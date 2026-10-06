@@ -1,0 +1,9 @@
+09:23:54 | INFO: Data are loaded, start creating Blender stuff
+09:23:54 | INFO: Blender create Mesh node NurbsPath.022
+09:23:54 | INFO: glTF import finished in 0.19s
+C:\Misc\The-Wood\ArtSource\preview-canopy.py:15: DeprecationWarning: 'World.use_nodes' is expected to be removed in Blender 6.0
+  scene=bpy.context.scene;scene.camera=cam;scene.render.engine='CYCLES';scene.cycles.samples=16;scene.cycles.device='CPU';scene.world=bpy.data.worlds.new('PreviewWorld');scene.world.use_nodes=True;scene.world.node_tree.nodes.get('Background').inputs['Color'].default_value=(0.5,0.6,0.75,1);scene.world.node_tree.nodes.get('Background').inputs['Strength'].default_value=0.6; bpy.ops.object.light_add(type='SUN',rotation=(0.6,-0.3,-0.4));bpy.context.object.data.energy=3.0
+00:02.750  render           | Saved: 'C:\Misc\The-Wood\ArtSource\Prepared\canopy-preview.png'
+Blender 5.2.0 LTS (hash fbe6228777e7 built 2026-07-14 01:35:40)
+
+Blender quit

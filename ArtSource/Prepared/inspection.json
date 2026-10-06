@@ -1,0 +1,638 @@
+[
+  {
+    "asset": "pine_sapling_small",
+    "variant": "pine_sapling_small_00",
+    "file": "pine_sapling_small_00.glb",
+    "dimensions_m": [
+      0.7876735925674438,
+      0.7274212837219238,
+      1.2989574670791626
+    ],
+    "triangles": 142506,
+    "materials": 2,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 142506,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "pine_sapling_small",
+    "variant": "pine_sapling_small_01",
+    "file": "pine_sapling_small_01.glb",
+    "dimensions_m": [
+      0.5287612676620483,
+      0.7303465604782104,
+      1.0456082820892334
+    ],
+    "triangles": 122235,
+    "materials": 2,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 122235,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "pine_sapling_small",
+    "variant": "pine_sapling_small_02",
+    "file": "pine_sapling_small_02.glb",
+    "dimensions_m": [
+      0.5127860307693481,
+      0.5799655318260193,
+      0.9613255858421326
+    ],
+    "triangles": 133403,
+    "materials": 2,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 133403,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "fern_02",
+    "variant": "fern_02_00",
+    "file": "fern_02_00.glb",
+    "dimensions_m": [
+      0.5519406199455261,
+      0.6134210824966431,
+      0.28680354356765747
+    ],
+    "triangles": 784,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 784,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "fern_02",
+    "variant": "fern_02_01",
+    "file": "fern_02_01.glb",
+    "dimensions_m": [
+      0.9897474050521851,
+      0.893689751625061,
+      0.427694708108902
+    ],
+    "triangles": 2384,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 2384,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "fern_02",
+    "variant": "fern_02_02",
+    "file": "fern_02_02.glb",
+    "dimensions_m": [
+      0.8743258118629456,
+      0.7652256488800049,
+      0.3490203619003296
+    ],
+    "triangles": 2248,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 2248,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "fern_02",
+    "variant": "fern_02_03",
+    "file": "fern_02_03.glb",
+    "dimensions_m": [
+      0.5727821588516235,
+      0.5932782888412476,
+      0.2130875587463379
+    ],
+    "triangles": 816,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 816,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_00",
+    "file": "grass_medium_01_00.glb",
+    "dimensions_m": [
+      0.31700897216796875,
+      0.32655882835388184,
+      0.1466887891292572
+    ],
+    "triangles": 6422,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 6422,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_01",
+    "file": "grass_medium_01_01.glb",
+    "dimensions_m": [
+      0.2840975522994995,
+      0.2757398784160614,
+      0.1692626178264618
+    ],
+    "triangles": 4626,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 4626,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_02",
+    "file": "grass_medium_01_02.glb",
+    "dimensions_m": [
+      0.27879106998443604,
+      0.25506988167762756,
+      0.14234741032123566
+    ],
+    "triangles": 5945,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 5945,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_03",
+    "file": "grass_medium_01_03.glb",
+    "dimensions_m": [
+      0.21561527252197266,
+      0.2213778793811798,
+      0.21774429082870483
+    ],
+    "triangles": 2287,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 2287,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_04",
+    "file": "grass_medium_01_04.glb",
+    "dimensions_m": [
+      0.18778884410858154,
+      0.20102860033512115,
+      0.17772157490253448
+    ],
+    "triangles": 1257,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 1257,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_05",
+    "file": "grass_medium_01_05.glb",
+    "dimensions_m": [
+      0.1923304796218872,
+      0.20285546779632568,
+      0.1446356624364853
+    ],
+    "triangles": 1466,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 1466,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_06",
+    "file": "grass_medium_01_06.glb",
+    "dimensions_m": [
+      0.1848401129245758,
+      0.1623130440711975,
+      0.14042668044567108
+    ],
+    "triangles": 833,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 833,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_07",
+    "file": "grass_medium_01_07.glb",
+    "dimensions_m": [
+      0.16595670580863953,
+      0.18989211320877075,
+      0.09989527612924576
+    ],
+    "triangles": 653,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 653,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_08",
+    "file": "grass_medium_01_08.glb",
+    "dimensions_m": [
+      0.16095638275146484,
+      0.15853148698806763,
+      0.3225463926792145
+    ],
+    "triangles": 290,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 290,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_09",
+    "file": "grass_medium_01_09.glb",
+    "dimensions_m": [
+      0.14994847774505615,
+      0.13478967547416687,
+      0.28566300868988037
+    ],
+    "triangles": 310,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 310,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_10",
+    "file": "grass_medium_01_10.glb",
+    "dimensions_m": [
+      0.1530308723449707,
+      0.1281569004058838,
+      0.2362561821937561
+    ],
+    "triangles": 340,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 340,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_11",
+    "file": "grass_medium_01_11.glb",
+    "dimensions_m": [
+      0.06734776496887207,
+      0.07376875728368759,
+      0.11245334148406982
+    ],
+    "triangles": 79,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 79,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_12",
+    "file": "grass_medium_01_12.glb",
+    "dimensions_m": [
+      0.023569822311401367,
+      0.03439873456954956,
+      0.060208480805158615
+    ],
+    "triangles": 28,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 28,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_13",
+    "file": "grass_medium_01_13.glb",
+    "dimensions_m": [
+      0.016031503677368164,
+      0.029003772884607315,
+      0.08238869905471802
+    ],
+    "triangles": 40,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 40,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_14",
+    "file": "grass_medium_01_14.glb",
+    "dimensions_m": [
+      0.043039798736572266,
+      0.08858247846364975,
+      0.04782668501138687
+    ],
+    "triangles": 32,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 32,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_15",
+    "file": "grass_medium_01_15.glb",
+    "dimensions_m": [
+      0.0852656364440918,
+      0.07415193319320679,
+      0.04945078864693642
+    ],
+    "triangles": 62,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 62,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "grass_medium_01",
+    "variant": "grass_medium_01_16",
+    "file": "grass_medium_01_16.glb",
+    "dimensions_m": [
+      0.05519580841064453,
+      0.06889013946056366,
+      0.047074805945158005
+    ],
+    "triangles": 60,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 60,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_07",
+    "variant": "rock_07_00",
+    "file": "rock_07_00.glb",
+    "dimensions_m": [
+      0.16888190805912018,
+      0.32027697563171387,
+      0.14372014999389648
+    ],
+    "triangles": 14844,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 14844,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "pine_tree_01",
+    "variant": "pine_tree_01_00",
+    "file": "pine_tree_01_00.glb",
+    "dimensions_m": [
+      7.60101318359375,
+      8.314447402954102,
+      20.374792098999023
+    ],
+    "triangles": 129502,
+    "materials": 5,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 6951524,
+    "wind_uv_version": 2,
+    "canopy_version": 3,
+    "needle_card_triangles": 16800
+  },
+  {
+    "asset": "pine_tree_01",
+    "variant": "pine_tree_01_01",
+    "file": "pine_tree_01_01.glb",
+    "dimensions_m": [
+      7.223750114440918,
+      7.5970258712768555,
+      14.88125991821289
+    ],
+    "triangles": 114282,
+    "materials": 5,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 4234432,
+    "wind_uv_version": 2,
+    "canopy_version": 3,
+    "needle_card_triangles": 16800
+  },
+  {
+    "asset": "pine_tree_01",
+    "variant": "pine_tree_01_02",
+    "file": "pine_tree_01_02.glb",
+    "dimensions_m": [
+      7.625714302062988,
+      7.855485916137695,
+      17.544002532958984
+    ],
+    "triangles": 88166,
+    "materials": 5,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 5996296,
+    "wind_uv_version": 2,
+    "canopy_version": 3,
+    "needle_card_triangles": 16800
+  },
+  {
+    "asset": "boulder_01",
+    "variant": "boulder_01_00",
+    "file": "boulder_01_00.glb",
+    "dimensions_m": [
+      0.695029079914093,
+      0.9999999403953552,
+      0.5484408736228943
+    ],
+    "triangles": 66122,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 66122,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_01",
+    "variant": "rock_moss_set_01_00",
+    "file": "rock_moss_set_01_00.glb",
+    "dimensions_m": [
+      0.6642215251922607,
+      1.0000001192092896,
+      0.4371575117111206
+    ],
+    "triangles": 11000,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 11000,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_01",
+    "variant": "rock_moss_set_01_01",
+    "file": "rock_moss_set_01_01.glb",
+    "dimensions_m": [
+      0.8136054873466492,
+      1.0000001192092896,
+      0.38667258620262146
+    ],
+    "triangles": 10996,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 10996,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_01",
+    "variant": "rock_moss_set_01_02",
+    "file": "rock_moss_set_01_02.glb",
+    "dimensions_m": [
+      1.0,
+      0.9862480163574219,
+      0.5215325951576233
+    ],
+    "triangles": 5000,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 5000,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_01",
+    "variant": "rock_moss_set_01_03",
+    "file": "rock_moss_set_01_03.glb",
+    "dimensions_m": [
+      1.0,
+      0.9234416484832764,
+      0.8311221599578857
+    ],
+    "triangles": 10589,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 10589,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_01",
+    "variant": "rock_moss_set_01_04",
+    "file": "rock_moss_set_01_04.glb",
+    "dimensions_m": [
+      0.6060441136360168,
+      1.0,
+      0.4019959568977356
+    ],
+    "triangles": 16548,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 16548,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_01",
+    "variant": "rock_moss_set_01_05",
+    "file": "rock_moss_set_01_05.glb",
+    "dimensions_m": [
+      0.7710369825363159,
+      1.0,
+      0.4576402008533478
+    ],
+    "triangles": 8994,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 8994,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_02",
+    "variant": "rock_moss_set_02_00",
+    "file": "rock_moss_set_02_00.glb",
+    "dimensions_m": [
+      1.0,
+      0.7177436351776123,
+      0.43992358446121216
+    ],
+    "triangles": 9826,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 9826,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_02",
+    "variant": "rock_moss_set_02_01",
+    "file": "rock_moss_set_02_01.glb",
+    "dimensions_m": [
+      1.0,
+      0.8154028654098511,
+      0.4382476806640625
+    ],
+    "triangles": 8000,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 8000,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_02",
+    "variant": "rock_moss_set_02_02",
+    "file": "rock_moss_set_02_02.glb",
+    "dimensions_m": [
+      1.0,
+      0.6209417581558228,
+      0.3743901252746582
+    ],
+    "triangles": 7894,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 7894,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_02",
+    "variant": "rock_moss_set_02_03",
+    "file": "rock_moss_set_02_03.glb",
+    "dimensions_m": [
+      1.0,
+      0.7043530941009521,
+      0.3488336205482483
+    ],
+    "triangles": 8000,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 8000,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_02",
+    "variant": "rock_moss_set_02_04",
+    "file": "rock_moss_set_02_04.glb",
+    "dimensions_m": [
+      1.0,
+      0.7825581431388855,
+      0.6707912683486938
+    ],
+    "triangles": 8000,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 8000,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_02",
+    "variant": "rock_moss_set_02_05",
+    "file": "rock_moss_set_02_05.glb",
+    "dimensions_m": [
+      1.0,
+      0.9138388633728027,
+      0.4659612774848938
+    ],
+    "triangles": 7999,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 7999,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "rock_moss_set_02",
+    "variant": "rock_moss_set_02_06",
+    "file": "rock_moss_set_02_06.glb",
+    "dimensions_m": [
+      0.9999998807907104,
+      0.5442603826522827,
+      0.6007531881332397
+    ],
+    "triangles": 7928,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 7928,
+    "wind_uv_version": 2
+  }
+]

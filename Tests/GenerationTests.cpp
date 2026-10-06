@@ -1,0 +1,197 @@
+#include "Generation/WoodGeneration.h"
+#include "Generation/WoodDiscovery.h"
+#include <cmath>
+#include <algorithm>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+int failures=0;
+void check(bool ok,const char* message) { if(!ok) { ++failures; std::cerr<<"FAIL: "<<message<<'\n'; } }
+bool near(double a,double b) { return std::abs(a-b)<1e-9; }
+int main() {
+ using namespace wood;
+ World world({42,128,32});
+ auto a=world.generate(0,0), b=world.generate(1,0);
+ check(a.vertices.size()==1089,"chunk includes shared edge vertices");
+ check(a.triangles.size()==6144,"chunk has complete indexed surface");
+ if(a.vertices.size()==1089 && b.vertices.size()==1089) {
+  for(int row=0;row<=32;++row) {
+   const auto& left=a.vertices[row*33+32]; const auto& right=b.vertices[row*33];
+   check(near(left.x,right.x)&&near(left.y,right.y)&&near(left.z,right.z),"neighbor seams agree");
+  }
+ }
+ auto bFirst=world.generate(1,0), aLast=world.generate(0,0);
+ check(aLast.features.size()==a.features.size()&&bFirst.features.size()==b.features.size(),"generation order preserves feature counts");
+ if(aLast.features.size()==a.features.size()) for(std::size_t i=0;i<a.features.size();++i)
+  check(near(a.features[i].position.x,aLast.features[i].position.x)&&near(a.features[i].position.z,aLast.features[i].position.z),"placement repeats for same seed");
+ check(!a.features.empty(),"habitats produce vegetation and rocks");
+ for(const auto& f:a.features) {
+  const auto s=world.sample(f.position.x,f.position.y);
+  check(near(f.position.z,world.terrainHeight(f.position.x,f.position.y)),"features are grounded");
+  if(f.kind!=Kind::Rock) check(s.depth<=0 && s.slope<0.7,"plants avoid water and steep terrain");
+ }
+ for(int y=-256;y<256;y+=4) {
+  auto s=world.sample(world.streamX(y),y);
+  check(s.depth>0&&s.depth<0.65,"continuous stream is shallow enough to wade");
+  auto downstream=world.sample(world.streamX(y+4),y+4);
+  check(downstream.waterHeight<s.waterHeight,"water flows downhill");
+ }
+ const auto forestRegion=world.region(0,0),highlandRegion=world.region(1,1);
+ check(world.sample(forestRegion.origin.x,forestRegion.origin.y).forest>0.65 &&
+       world.sample(highlandRegion.origin.x,highlandRegion.origin.y).forest<0.25,"regional forest blends into open highlands");
+ World other({43,128,32});
+ check(!near(world.sample(140,70).height,other.sample(140,70).height),"different seeds change terrain away from reserved bank terrace");
+ const auto l=world.lighting(0,0,200), l0=world.lighting(-0.001,0,200), l1=world.lighting(0.001,0,200);
+ check(l.brightness>0&&l.kelvin>2000,"lighting returns usable illumination");
+ check(std::abs(l0.kelvin-l1.kelvin)<1,"regional lighting transition is continuous");
+ const auto eastRegion=world.region(1,0);
+ check(!near(world.lighting(-180,-180,0).brightness,world.lighting(eastRegion.origin.x,eastRegion.origin.y,0).brightness),"distinct hex regions have independent light phases");
+ Observation o; o.accelerate(true); check(near(o.rate(),1),"acceleration requires sitting");
+ o.sit(true); o.accelerate(true); o.advance(2); check(near(o.seconds,40),"seated acceleration advances shared world time");
+ o.sit(false); check(near(o.rate(),1)&&!o.accelerated,"standing restores normal time");
+ bool rejected=false; try { World invalid({1,0,0}); } catch(const std::invalid_argument&) { rejected=true; }
+ check(rejected,"invalid generation dimensions rejected");
+ // Catch holes at negative chunk coordinates and non-power-of-two chunk sizes.
+ for(unsigned seed:{0u,1u,42u,98765u}) {
+  World varied({seed,96,24});
+  auto west=varied.generate(-1,-1),east=varied.generate(0,-1),north=varied.generate(-1,0);
+  for(int i=0;i<=24;++i) {
+   check(near(west.vertices[i*25+24].z,east.vertices[i*25].z),"negative east-west seams agree");
+   check(near(west.vertices[24*25+i].z,north.vertices[i].z),"negative north-south seams agree");
+  }
+  for(auto index:west.triangles) check(index<west.vertices.size(),"triangle indices remain in range");
+  // The reserved stream-bank route must be walkable, even across seed changes.
+  for(int y=-220;y<220;y+=4) {
+   const auto route=varied.sample(varied.streamX(y)-7,y);
+   check(route.slope<std::tan(38.0*3.141592653589793/180),"reserved bank route is walkable");
+  }
+ }
+ // Layered habitats and the narrow protected bank survive multiple seeds.
+ for(unsigned seed:{0u,42u,98765u}) {
+  World habitat({seed,128,16});
+  std::size_t trees=0,understory=0,highlandTrees=0,total=0,bankDetail=0,forestFerns=0,largeFerns=0;
+  for(int cy=-2;cy<2;++cy) for(int cx=-2;cx<2;++cx) {
+   const auto chunk=habitat.generate(cx,cy);
+   total+=chunk.features.size();
+   for(const auto& f:chunk.features) {
+    const double routeDistance=std::abs(f.position.x-(habitat.streamX(f.position.y)-7));
+    if(f.kind==Kind::Tree||f.kind==Kind::Rock)
+     check(routeDistance>2.0,"protected bank route has no trees or rocks");
+    if(habitat.sample(f.position.x,f.position.y).biome[0]>0.65) {
+     trees+=f.kind==Kind::Tree;
+     forestFerns+=f.kind==Kind::Fern;
+     largeFerns+=f.kind==Kind::Fern&&f.scale>1.4;
+     understory+=f.kind==Kind::Grass||f.kind==Kind::Fern;
+    }
+
+    if(std::abs(f.position.x-habitat.streamX(f.position.y))<10) ++bankDetail;
+   }
+   const auto repeat=habitat.generate(cx,cy);
+   check(repeat.features.size()==chunk.features.size(),"multi-seed habitat repeats counts");
+   for(std::size_t i=0;i<chunk.features.size();++i) {
+    const auto& f=chunk.features[i]; const auto& r=repeat.features[i];
+    check(f.kind==r.kind&&near(f.position.x,r.position.x)&&near(f.position.y,r.position.y)&&near(f.scale,r.scale),"multi-seed habitat repeats full placement");
+   }
+  }
+  const auto highland=habitat.region(1,1);
+  const auto highlandChunk=habitat.generate(static_cast<int>(std::floor(highland.origin.x/128)),static_cast<int>(std::floor(highland.origin.y/128)));
+  for(const auto& f:highlandChunk.features) highlandTrees+=f.kind==Kind::Tree;
+  const auto colonyChunk=habitat.generate(-2,0);
+  int patches[64]={};
+  for(const auto& f:colonyChunk.features) if(f.kind==Kind::Fern||f.kind==Kind::Grass) {
+   const int col=static_cast<int>((f.position.x+256)/16),row=static_cast<int>(f.position.y/16);
+   if(col>=0&&col<8&&row>=0&&row<8) ++patches[row*8+col];
+  }
+  const auto range=std::minmax_element(patches,patches+64);
+  check(*range.second>2*std::max(1,*range.first),"understory forms dense colonies and open pockets");
+  check(trees>200&&understory>6000,"forest canopy and dense understory coexist");
+  check(forestFerns>understory/3&&largeFerns>forestFerns/3,"moist forest has substantial mature fern colonies");
+  // Compare area-normalized density, rather than assuming x alone defines a biome.
+  const auto forestChunk=habitat.generate(-2,-2);
+  std::size_t forestChunkTrees=0;
+  for(const auto& f:forestChunk.features) forestChunkTrees+=f.kind==Kind::Tree;
+  check(highlandTrees<forestChunkTrees/3,"open highlands have substantially fewer trees per equal area");
+  check(bankDetail>100,"stream banks retain vegetation outside narrow route");
+  check(total<80000,"512 metre habitat stays within feature budget");
+  std::cout<<"Habitat seed "<<seed<<": "<<total<<" features, "<<trees<<" forest trees, "<<understory<<" understory, "<<highlandTrees<<" highland trees\n";
+ }
+ // Repartitioning identical world bounds cannot duplicate or lose a candidate.
+ World small({42,96,8}),large({42,192,8});
+ auto united=large.generate(-1,-1).features;
+ std::vector<Feature> pieces;
+ for(int cy=-2;cy<0;++cy) for(int cx=-2;cx<0;++cx) {
+  const auto part=small.generate(cx,cy);
+  pieces.insert(pieces.end(),part.features.begin(),part.features.end());
+ }
+ auto order=[](const Feature& a,const Feature& b) {
+  if(a.position.x!=b.position.x) return a.position.x<b.position.x;
+  if(a.position.y!=b.position.y) return a.position.y<b.position.y;
+  if(a.kind!=b.kind) return static_cast<int>(a.kind)<static_cast<int>(b.kind);
+  if(a.scale!=b.scale) return a.scale<b.scale;
+  return a.yaw<b.yaw;
+ };
+ std::sort(united.begin(),united.end(),order); std::sort(pieces.begin(),pieces.end(),order);
+ check(united.size()==pieces.size(),"chunk repartition preserves candidates at negative boundaries");
+ if(united.size()==pieces.size()) for(std::size_t i=0;i<united.size();++i)
+  check(united[i].kind==pieces[i].kind&&near(united[i].position.x,pieces[i].position.x)&&near(united[i].position.y,pieces[i].position.y)&&near(united[i].scale,pieces[i].scale),"chunk repartition preserves every layered feature");
+
+ // Verify zero tree overlap with discovery inner reservations across chunks
+ for(unsigned seed : {0u, 42u, 98765u}) {
+  World testWorld({seed, 128, 16});
+  std::vector<DiscoveryReservation> testReservations;
+  auto hFn = [&](double hx, double hy) { return testWorld.terrainHeight(hx, hy); };
+  auto sXFn = [&](double sy) { return testWorld.streamX(sy); };
+  auto sHWFn = [&](double sy) { return testWorld.streamHalfWidth(sy); };
+  for(int cy = -3; cy <= 3; ++cy) {
+   for(int cx = -3; cx <= 3; ++cx) {
+    const auto r = testWorld.region(cx, cy);
+    const Vec3 center{r.origin.x, r.origin.y, testWorld.terrainHeight(r.origin.x, r.origin.y)};
+    const auto climate = testWorld.sample(r.origin.x, r.origin.y);
+    const auto plan = planDiscovery(seed, cx, cy, center, climate, hFn, sXFn, sHWFn);
+    if(plan.valid && (plan.reservation.innerRadius > 0.0 || plan.reservation.outerRadius > 0.0)) {
+     testReservations.push_back(plan.reservation);
+    }
+   }
+  }
+  check(!testReservations.empty(), "discovery reservations planned in test area");
+  for(int cy = -2; cy <= 2; ++cy) {
+   for(int cx = -2; cx <= 2; ++cx) {
+    const auto chunk = testWorld.generate(cx, cy);
+    for(const auto& f : chunk.features) {
+     if(f.kind == Kind::Tree) {
+      check(!isInsideReservation(testReservations, f.position.x, f.position.y, true),
+            "zero trees generated inside discovery inner reservation radii");
+     }
+    }
+   }
+  }
+ }
+
+ // Deterministic feature generation across chunks
+ for(unsigned seed : {42u, 12345u}) {
+  World wA({seed, 128, 16}), wB({seed, 128, 16});
+  for(int cy = -1; cy <= 1; ++cy) {
+   for(int cx = -1; cx <= 1; ++cx) {
+    const auto chA = wA.generate(cx, cy);
+    const auto chB = wB.generate(cx, cy);
+    check(chA.features.size() == chB.features.size(), "chunk feature generation is deterministic in count");
+    bool match = true;
+    for(std::size_t i = 0; i < chA.features.size(); ++i) {
+     if(chA.features[i].kind != chB.features[i].kind ||
+        !near(chA.features[i].position.x, chB.features[i].position.x) ||
+        !near(chA.features[i].position.y, chB.features[i].position.y) ||
+        !near(chA.features[i].scale, chB.features[i].scale)) {
+      match = false;
+      break;
+     }
+    }
+    check(match, "chunk feature generation is deterministic across instances");
+   }
+  }
+ }
+
+ bool badTime=false; try { o.advance(-1); } catch(const std::invalid_argument&) { badTime=true; }
+ check(badTime,"negative elapsed time rejected");
+ if(failures) return 1;
+ std::cout<<"PASS: generation, hydrology, placement, lighting and observation contracts\n";
+}

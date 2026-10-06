@@ -1,0 +1,16 @@
+.cache/
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+*.sln
+*.VC.db
+ArtSource/PolyHaven/
+ArtSource/Prepared/*.glb
+__pycache__/
+*.obj
+*.exe
+*.pdb
+*.log
+.claude/

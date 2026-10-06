@@ -1,0 +1,846 @@
+{
+  "Diffuse": {
+    "8k": {
+      "jpg": {
+        "size": 66004903,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_diff_8k.jpg",
+        "md5": "78098f470dc4526cdc3d34fa24c09de8"
+      },
+      "png": {
+        "size": 368910489,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/8k/rocky_gravel/rocky_gravel_diff_8k.png",
+        "md5": "afd55a89cf3c86439025064ba14d8eb7"
+      },
+      "exr": {
+        "size": 123735470,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_diff_8k.exr",
+        "md5": "0e5255a64715aab3dc5b36640f83876e"
+      }
+    },
+    "4k": {
+      "jpg": {
+        "size": 18032715,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_diff_4k.jpg",
+        "md5": "ac3f62f2f2afe040ff9fbbfc5e4c78e2"
+      },
+      "png": {
+        "size": 93041889,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/4k/rocky_gravel/rocky_gravel_diff_4k.png",
+        "md5": "7cd520e08d8ba62542c99f4f128c8bd4"
+      },
+      "exr": {
+        "size": 34869735,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_diff_4k.exr",
+        "md5": "5b88c2d84580893d4bbca50f0ea523a7"
+      }
+    },
+    "2k": {
+      "jpg": {
+        "size": 4832644,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_diff_2k.jpg",
+        "md5": "b78a49ef675dff9dcc62f4668854db23"
+      },
+      "png": {
+        "size": 23531786,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/rocky_gravel/rocky_gravel_diff_2k.png",
+        "md5": "f9907405320d5ce4127169f2e750310c"
+      },
+      "exr": {
+        "size": 9395066,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_diff_2k.exr",
+        "md5": "e8afa25fc33b4d2d2898667945577222"
+      }
+    },
+    "1k": {
+      "jpg": {
+        "size": 1272321,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_diff_1k.jpg",
+        "md5": "a1d5a23e5df0f2a43ec69d9a1b1c3f92"
+      },
+      "png": {
+        "size": 5940720,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/rocky_gravel/rocky_gravel_diff_1k.png",
+        "md5": "3288e405d1c16837cb97786dce8834fe"
+      },
+      "exr": {
+        "size": 2479513,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_diff_1k.exr",
+        "md5": "df506892e655c9865d062abe3f55b333"
+      }
+    }
+  },
+  "nor_dx": {
+    "8k": {
+      "jpg": {
+        "size": 75554816,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_nor_dx_8k.jpg",
+        "md5": "5eef2f98913741420cb3f03555bcf015"
+      },
+      "png": {
+        "size": 370510367,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/8k/rocky_gravel/rocky_gravel_nor_dx_8k.png",
+        "md5": "38f22327b74dbdd853d72819c5ec0fde"
+      },
+      "exr": {
+        "size": 146539867,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_nor_dx_8k.exr",
+        "md5": "2ece2175a4a3a672f72a67f023337b00"
+      }
+    },
+    "4k": {
+      "jpg": {
+        "size": 21977373,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_nor_dx_4k.jpg",
+        "md5": "09c7a6bb2467cd3710474c111885acf7"
+      },
+      "png": {
+        "size": 95720900,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/4k/rocky_gravel/rocky_gravel_nor_dx_4k.png",
+        "md5": "8dacf61de338a74175b7b4dc7819d94b"
+      },
+      "exr": {
+        "size": 41804697,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_nor_dx_4k.exr",
+        "md5": "378fbf6164ac5adbe2dbb79e8aa48690"
+      }
+    },
+    "2k": {
+      "jpg": {
+        "size": 5919584,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_nor_dx_2k.jpg",
+        "md5": "e2ffd970c074d3a964ce44d5aa1334b2"
+      },
+      "png": {
+        "size": 24282013,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/rocky_gravel/rocky_gravel_nor_dx_2k.png",
+        "md5": "829e1017d00f9ba5fb4d804a8510cf9e"
+      },
+      "exr": {
+        "size": 11033143,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_nor_dx_2k.exr",
+        "md5": "e205d7364ea3a475a7eef8db2f92398b"
+      }
+    },
+    "1k": {
+      "jpg": {
+        "size": 1483691,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_nor_dx_1k.jpg",
+        "md5": "511fe53dd2f52c3bba4bc648992c2a16"
+      },
+      "png": {
+        "size": 6106782,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/rocky_gravel/rocky_gravel_nor_dx_1k.png",
+        "md5": "354f30abd65fbe3ef2c93901bfd86b5f"
+      },
+      "exr": {
+        "size": 2794886,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_nor_dx_1k.exr",
+        "md5": "19aa2650952e6288d913c89c830d997c"
+      }
+    }
+  },
+  "nor_gl": {
+    "8k": {
+      "jpg": {
+        "size": 75734584,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_nor_gl_8k.jpg",
+        "md5": "c71b83c28602d6e322fec57689430a8f"
+      },
+      "png": {
+        "size": 374552915,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/8k/rocky_gravel/rocky_gravel_nor_gl_8k.png",
+        "md5": "ac7c1f029cf0dda19f3e2d6f7cd23658"
+      },
+      "exr": {
+        "size": 146445842,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_nor_gl_8k.exr",
+        "md5": "04217e322bc4848b2b3e6369c9b28f3c"
+      }
+    },
+    "4k": {
+      "jpg": {
+        "size": 22007876,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_nor_gl_4k.jpg",
+        "md5": "4c5dcd1b36bff60620ebcac493cc7f48"
+      },
+      "png": {
+        "size": 95747015,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/4k/rocky_gravel/rocky_gravel_nor_gl_4k.png",
+        "md5": "6dc8e5800edd4edae0b2b86d292d082c"
+      },
+      "exr": {
+        "size": 41763890,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_nor_gl_4k.exr",
+        "md5": "bfd48a2bb9e63f3e9cf9e0cefea8d1b4"
+      }
+    },
+    "2k": {
+      "jpg": {
+        "size": 5922074,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_nor_gl_2k.jpg",
+        "md5": "11de3f8b3a18e4211a46b55ef341bf82"
+      },
+      "png": {
+        "size": 24288258,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/rocky_gravel/rocky_gravel_nor_gl_2k.png",
+        "md5": "0c85f3078617dc6e4cff7bcdc2a37886"
+      },
+      "exr": {
+        "size": 11022953,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_nor_gl_2k.exr",
+        "md5": "b33384e95fb7dac38927515b0e2b1ba9"
+      }
+    },
+    "1k": {
+      "jpg": {
+        "size": 1484181,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_nor_gl_1k.jpg",
+        "md5": "9951d3f40a0ea515d799ef2aa271534d"
+      },
+      "png": {
+        "size": 6107764,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/rocky_gravel/rocky_gravel_nor_gl_1k.png",
+        "md5": "c34001488d17cb909654a48d879c3ecc"
+      },
+      "exr": {
+        "size": 2792484,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_nor_gl_1k.exr",
+        "md5": "b38b0860a8573a4800a12536eae5fd4f"
+      }
+    }
+  },
+  "blend": {
+    "8k": {
+      "blend": {
+        "include": {
+          "textures/rocky_gravel_disp_8k.png": {
+            "size": 92473185,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/8k/rocky_gravel/rocky_gravel_disp_8k.png",
+            "md5": "81390dfe6c497950737f55780e4e628d"
+          },
+          "textures/rocky_gravel_nor_gl_8k.exr": {
+            "size": 146445842,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_nor_gl_8k.exr",
+            "md5": "04217e322bc4848b2b3e6369c9b28f3c"
+          },
+          "textures/rocky_gravel_diff_8k.jpg": {
+            "size": 66004903,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_diff_8k.jpg",
+            "md5": "78098f470dc4526cdc3d34fa24c09de8"
+          },
+          "textures/rocky_gravel_rough_8k.exr": {
+            "size": 24609192,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_rough_8k.exr",
+            "md5": "07c9816edc631127c3a8590c3c76af4c"
+          }
+        },
+        "size": 225388,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/blend/8k/rocky_gravel/rocky_gravel_8k.blend",
+        "md5": "9608040b034ca339d460b9c1c3c259a2"
+      }
+    },
+    "4k": {
+      "blend": {
+        "include": {
+          "textures/rocky_gravel_disp_4k.png": {
+            "size": 27012730,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/4k/rocky_gravel/rocky_gravel_disp_4k.png",
+            "md5": "1ba801614ddda62dbcc36afe1008dd4a"
+          },
+          "textures/rocky_gravel_nor_gl_4k.exr": {
+            "size": 41763890,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_nor_gl_4k.exr",
+            "md5": "bfd48a2bb9e63f3e9cf9e0cefea8d1b4"
+          },
+          "textures/rocky_gravel_rough_4k.exr": {
+            "size": 7680731,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_rough_4k.exr",
+            "md5": "40a79ba70d0d5988c2ac3555ca622580"
+          },
+          "textures/rocky_gravel_diff_4k.jpg": {
+            "size": 18032715,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_diff_4k.jpg",
+            "md5": "ac3f62f2f2afe040ff9fbbfc5e4c78e2"
+          }
+        },
+        "size": 225293,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/blend/4k/rocky_gravel/rocky_gravel_4k.blend",
+        "md5": "938ebddebdc072a45c5ad3b163ba7457"
+      }
+    },
+    "2k": {
+      "blend": {
+        "include": {
+          "textures/rocky_gravel_nor_gl_2k.exr": {
+            "size": 11022953,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_nor_gl_2k.exr",
+            "md5": "b33384e95fb7dac38927515b0e2b1ba9"
+          },
+          "textures/rocky_gravel_rough_2k.exr": {
+            "size": 2066070,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_rough_2k.exr",
+            "md5": "f1cf1a7a791483fab4c22414167f5427"
+          },
+          "textures/rocky_gravel_diff_2k.jpg": {
+            "size": 4832644,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_diff_2k.jpg",
+            "md5": "b78a49ef675dff9dcc62f4668854db23"
+          },
+          "textures/rocky_gravel_disp_2k.png": {
+            "size": 7165073,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/rocky_gravel/rocky_gravel_disp_2k.png",
+            "md5": "20a65db144d8205f5a8f0f669c1dbbe5"
+          }
+        },
+        "size": 225711,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/blend/2k/rocky_gravel/rocky_gravel_2k.blend",
+        "md5": "3ec136eb2977c784e5e13eb680707afc"
+      }
+    },
+    "1k": {
+      "blend": {
+        "include": {
+          "textures/rocky_gravel_diff_1k.jpg": {
+            "size": 1272321,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_diff_1k.jpg",
+            "md5": "a1d5a23e5df0f2a43ec69d9a1b1c3f92"
+          },
+          "textures/rocky_gravel_disp_1k.png": {
+            "size": 1867403,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/rocky_gravel/rocky_gravel_disp_1k.png",
+            "md5": "2f76e8343ec22805b82dfcc590b745f3"
+          },
+          "textures/rocky_gravel_rough_1k.exr": {
+            "size": 511527,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_rough_1k.exr",
+            "md5": "fe49af21d23435c31c5093cd2c9e2717"
+          },
+          "textures/rocky_gravel_nor_gl_1k.exr": {
+            "size": 2792484,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_nor_gl_1k.exr",
+            "md5": "b38b0860a8573a4800a12536eae5fd4f"
+          }
+        },
+        "size": 225885,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/blend/1k/rocky_gravel/rocky_gravel_1k.blend",
+        "md5": "5e3c0475058ccd9c94a478ed7d666806"
+      }
+    }
+  },
+  "gltf": {
+    "8k": {
+      "gltf": {
+        "include": {
+          "rocky_gravel.bin": {
+            "size": 2369812,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/8k/rocky_gravel/rocky_gravel.bin",
+            "md5": "7404a7acbfd3d2eeaf48ac803f1c1503"
+          },
+          "textures/rocky_gravel_nor_gl_8k.jpg": {
+            "size": 75734584,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_nor_gl_8k.jpg",
+            "md5": "c71b83c28602d6e322fec57689430a8f"
+          },
+          "textures/rocky_gravel_diff_8k.jpg": {
+            "size": 66004903,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_diff_8k.jpg",
+            "md5": "78098f470dc4526cdc3d34fa24c09de8"
+          },
+          "textures/rocky_gravel_arm_8k.jpg": {
+            "size": 52530114,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_arm_8k.jpg",
+            "md5": "910f375b750ca76ea4a4fbc376598ce8"
+          }
+        },
+        "size": 2782,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/8k/rocky_gravel/rocky_gravel_8k.gltf",
+        "md5": "433e1ad75a4932c4ff4a50931961875f"
+      }
+    },
+    "4k": {
+      "gltf": {
+        "include": {
+          "rocky_gravel.bin": {
+            "size": 2369812,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/8k/rocky_gravel/rocky_gravel.bin",
+            "md5": "7404a7acbfd3d2eeaf48ac803f1c1503"
+          },
+          "textures/rocky_gravel_diff_4k.jpg": {
+            "size": 18032715,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_diff_4k.jpg",
+            "md5": "ac3f62f2f2afe040ff9fbbfc5e4c78e2"
+          },
+          "textures/rocky_gravel_nor_gl_4k.jpg": {
+            "size": 22007876,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_nor_gl_4k.jpg",
+            "md5": "4c5dcd1b36bff60620ebcac493cc7f48"
+          },
+          "textures/rocky_gravel_arm_4k.jpg": {
+            "size": 15621887,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_arm_4k.jpg",
+            "md5": "e392b52b50ff03b9fa387f9b4d71d555"
+          }
+        },
+        "size": 2782,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/4k/rocky_gravel/rocky_gravel_4k.gltf",
+        "md5": "2189a6c58863f7a4d1916bbd1e75989e"
+      }
+    },
+    "2k": {
+      "gltf": {
+        "include": {
+          "textures/rocky_gravel_nor_gl_2k.jpg": {
+            "size": 5922074,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_nor_gl_2k.jpg",
+            "md5": "11de3f8b3a18e4211a46b55ef341bf82"
+          },
+          "rocky_gravel.bin": {
+            "size": 2369812,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/8k/rocky_gravel/rocky_gravel.bin",
+            "md5": "7404a7acbfd3d2eeaf48ac803f1c1503"
+          },
+          "textures/rocky_gravel_arm_2k.jpg": {
+            "size": 4225582,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_arm_2k.jpg",
+            "md5": "04cd3048357ce5943c80922d38ea75af"
+          },
+          "textures/rocky_gravel_diff_2k.jpg": {
+            "size": 4832644,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_diff_2k.jpg",
+            "md5": "b78a49ef675dff9dcc62f4668854db23"
+          }
+        },
+        "size": 2782,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/2k/rocky_gravel/rocky_gravel_2k.gltf",
+        "md5": "a558438a071a9f49bad2af2867f6478c"
+      }
+    },
+    "1k": {
+      "gltf": {
+        "include": {
+          "textures/rocky_gravel_diff_1k.jpg": {
+            "size": 1272321,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_diff_1k.jpg",
+            "md5": "a1d5a23e5df0f2a43ec69d9a1b1c3f92"
+          },
+          "rocky_gravel.bin": {
+            "size": 2369812,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/8k/rocky_gravel/rocky_gravel.bin",
+            "md5": "7404a7acbfd3d2eeaf48ac803f1c1503"
+          },
+          "textures/rocky_gravel_arm_1k.jpg": {
+            "size": 1091695,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_arm_1k.jpg",
+            "md5": "9392f3243365cde330eb38e11755007a"
+          },
+          "textures/rocky_gravel_nor_gl_1k.jpg": {
+            "size": 1484181,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_nor_gl_1k.jpg",
+            "md5": "9951d3f40a0ea515d799ef2aa271534d"
+          }
+        },
+        "size": 2782,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/1k/rocky_gravel/rocky_gravel_1k.gltf",
+        "md5": "089c5904417cc98c812c44fe7f3e24d8"
+      }
+    }
+  },
+  "arm": {
+    "8k": {
+      "jpg": {
+        "size": 52530114,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_arm_8k.jpg",
+        "md5": "910f375b750ca76ea4a4fbc376598ce8"
+      },
+      "png": {
+        "size": 254746387,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/8k/rocky_gravel/rocky_gravel_arm_8k.png",
+        "md5": "156549b4640437e90157fadab3079beb"
+      },
+      "exr": {
+        "size": 96999356,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_arm_8k.exr",
+        "md5": "85a042ef33f00e2ade08c23aad4d1273"
+      }
+    },
+    "4k": {
+      "jpg": {
+        "size": 15621887,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_arm_4k.jpg",
+        "md5": "e392b52b50ff03b9fa387f9b4d71d555"
+      },
+      "png": {
+        "size": 69814718,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/4k/rocky_gravel/rocky_gravel_arm_4k.png",
+        "md5": "35ea04622d720c5ad733ab719c452128"
+      },
+      "exr": {
+        "size": 30520927,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_arm_4k.exr",
+        "md5": "998c9bc99b4c7258ef080db931a8b0e5"
+      }
+    },
+    "2k": {
+      "jpg": {
+        "size": 4225582,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_arm_2k.jpg",
+        "md5": "04cd3048357ce5943c80922d38ea75af"
+      },
+      "png": {
+        "size": 17970795,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/rocky_gravel/rocky_gravel_arm_2k.png",
+        "md5": "56ecf509702083c91030f95591497b07"
+      },
+      "exr": {
+        "size": 8317147,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_arm_2k.exr",
+        "md5": "664effb2742e456c6ac7b5dc91331870"
+      }
+    },
+    "1k": {
+      "jpg": {
+        "size": 1091695,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_arm_1k.jpg",
+        "md5": "9392f3243365cde330eb38e11755007a"
+      },
+      "png": {
+        "size": 4500827,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/rocky_gravel/rocky_gravel_arm_1k.png",
+        "md5": "579f5ec8aecc52d13eb5ef2b9c4f169f"
+      },
+      "exr": {
+        "size": 2163258,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_arm_1k.exr",
+        "md5": "cd3ee69c0b928cf0c15992362049092a"
+      }
+    }
+  },
+  "Rough": {
+    "8k": {
+      "jpg": {
+        "size": 25977154,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_rough_8k.jpg",
+        "md5": "00e914cda2363afbdd4b634bf9ed4a4e"
+      },
+      "png": {
+        "size": 166163540,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/8k/rocky_gravel/rocky_gravel_rough_8k.png",
+        "md5": "7091cc8c1aae65b59c2457e82b7af51d"
+      },
+      "exr": {
+        "size": 24609192,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_rough_8k.exr",
+        "md5": "07c9816edc631127c3a8590c3c76af4c"
+      }
+    },
+    "4k": {
+      "jpg": {
+        "size": 7733919,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_rough_4k.jpg",
+        "md5": "6cfe5f6ef6bd4b772347e11abb8844fa"
+      },
+      "png": {
+        "size": 38682391,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/4k/rocky_gravel/rocky_gravel_rough_4k.png",
+        "md5": "1ccad62e9e694f713d0da19aeaf376bf"
+      },
+      "exr": {
+        "size": 7680731,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_rough_4k.exr",
+        "md5": "40a79ba70d0d5988c2ac3555ca622580"
+      }
+    },
+    "2k": {
+      "jpg": {
+        "size": 2007455,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_rough_2k.jpg",
+        "md5": "bd3d01e357a4d2c0ad0d7e3481505bdd"
+      },
+      "png": {
+        "size": 9724016,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/rocky_gravel/rocky_gravel_rough_2k.png",
+        "md5": "e69e0b0c98c58bc8998c1ec2a4eb5464"
+      },
+      "exr": {
+        "size": 2066070,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_rough_2k.exr",
+        "md5": "f1cf1a7a791483fab4c22414167f5427"
+      }
+    },
+    "1k": {
+      "jpg": {
+        "size": 485767,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_rough_1k.jpg",
+        "md5": "ea8668e6687c631376e2400a3b03bb94"
+      },
+      "png": {
+        "size": 2417946,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/rocky_gravel/rocky_gravel_rough_1k.png",
+        "md5": "6b76996bbb928d0e77e2953b66ee209a"
+      },
+      "exr": {
+        "size": 511527,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_rough_1k.exr",
+        "md5": "fe49af21d23435c31c5093cd2c9e2717"
+      }
+    }
+  },
+  "Displacement": {
+    "8k": {
+      "jpg": {
+        "size": 18756761,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_disp_8k.jpg",
+        "md5": "2565c45d6e83d800703e33a7bca73c3a"
+      },
+      "png": {
+        "size": 92473185,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/8k/rocky_gravel/rocky_gravel_disp_8k.png",
+        "md5": "81390dfe6c497950737f55780e4e628d"
+      },
+      "exr": {
+        "size": 57230364,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_disp_8k.exr",
+        "md5": "224ea09891086fdebe4c2f1fe9a4fb3e"
+      }
+    },
+    "4k": {
+      "jpg": {
+        "size": 6618763,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_disp_4k.jpg",
+        "md5": "1e30cea5bf6a754a6a7f60c8049f029e"
+      },
+      "png": {
+        "size": 27012730,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/4k/rocky_gravel/rocky_gravel_disp_4k.png",
+        "md5": "1ba801614ddda62dbcc36afe1008dd4a"
+      },
+      "exr": {
+        "size": 17775538,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_disp_4k.exr",
+        "md5": "b825b3c35f84522d2e4ade85b269d92b"
+      }
+    },
+    "2k": {
+      "jpg": {
+        "size": 2226985,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_disp_2k.jpg",
+        "md5": "ee78c960115f95a28cfc0b5f7dc6093e"
+      },
+      "png": {
+        "size": 7165073,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/rocky_gravel/rocky_gravel_disp_2k.png",
+        "md5": "20a65db144d8205f5a8f0f669c1dbbe5"
+      },
+      "exr": {
+        "size": 4939826,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_disp_2k.exr",
+        "md5": "7fc83740a72cbcd568fc4ab229bdb4c8"
+      }
+    },
+    "1k": {
+      "jpg": {
+        "size": 678894,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_disp_1k.jpg",
+        "md5": "c139e789639e1a90329a17d4ee891aee"
+      },
+      "png": {
+        "size": 1867403,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/rocky_gravel/rocky_gravel_disp_1k.png",
+        "md5": "2f76e8343ec22805b82dfcc590b745f3"
+      },
+      "exr": {
+        "size": 1311053,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_disp_1k.exr",
+        "md5": "644d4391eb059e9fd2f8851364e03a8a"
+      }
+    }
+  },
+  "AO": {
+    "8k": {
+      "jpg": {
+        "size": 50338913,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_ao_8k.jpg",
+        "md5": "6cc09b909b7fde899930496e66086cf5"
+      },
+      "png": {
+        "size": 107819857,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/8k/rocky_gravel/rocky_gravel_ao_8k.png",
+        "md5": "690ac9f83a9154b67878cf05ca542c89"
+      },
+      "exr": {
+        "size": 87386694,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_ao_8k.exr",
+        "md5": "9ed02077a6d4620949a959edf1452885"
+      }
+    },
+    "4k": {
+      "jpg": {
+        "size": 15433445,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_ao_4k.jpg",
+        "md5": "0b917041238d7ce0ee5fb0204b4d36a7"
+      },
+      "png": {
+        "size": 30993883,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/4k/rocky_gravel/rocky_gravel_ao_4k.png",
+        "md5": "02a8b5f7f3f6151778eb8ee460943d3d"
+      },
+      "exr": {
+        "size": 22829442,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_ao_4k.exr",
+        "md5": "89c687144d71b4cc7cb9edb155ab44f8"
+      }
+    },
+    "2k": {
+      "jpg": {
+        "size": 4272482,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_ao_2k.jpg",
+        "md5": "dd158aebb353ed21f6e9fadaf9cc088e"
+      },
+      "png": {
+        "size": 8088647,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/rocky_gravel/rocky_gravel_ao_2k.png",
+        "md5": "e13116848ab6657f7a34eb68121da485"
+      },
+      "exr": {
+        "size": 5837274,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_ao_2k.exr",
+        "md5": "cdf2e791aefbed98def123afa7b7a896"
+      }
+    },
+    "1k": {
+      "jpg": {
+        "size": 1126945,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_ao_1k.jpg",
+        "md5": "1a9d3074dbee18b6e24d26ee66e27c49"
+      },
+      "png": {
+        "size": 2040497,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/rocky_gravel/rocky_gravel_ao_1k.png",
+        "md5": "3983468410f87925bc4f3bd9c18153d9"
+      },
+      "exr": {
+        "size": 1470575,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_ao_1k.exr",
+        "md5": "01421ca7fccba502dba44e514b1d75fd"
+      }
+    }
+  },
+  "mtlx": {
+    "8k": {
+      "mtlx": {
+        "include": {
+          "textures/rocky_gravel_disp_8k.png": {
+            "size": 92473185,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/8k/rocky_gravel/rocky_gravel_disp_8k.png",
+            "md5": "81390dfe6c497950737f55780e4e628d"
+          },
+          "textures/rocky_gravel_nor_gl_8k.exr": {
+            "size": 146445842,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_nor_gl_8k.exr",
+            "md5": "04217e322bc4848b2b3e6369c9b28f3c"
+          },
+          "textures/rocky_gravel_diff_8k.jpg": {
+            "size": 66004903,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/8k/rocky_gravel/rocky_gravel_diff_8k.jpg",
+            "md5": "78098f470dc4526cdc3d34fa24c09de8"
+          },
+          "textures/rocky_gravel_rough_8k.exr": {
+            "size": 24609192,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/8k/rocky_gravel/rocky_gravel_rough_8k.exr",
+            "md5": "07c9816edc631127c3a8590c3c76af4c"
+          }
+        },
+        "size": 4703,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/mtlx/8k/rocky_gravel/rocky_gravel_8k.mtlx",
+        "md5": "2acfdbb8f2df35b2561c09282f08ac02"
+      }
+    },
+    "4k": {
+      "mtlx": {
+        "include": {
+          "textures/rocky_gravel_disp_4k.png": {
+            "size": 27012730,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/4k/rocky_gravel/rocky_gravel_disp_4k.png",
+            "md5": "1ba801614ddda62dbcc36afe1008dd4a"
+          },
+          "textures/rocky_gravel_nor_gl_4k.exr": {
+            "size": 41763890,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_nor_gl_4k.exr",
+            "md5": "bfd48a2bb9e63f3e9cf9e0cefea8d1b4"
+          },
+          "textures/rocky_gravel_rough_4k.exr": {
+            "size": 7680731,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/4k/rocky_gravel/rocky_gravel_rough_4k.exr",
+            "md5": "40a79ba70d0d5988c2ac3555ca622580"
+          },
+          "textures/rocky_gravel_diff_4k.jpg": {
+            "size": 18032715,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/rocky_gravel/rocky_gravel_diff_4k.jpg",
+            "md5": "ac3f62f2f2afe040ff9fbbfc5e4c78e2"
+          }
+        },
+        "size": 4703,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/mtlx/4k/rocky_gravel/rocky_gravel_4k.mtlx",
+        "md5": "dcbe6558965947bfc671d396afac2164"
+      }
+    },
+    "2k": {
+      "mtlx": {
+        "include": {
+          "textures/rocky_gravel_nor_gl_2k.exr": {
+            "size": 11022953,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_nor_gl_2k.exr",
+            "md5": "b33384e95fb7dac38927515b0e2b1ba9"
+          },
+          "textures/rocky_gravel_rough_2k.exr": {
+            "size": 2066070,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/2k/rocky_gravel/rocky_gravel_rough_2k.exr",
+            "md5": "f1cf1a7a791483fab4c22414167f5427"
+          },
+          "textures/rocky_gravel_diff_2k.jpg": {
+            "size": 4832644,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_gravel/rocky_gravel_diff_2k.jpg",
+            "md5": "b78a49ef675dff9dcc62f4668854db23"
+          },
+          "textures/rocky_gravel_disp_2k.png": {
+            "size": 7165073,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/2k/rocky_gravel/rocky_gravel_disp_2k.png",
+            "md5": "20a65db144d8205f5a8f0f669c1dbbe5"
+          }
+        },
+        "size": 4703,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/mtlx/2k/rocky_gravel/rocky_gravel_2k.mtlx",
+        "md5": "48786bfdf08d0a0910c56ca2a4188a46"
+      }
+    },
+    "1k": {
+      "mtlx": {
+        "include": {
+          "textures/rocky_gravel_diff_1k.jpg": {
+            "size": 1272321,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_gravel/rocky_gravel_diff_1k.jpg",
+            "md5": "a1d5a23e5df0f2a43ec69d9a1b1c3f92"
+          },
+          "textures/rocky_gravel_disp_1k.png": {
+            "size": 1867403,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/rocky_gravel/rocky_gravel_disp_1k.png",
+            "md5": "2f76e8343ec22805b82dfcc590b745f3"
+          },
+          "textures/rocky_gravel_rough_1k.exr": {
+            "size": 511527,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_rough_1k.exr",
+            "md5": "fe49af21d23435c31c5093cd2c9e2717"
+          },
+          "textures/rocky_gravel_nor_gl_1k.exr": {
+            "size": 2792484,
+            "url": "https://dl.polyhaven.org/file/ph-assets/Textures/exr/1k/rocky_gravel/rocky_gravel_nor_gl_1k.exr",
+            "md5": "b38b0860a8573a4800a12536eae5fd4f"
+          }
+        },
+        "size": 4703,
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/mtlx/1k/rocky_gravel/rocky_gravel_1k.mtlx",
+        "md5": "014a6f1fcfcca505faead656288e43dd"
+      }
+    }
+  }
+}

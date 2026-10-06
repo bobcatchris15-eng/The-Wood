@@ -1,0 +1,43 @@
+09:21:34 | INFO: Data are loaded, start creating Blender stuff
+09:21:34 | INFO: Blender create Mesh node NurbsPath.022
+09:21:55 | INFO: Blender create Mesh node NurbsPath.023
+09:22:08 | INFO: Blender create Mesh node NurbsPath.024
+09:22:27 | INFO: glTF import finished in 53.23s
+C:\Misc\The-Wood\Tools\Prepare-Art.py:55: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  mat.use_nodes=True
+INFO Draco is available, use library at C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\addons_core\io_scene_gltf2\bf_intern_draco_bridge.dll
+INFO MeshOptimizer is available, use library at C:\Program Files\Blender Foundation\Blender 5.2\5.2\scripts\addons_core\io_scene_gltf2\bf_intern_meshopt_bridge.dll
+09:23:08 | INFO: Starting glTF 2.0 export
+09:23:08 | INFO: Extracting primitive: NurbsPath.022
+09:23:09 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:23:09 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:23:09 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:23:09 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:23:09 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+09:23:09 | INFO: Primitives created: 4
+09:23:09 | INFO: Finished glTF 2.0 export in 0.5714645385742188 s
+
+09:23:33 | INFO: Starting glTF 2.0 export
+09:23:33 | INFO: Extracting primitive: NurbsPath.023
+09:23:33 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:23:33 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:23:33 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:23:33 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:23:33 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+09:23:33 | INFO: Primitives created: 4
+09:23:33 | INFO: Finished glTF 2.0 export in 0.49547743797302246 s
+
+09:24:08 | INFO: Starting glTF 2.0 export
+09:24:08 | INFO: Extracting primitive: NurbsPath.024
+09:24:08 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:24:08 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:24:08 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:24:09 | WARNING: More than one shader node tex image used for a texture. The resulting glTF sampler will behave like the first shader node tex image.
+09:24:09 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+09:24:09 | INFO: Primitives created: 4
+09:24:09 | INFO: Finished glTF 2.0 export in 0.5079708099365234 s
+
+Prepared 42 grounded variants. See ArtSource/Prepared/inspection.json
+Blender 5.2.0 LTS (hash fbe6228777e7 built 2026-07-14 01:35:40)
+
+Blender quit

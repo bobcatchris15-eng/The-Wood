@@ -1,0 +1,93 @@
+#include "WoodWorld.h"
+#include "Generation/WoodStreaming.h"
+#include "WoodRuntime.h"
+#include "WoodPalette.h"
+#include "ProceduralMeshComponent.h"
+#include "Async/Async.h"
+#include "Engine/RectLight.h"
+#include "Components/RectLightComponent.h"
+#include "Engine/World.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+
+FVector AWoodWorld::ExplorerStart() const {
+ double X=-180,Y=-180;
+ FParse::Value(FCommandLine::Get(),TEXT("WoodStartX="),X);
+ FParse::Value(FCommandLine::Get(),TEXT("WoodStartY="),Y);
+ return FVector(X*100,Y*100,0);
+}
+int32 AWoodWorld::LoadedChunkCount() const {return Runtime->Chunks.Num();}
+void AWoodWorld::EnsureTerrainAround(FVector Position) {
+ FIntPoint Key(FMath::FloorToInt(Position.X/12800),FMath::FloorToInt(Position.Y/12800));
+ if(!Runtime->Chunks.Contains(Key)) Realize(WoodPrepareChunk(Generator,Key.X,Key.Y,Runtime->Kinds,Runtime->Profiles,Runtime->Available,false),false);
+}
+void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
+ const auto& Chunk=Prepared.Chunk;
+ const FIntPoint Key(Chunk.x,Chunk.y);
+ auto& Resident=Runtime->Chunks.FindOrAdd(Key);
+ if(!Resident.Ground) {
+  auto* Mesh=NewObject<UProceduralMeshComponent>(this); Mesh->SetupAttachment(RootComponent);Mesh->RegisterComponent();
+  TArray<FVector> Vertices,Normals;TArray<FVector2D> UVs;TArray<FLinearColor> Colors;TArray<int32> Triangles;
+  for(const auto& P:Chunk.vertices) Vertices.Add(FVector(P.x,P.y,P.z)*100);
+  Normals=Prepared.Normals;UVs=Prepared.HabitatUV;Colors=Prepared.BiomeColors;
+  for(auto I:Chunk.triangles) Triangles.Add(I);
+  Mesh->CreateMeshSection_LinearColor(0,Vertices,Triangles,Normals,UVs,Colors,TArray<FProcMeshTangent>(),true);
+  if(Palette) Mesh->SetMaterial(0,Palette->GroundMaterial.LoadSynchronous());
+  Terrain.Add(Mesh);Resident.Ground=Mesh;
+  TArray<FVector> WV,WN;TArray<FVector2D> WU;TArray<int32> WT;TArray<FLinearColor> WC;
+  for(int32 I=0;I<=64;++I) {
+   const double Y=Chunk.y*128+I*2,X=Generator.streamX(Y),Half=.92*Generator.streamHalfWidth(Y);
+   const double L=FMath::Clamp(X-Half,Chunk.x*128.0,(Chunk.x+1)*128.0),R=FMath::Clamp(X+Half,Chunk.x*128.0,(Chunk.x+1)*128.0);
+   const double Z=Generator.sample(X,Y).waterHeight+.015;
+   WV.Add(FVector(L,Y,Z)*100);WV.Add(FVector(R,Y,Z)*100);
+   WN.Add(FVector::UpVector);WN.Add(FVector::UpVector);WU.Add(FVector2D(0,Y/8));WU.Add(FVector2D(1,Y/8));WC.Add(FLinearColor::White);WC.Add(FLinearColor::White);
+   if(I>0&&(R>L||WV[(I-1)*2+1].X>WV[(I-1)*2].X)) {const int32 N=(I-1)*2;WT.Append({N,N+2,N+1,N+1,N+2,N+3});}
+  }
+  if(!WT.IsEmpty()) {
+   auto* WaterMesh=NewObject<UProceduralMeshComponent>(this);WaterMesh->SetupAttachment(RootComponent);WaterMesh->RegisterComponent();WaterMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+   WaterMesh->CreateMeshSection_LinearColor(0,WV,WT,WN,WU,WC,TArray<FProcMeshTangent>(),false);
+   if(Palette) WaterMesh->SetMaterial(0,Palette->WaterMaterial.LoadSynchronous());Water.Add(WaterMesh);Resident.Water=WaterMesh;
+  }
+ }
+ if(Resident.Detailed||!Detailed) return;
+ const auto& Placements=Prepared.Placements;Resident.Instances.SetNum(Vegetation.Num());
+ for(int32 I=0;I<Vegetation.Num();++I) if(!Placements[I].IsEmpty()) {
+  Resident.Instances[I]=Vegetation[I]->AddInstancesById(Placements[I],true,false);
+ }
+ Resident.Detailed=true;
+}
+void AWoodWorld::Stream(FVector Position) {
+ EnsureTerrainAround(Position);
+ const FIntPoint Center(FMath::FloorToInt(Position.X/12800),FMath::FloorToInt(Position.Y/12800));
+ TArray<FIntPoint> Done;for(auto& Job:Runtime->Jobs) if(Job.Value.IsReady()) {Done.Add(Job.Key);break;}
+ for(auto Key:Done) {auto Chunk=Runtime->Jobs[Key].Get();Runtime->Jobs.Remove(Key);if(FMath::Abs(Key.X-Center.X)<=ChunkRadius+1&&FMath::Abs(Key.Y-Center.Y)<=ChunkRadius+1) Realize(Chunk);}
+ TArray<FIntPoint> Remove;for(auto& Entry:Runtime->Chunks) if(FMath::Abs(Entry.Key.X-Center.X)>ChunkRadius+2||FMath::Abs(Entry.Key.Y-Center.Y)>ChunkRadius+2) Remove.Add(Entry.Key);
+ for(auto Key:Remove) {
+  auto& C=Runtime->Chunks[Key];for(int32 I=0;I<C.Instances.Num();++I) if(!C.Instances[I].IsEmpty()) {
+   Vegetation[I]->RemoveInstancesById(C.Instances[I],false);
+  }
+  Terrain.Remove(C.Ground);C.Ground->DestroyComponent();if(C.Water) {Water.Remove(C.Water);C.Water->DestroyComponent();}Runtime->Chunks.Remove(Key);
+ }
+ std::vector<wood::streaming::Coord> Loaded,Pending;
+ for(const auto& Entry:Runtime->Chunks) if(Entry.Value.Detailed) Loaded.push_back({Entry.Key.X,Entry.Key.Y});
+ for(const auto& Entry:Runtime->Jobs) Pending.push_back({Entry.Key.X,Entry.Key.Y});
+ const auto Plan=wood::streaming::plan(Position.X/100,Position.Y/100,Loaded,Pending,{128,ChunkRadius,ChunkRadius+2,2});
+ for(const auto& Coordinate:Plan.needed) {
+  if(Runtime->Jobs.Num()>=2) break;
+  const FIntPoint Key(Coordinate.x,Coordinate.y);
+  const wood::World Snapshot=Generator;const auto Kinds=Runtime->Kinds;const auto Profiles=Runtime->Profiles;const auto Available=Runtime->Available;
+  Runtime->Jobs.Add(Key,Async(EAsyncExecution::ThreadPool,[Snapshot,Key,Kinds,Profiles,Available](){return WoodPrepareChunk(Snapshot,Key.X,Key.Y,Kinds,Profiles,Available);}));
+ }
+ // Fixed world-space light tiles preserve shadows as the player moves.
+ const FIntPoint LightCenter(FMath::FloorToInt(Position.X/51200),FMath::FloorToInt(Position.Y/51200));
+ if(Runtime->LightCenter!=LightCenter) {
+  Runtime->LightCenter=LightCenter;
+  for(int32 I=RegionLights.Num()-1;I>=0;--I) {const FVector P=RegionLights[I]->GetActorLocation();if(FMath::Abs(P.X-Position.X)>110000||FMath::Abs(P.Y-Position.Y)>110000){RegionLights[I]->Destroy();RegionLights.RemoveAt(I);}}
+  for(int32 Y=-1;Y<=1;++Y) for(int32 X=-1;X<=1;++X) {
+   const FVector P((LightCenter.X+X)*51200.0+25600,(LightCenter.Y+Y)*51200.0+25600,18000);
+   bool Exists=false;for(const auto& L:RegionLights) if(FVector::DistSquared2D(L->GetActorLocation(),P)<1) Exists=true;
+   if(Exists) continue;auto* L=GetWorld()->SpawnActor<ARectLight>(P,FRotator(-90,0,0));if(!L) continue;
+   auto* C=Cast<URectLightComponent>(L->GetLightComponent());C->SetMobility(EComponentMobility::Movable);C->SetAttenuationRadius(55000);C->SetSourceWidth(3000);C->SetSourceHeight(3000);C->SetUseTemperature(true);C->SetIntensityUnits(ELightUnits::Candelas);C->SetCastShadows(false);RegionLights.Add(L);
+  }
+ }
+}
