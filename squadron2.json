@@ -1,0 +1,40 @@
+{
+  "_comment": "Wave 2. Leverages the resources announced 2026-10-07: Blender 5.2 on PATH, the E:/Vivarium procedural flora, and the fact that Unreal is reinstalling (so no engine work). Every assignment assumes Docs/clanker/WorkerBrief.md has been read first.",
+  "workers": [
+    {
+      "key": "vivarium-flora-map",
+      "title": "Vivarium flora to Wood climate mapping",
+      "profile": "architecture",
+      "worktree": false,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first, then Docs/Specification.md sections 4, 5 and 10, and Docs/BiomeCatalog.md.\n\nE:\\Vivarium has 34 procedurally generated plant species and NO mesh files. Read E:\\Vivarium\\src\\Vivarium.Sim\\Geometry\\OrganismMeshes.cs, OrganismMeshes.VisualBreakFlora.cs, FloraLeaf.cs, FloraVisualCompiler.cs and E:\\Vivarium\\src\\Vivarium.Sim\\Flora\\Flora.cs.\n\nProduce a mapping table: Vivarium species -> the The Wood climate family or unreal-variant role it could serve -> what the port would actually require (algorithm to lift vs asset to export). Note explicitly which species fit Specification.md section 5's unreal character (excessive fungi, implausible canopy, unusual colour) versus ordinary biome cover.\n\nThen state the single highest-value port: which algorithm gives The Wood the most believable new plant forms per unit of work, and why. Cite file:line for both sides. Do not edit any file."
+    },
+    {
+      "key": "generator-gap-vs-brief",
+      "title": "Spec and plan drift audit",
+      "profile": "review",
+      "worktree": false,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first.\n\nDocs/Status.md, README.md, Docs/BiomeGeneration.md, Docs/BiomeCatalog.md, Docs/DiscoveryCatalog.md and the two plans in Docs/superpowers/plans/ were written across several passes. Some describe work that later passes superseded; some plans describe a hex migration that Docs/Status.md says has only a geometric foundation.\n\nBuild a drift table: document and section -> what it claims -> what Source/ and Tests/ actually contain -> still accurate / superseded / aspirational / wrong. Flag every place a future specification is presented as though implemented, and every place an implemented change was never folded back into the older document. Cite file:line. Do not edit any file."
+    },
+    {
+      "key": "asset-provenance",
+      "title": "Asset provenance and licence audit",
+      "profile": "review",
+      "worktree": false,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first, then Docs/Specification.md section 10 and Docs/Assets.md.\n\nSection 10 requires that assets have suitable redistribution rights and that source URLs, licence records and checksums are preserved.\n\nAudit the actual Content/Art tree and ArtSource/ against Docs/Assets.md. For each asset group: is it documented, does it have a recorded source and licence, is there a checksum, and is it still present on disk. Report undocumented assets, missing provenance fields, and records pointing at files that no longer exist. Also assess whether the current palette (three pine variants, four ferns, ten grass variants, fourteen rocks) satisfies the four-biome claim in Docs/Status.md, given that Docs/Status.md itself calls it a limited library shared across four families. Cite paths. Do not edit any file."
+    },
+    {
+      "key": "blender-plant-prep",
+      "title": "Blender plant asset preparation pipeline",
+      "profile": "implementation",
+      "worktree": true,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first. Blender 5.2 is at C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe. Unreal is reinstalling, so do not attempt engine work.\n\nDocs/Specification.md section 10 requires the asset pipeline to verify scale, ground-contact pivots, normals, alpha masking, wind weights, collision, material compatibility with instancing, and distance detail.\n\nRead Tools/Prepare-Art.py and Tools/Inspect-TreeRoots.py to learn the existing conventions. Then write Tools/Prepare-Plant.py, a Blender background script that takes a source plant mesh and emits the pipeline's required outputs: a ground-contact pivot at the true base rather than the object origin, a wind-weight attribute separating rooted base from moving canopy, alpha-ready material naming, and a distance LOD stage. It must run headless via blender --background --python and follow the argument and error-handling style of the existing Tools scripts.\n\nWrite that one file plus a short section appended to a NEW file Docs/Assets-PlantPipeline.md. Do not modify source or existing Tools scripts."
+    },
+    {
+      "key": "squad-machinery-review",
+      "title": "Orchestration machinery post-mortem",
+      "profile": "review",
+      "worktree": false,
+      "assignment": "Read Docs/clanker/WorkerBrief.md, then Docs/clanker/ModelDossier.md and Tools/clanker-fleet/squadron.mjs plus Tools/clanker-fleet/squadron-op.mjs.\n\nThe fleet harness has hard-won operational knowledge baked in as comments. Produce a short operations review covering: the constraints that actually bite (operator must outlive its launcher because session_shutdown stops workers; prompts need streamingBehavior followUp or they are silently dropped; git worktree add checks out ~777 files and dominates spawn latency; a pinned model is a request not a guarantee), anything in the harness that is fragile or would surprise a new operator, and the two concrete defects already found in the StatefulClanker extension itself - the single-sample rating nudge in catalog/profiles.ts resolveProfile that rewrites a curated rating without updating its source tag, and that a receipt only exists if the worker calls worker_finish so a silent give-up loses the task entirely.\n\nWrite the review to Docs/clanker/OperationsReview.md. Cite file:line. Do not modify the harness."
+    }
+  ]
+}
