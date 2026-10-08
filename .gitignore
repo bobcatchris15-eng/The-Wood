@@ -14,3 +14,8 @@ __pycache__/
 *.pdb
 *.log
 .claude/
+.oc-proxy-scratch/
+Tools/oc-proxy/proxy.log
+
+# StatefulClanker orchestration state (tasks, receipts, event log, worktrees)
+.statefulclanker/

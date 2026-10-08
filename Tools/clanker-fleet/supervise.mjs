@@ -59,23 +59,41 @@ function journal(kind, data) {
   appendFileSync(HB, JSON.stringify({ ts: new Date().toISOString(), kind, ...data }) + "\n");
 }
 
-/** Tasks in the spec, matched to their worker by title. */
+/**
+ * Tasks in the spec, matched to every worker that ever attempted them.
+ *
+ * Earlier this matched only `task.assigned_worker`, which was a bug: a retried task
+ * spawns a NEW task record, so each retry saw the original still-unassigned worker
+ * and retried again. Three workers independently wrote the same 500-line design
+ * because of it. Matching on title across ALL task buckets fixes it.
+ */
 function reconcile(spec) {
   const all = tasks();
   return spec.workers.map((w) => {
-    const task = all.find((t) => t.title === w.title);
-    const worker = task?.assigned_worker ? workers().find((x) => x.id === task.assigned_worker) : null;
-    const receipt = worker?.results?.length ? worker.results[worker.results.length - 1] : null;
-    const terminal = worker ? ["COMPLETE", "FAILED", "CANCELLED", "LOST"].includes(worker.status) : true;
-    const stalled = worker && !terminal && !receipt &&
-      Date.now() - new Date(worker.last_activity).getTime() > 25 * 60 * 1000;
+    const attempts = all.filter((t) => t.title.startsWith(w.title));
+    const ws = attempts.map((t) => workers().find((x) => x.id === t.assigned_worker)).filter(Boolean);
+    const receipts = ws.flatMap((x) => (x.results?.length ? [x.results[x.results.length - 1]] : []));
+    const winner = ws.find((x) => x.results?.length);
+    const stalled = ws.filter((x) => !x.results?.length &&
+      !["COMPLETE", "FAILED", "CANCELLED", "LOST"].includes(x.status));
+    const lastActivity = ws.length
+      ? ws.map((x) => new Date(x.last_activity).getTime()).sort((a, b) => b - a)[0] : 0;
+    const stalledRecently = stalled.length && Date.now() - lastActivity > 25 * 60 * 1000;
+    const neverFinished = ws.filter((x) => !x.results?.length &&
+      ["FAILED", "CANCELLED", "LOST"].includes(x.status));
+
     return {
-      key: w.key, spec: w, task, worker,
-      done: !!receipt,
-      dead: !receipt && (terminal || stalled),
-      why: !worker ? "never spawned" : receipt ? "" :
-        stalled ? `stalled (no activity since ${worker.last_activity})` : worker.status,
-      model: worker ? `${worker.provider}/${worker.model}` : null,
+      key: w.key, spec: w, attempts: attempts.length,
+      worker: winner ?? ws[ws.length - 1] ?? null,
+      done: receipts.length > 0,
+      receipt: receipts[0] ?? null,
+      // Only dead if NO attempt ever produced a receipt.
+      dead: receipts.length === 0 && (ws.length === 0 || stalledRecently || neverFinished.length > 0),
+      why: ws.length === 0 ? "never spawned"
+        : receipts.length ? ""
+        : stalledRecently ? `stalled (${ws.length} attempt(s), none active)`
+        : `${neverFinished.length} attempt(s) died without a receipt`,
+      model: winner ? `${winner.provider}/${winner.model}` : null,
     };
   });
 }
@@ -171,7 +189,8 @@ async function main() {
     for (const r of dead) console.log(`  DEAD  ${r.key.padEnd(20)} ${r.model ?? "-"} ${r.why}`);
 
     if (!dead.length) {
-      console.log("  all tasks resolved - supervisor exiting");
+      console.log("  all tasks resolved");
+      await integrateAll();
       journal("supervisor-complete", {});
       op.child.kill();
       process.exit(0);
@@ -183,17 +202,57 @@ async function main() {
       break;
     }
 
-    for (const row of dead) {
+    for (const row of rows) {
+      if (row.done) continue;
       console.log(`  reassigning ${row.key} (${row.why})`);
       await reassign(op, row, tried);
       await sleep(3000);
     }
     round++;
 
+    // Integrations are the operator's job, and skipping it is how six completed
+    // workers produced zero artifacts on main. Do it every round.
+    await integrateAll();
+
     console.log(`  sleeping ${INTERVAL_MIN}m`);
     await sleep(INTERVAL_MIN * 60 * 1000);
   }
   shutdown();
+}
+
+/** Copy every completed worker's uncommitted files onto the working tree. */
+async function integrateAll() {
+  const wtRoot = join(SC, "worktrees");
+  if (!existsSync(wtRoot)) return;
+  const { readdirSync, copyFileSync, mkdirSync } = await import("node:fs");
+  const { dirname, join: pjoin } = await import("node:path");
+  const { execFileSync } = await import("node:child_process");
+  const done = new Set();
+
+  for (const id of readdirSync(wtRoot)) {
+    const wt = pjoin(wtRoot, id);
+    if (!existsSync(pjoin(wt, ".git"))) continue;
+    const w = workers().find((x) => x.id === id);
+    if (!w?.results?.length) continue;           // only completed work
+    let lines = [];
+    try {
+      lines = execFileSync("git", ["-C", wt, "status", "--porcelain"], { encoding: "utf8" })
+        .split("\n").filter((l) => l.trim() && !l.includes(".clanker") && !l.includes("->"));
+    } catch { continue; }
+    for (const l of lines) {
+      const rel = l.slice(3).trim().replace(/^"/, "").replace(/"$/, "");
+      if (!rel) continue;
+      const key = rel;
+      if (done.has(key)) { journal("integrate-dup", { rel, skipped: true }); continue; }
+      try {
+        mkdirSync(dirname(pjoin(ROOT, rel)), { recursive: true });
+        copyFileSync(pjoin(wt, rel), pjoin(ROOT, rel));
+        done.add(key);
+        journal("integrated", { worker: id, model: `${w.provider}/${w.model}`, file: rel });
+        console.log(`  integrated ${rel}  (${id} ${w.provider}/${w.model})`);
+      } catch (e) { journal("integrate-error", { worker: id, rel, message: String(e) }); }
+    }
+  }
 }
 
 main().catch((e) => {

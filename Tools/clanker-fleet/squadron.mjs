@@ -28,8 +28,9 @@
  */
 
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, openSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, openSync, readdirSync, copyFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { join, dirname } from "node:path";
 import { spawnOperatorWithPipe, ask, cancelAll } from "./squadron-op.mjs";
 
 const ROOT = process.cwd();
@@ -279,10 +280,54 @@ async function down() {
   console.log("done");
 }
 
+async function harvest() {
+  const wtRoot = join(SC, "worktrees");
+  if (!existsSync(wtRoot)) return console.log("no worktrees");
+  const out = [];
+  for (const id of readdirSync(wtRoot)) {
+    const wt = join(wtRoot, id);
+    if (!existsSync(join(wt, ".git"))) continue;
+    const files = execFileSync("git", ["-C", wt, "status", "--porcelain"], { encoding: "utf8" })
+      .split("\n").filter((l) => l.trim());
+    const w = workers().find((x) => x.id === id);
+    out.push({
+      id,
+      model: w ? `${w.provider}/${w.model}` : "(archived)",
+      name: w?.display_name ?? null,
+      receipt: !!(w?.results?.length),
+      files: files.map((l) => l.slice(3).trim()),
+    });
+  }
+  console.log("id    model                        name           receipt  uncommitted");
+  for (const o of out)
+    console.log(`${o.id}  ${o.model.padEnd(28)} ${(o.name || "-").padEnd(13)} ${(o.receipt ? "yes" : "NO").padEnd(7)} ${o.files.length}`);
+  console.log("\nIntegrate with:  node squadron.mjs integrate <workerId>");
+}
+
+/** Copy a worker's uncommitted files onto the working tree, then commit nothing. */
+function integrate(id) {
+  const wt = join(SC, "worktrees", id);
+  if (!existsSync(wt)) return console.log(`no worktree for ${id}`);
+  const lines = execFileSync("git", ["-C", wt, "status", "--porcelain"], { encoding: "utf8" })
+    .split("\n").filter((l) => l.trim() && !l.includes(".clanker"));
+  if (!lines.length) return console.log(`${id}: nothing to integrate`);
+  for (const l of lines) {
+    const rel = l.slice(3).trim().replace(/^"/, "").replace(/"$/, "");
+    if (!rel || rel.includes("->")) continue;
+    const src = join(wt, rel), dst = join(ROOT, rel);
+    mkdirSync(dirname(dst), { recursive: true });
+    copyFileSync(src, dst);
+    console.log(`  ${rel}`);
+  }
+  console.log(`\nintegrated ${lines.length} file(s) from ${id}. Review, then commit.`);
+}
+
 const cmd = process.argv[2] || "status";
 if (cmd === "doctor") await doctor();
 else if (cmd === "up") await up();
 else if (cmd === "status") status();
 else if (cmd === "show") show(process.argv[3]);
+else if (cmd === "harvest") harvest();
+else if (cmd === "integrate") integrate(process.argv[3]);
 else if (cmd === "down") await down();
 else console.log("commands: up | status | show <id> | down | doctor");

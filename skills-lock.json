@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "ue-async-threading": {
+      "source": "quodsoler/unreal-engine-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ue-async-threading/SKILL.md",
+      "computedHash": "c43eca12b3d902bba269f2602097a68d796f41cdb64c4d923189fb8775382e58"
+    },
+    "ue-materials-rendering": {
+      "source": "quodsoler/unreal-engine-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ue-materials-rendering/SKILL.md",
+      "computedHash": "66203093fe8128759d12afd66afbfc7289ecaffd923150599f9ed1e6bf76bc87"
+    },
+    "ue-module-build-system": {
+      "source": "quodsoler/unreal-engine-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ue-module-build-system/SKILL.md",
+      "computedHash": "f872e80bb2f9c63214df05c899d61c05e2235b6fe0fffb2f4a6e64723da631e1"
+    },
+    "ue-procedural-generation": {
+      "source": "quodsoler/unreal-engine-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ue-procedural-generation/SKILL.md",
+      "computedHash": "1a6630f55d9b6dd1efb1e229a1c40fe16a3b0db7ddea166021ade3cdd6ebe6c3"
+    },
+    "ue-serialization-savegames": {
+      "source": "quodsoler/unreal-engine-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ue-serialization-savegames/SKILL.md",
+      "computedHash": "5bb447d1c5242d502d3af41f12cfcad60f4f78bb104166b82599b23e16a7fccd"
+    },
+    "ue-world-level-streaming": {
+      "source": "quodsoler/unreal-engine-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ue-world-level-streaming/SKILL.md",
+      "computedHash": "cc1c5cf52f0ada773a8e0a01cdc04fa2685b45ce074b39093ad45e54d75dda81"
+    }
+  }
+}
