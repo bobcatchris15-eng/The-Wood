@@ -118,6 +118,25 @@ void testEnteredIsWilderness() {
  check(a.brightness==b.brightness&&a.kelvin==b.kelvin,"entered lighting in zone is wilderness lighting");
 }
 
+// Stream is dry on the lot pad and path while not entered; entered worlds keep their stream unchanged.
+void testStreamDryInZone() {
+ const std::uint32_t streamSeeds[]={0u,42u,98765u,12345u};
+ for(const std::uint32_t seed:streamSeeds) {
+  World closed(Settings{seed});
+  closed.setEntered(false);
+  World entered(Settings{seed});
+  entered.setEntered(true);
+  const World wilderness(Settings{seed});
+  for(int gx=-30;gx<=30;++gx) for(int gy=-580;gy<=-220;++gy) {
+   const double x=gx, y=gy;
+   const bool onLot=wood::entrance::lotDistance(x,y)<=0;
+   const bool onPath=wood::entrance::pathDistance(x,y)<=wood::entrance::PathHalfWidth;
+   if(onLot||onPath) check(closed.streamDepth(x,y)==0,"stream dry on lot pad and path when not entered");
+   check(entered.streamDepth(x,y)==wilderness.streamDepth(x,y),"entered stream unchanged");
+  }
+ }
+}
+
 void testNotEnteredLightingAndTrees() {
  World closed(Settings{42});
  closed.setEntered(false);
@@ -140,6 +159,7 @@ int main() {
  testOutsideZoneIdentical();
  testEnteredIsWilderness();
  testNotEnteredLightingAndTrees();
+ testStreamDryInZone();
  if(failures==0) std::cout<<"Entrance tests passed\n";
  else std::cout<<failures<<" entrance test failures\n";
  return failures==0?0:1;

@@ -38,13 +38,17 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
   if(Palette) Mesh->SetMaterial(0,Palette->GroundMaterial.LoadSynchronous());
   Terrain.Add(Mesh);Resident.Ground=Mesh;
   TArray<FVector> WV,WN;TArray<FVector2D> WU;TArray<int32> WT;TArray<FLinearColor> WC;
+  // Water exists only where the core reports depth; dry rows (entrance zone) emit no ribbon.
+  TArray<bool> Wet;
   for(int32 I=0;I<=64;++I) {
    const double Y=Chunk.y*128+I*2,X=Generator.streamX(Y),Half=.92*Generator.streamHalfWidth(Y);
    const double L=FMath::Clamp(X-Half,Chunk.x*128.0,(Chunk.x+1)*128.0),R=FMath::Clamp(X+Half,Chunk.x*128.0,(Chunk.x+1)*128.0);
-   const double Z=Generator.sample(X,Y).waterHeight+.015;
+   const auto Core=Generator.sample(X,Y);
+   Wet.Add(Core.depth>0);
+   const double Z=Core.waterHeight+.015;
    WV.Add(FVector(L,Y,Z)*100);WV.Add(FVector(R,Y,Z)*100);
    WN.Add(FVector::UpVector);WN.Add(FVector::UpVector);WU.Add(FVector2D(0,Y/4));WU.Add(FVector2D(1,Y/4));WC.Add(FLinearColor::White);WC.Add(FLinearColor::White);
-   if(I>0&&(R>L||WV[(I-1)*2+1].X>WV[(I-1)*2].X)) {const int32 N=(I-1)*2;WT.Append({N,N+2,N+1,N+1,N+2,N+3});}
+   if(I>0&&Wet[I]&&Wet[I-1]&&(R>L||WV[(I-1)*2+1].X>WV[(I-1)*2].X)) {const int32 N=(I-1)*2;WT.Append({N,N+2,N+1,N+1,N+2,N+3});}
   }
   if(!WT.IsEmpty()) {
    auto* WaterMesh=NewObject<UProceduralMeshComponent>(this);WaterMesh->SetupAttachment(RootComponent);WaterMesh->RegisterComponent();WaterMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);

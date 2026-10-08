@@ -153,15 +153,20 @@ double groundBase(const World& world,double x,double y,double stream,const Surfa
  const double base=water+3.0+broad+detail+valleyWall+mountainMass+crags+prairie;
  return bank+(base-bank)*smooth((distance-10.0)/25.0);
 }
+// Stream distance far enough that groundBase sees no channel: the dry, carve-free wilderness height.
+constexpr double FarStream=1e6;
 // Wilderness base height, blended toward the trailhead entrance inside its zone while not entered.
+// The stream carve fades out with entrance::blend, so the lot and path are dry.
 double ground(const World& world,double x,double y,double stream,const Surface* cachedClimate=nullptr) {
  const double base=groundBase(world,x,y,stream,cachedClimate);
  if(world.entered()) return base;
  const double w=entrance::blend(x,y);
  if(w<=0) return base;
- const double lotHeight=groundBase(world,entrance::LotX,entrance::LotY,world.streamX(entrance::LotY));
- const double shaped=entrance::shapedHeight(x,y,base,lotHeight);
- return w>=1?shaped:base+(shaped-base)*w;
+ const double dry=groundBase(world,x,y,x+FarStream,cachedClimate);
+ const double carved=dry+(base-dry)*(1-w);
+ const double lotHeight=groundBase(world,entrance::LotX,entrance::LotY,entrance::LotX+FarStream);
+ const double shaped=entrance::shapedHeight(x,y,carved,lotHeight);
+ return w>=1?shaped:carved+(shaped-carved)*w;
 }
 }
 bool allowedAdjacent(Biome a,Biome b) {
@@ -193,6 +198,8 @@ double World::streamHalfWidth(double y) const {
 double World::bankProfile(double d01) { return 1-smooth(d01); }
 double World::streamDepth(double x,double y) const {
  validatePoint(x,y);
+ // No water in the entrance zone while not entered: the lot and path stay dry.
+ if(!entered_&&entrance::blend(x,y)>0.5) return 0;
  if(std::abs(x-streamX(y))>=2.0*streamHalfWidth(y)) return 0;
  return std::max(0.0,waterLevel(y)-ground(*this,x,y,streamX(y)));
 }
@@ -204,7 +211,8 @@ Surface World::sample(double x,double y) const {
  const double dy=(ground(*this,x,y+0.25,streamX(y+0.25))-ground(*this,x,y-0.25,streamX(y-0.25)))/0.5;
  s.slope=std::hypot(dx,dy);
  s.waterHeight=waterLevel(y);
- s.depth=std::abs(x-streamX(y))<streamHalfWidth(y)?std::max(0.0,s.waterHeight-s.height):0;
+ const bool dryZone=!entered_&&entrance::blend(x,y)>0.5;
+ s.depth=(!dryZone&&std::abs(x-streamX(y))<streamHalfWidth(y))?std::max(0.0,s.waterHeight-s.height):0;
  s.moisture=std::clamp(s.moisture+0.25*std::exp(-std::abs(x-streamX(y))/12),0.0,1.0);
  return s;
 }

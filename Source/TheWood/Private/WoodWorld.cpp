@@ -5,6 +5,7 @@
 #include "GameFramework/PlayerController.h"
 #include "WoodPalette.h"
 #include "Generation/WoodAtmosphere.h"
+#include "Generation/WoodEntrance.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/RectLightComponent.h"
@@ -170,9 +171,11 @@ void AWoodWorld::SetEntered(bool Value) {
 }
 void AWoodWorld::SpawnTrailheadLot() {
  if(TrailheadLot) return;
- // Lot pad 44x28 m centred (0,-560) m, 6 m skirt fading vertex alpha to 0. Units: cm.
- constexpr double PadMinX=-2200,PadMaxX=2200,PadMinY=-57400,PadMaxY=-54600;
- constexpr double Skirt=600,Cell=100;
+ // Lot pad from the core (metres, converted to cm), skirt fading vertex alpha to 0.
+ namespace entrance=wood::entrance;
+ constexpr double PadMinX=(entrance::LotX-entrance::LotHalfW)*100,PadMaxX=(entrance::LotX+entrance::LotHalfW)*100;
+ constexpr double PadMinY=(entrance::LotY-entrance::LotHalfH)*100,PadMaxY=(entrance::LotY+entrance::LotHalfH)*100;
+ constexpr double Skirt=entrance::LotPadSkirt*100,Cell=100;
  constexpr int32 NX=static_cast<int32>((PadMaxX-PadMinX+2*Skirt)/Cell);
  constexpr int32 NY=static_cast<int32>((PadMaxY-PadMinY+2*Skirt)/Cell);
  const double X0=PadMinX-Skirt,Y0=PadMinY-Skirt;

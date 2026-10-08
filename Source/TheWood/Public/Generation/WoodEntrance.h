@@ -9,6 +9,8 @@ namespace wood::entrance {
 inline constexpr double LotX=0, LotY=-560, LotHalfW=22, LotHalfH=14;
 // Terrain blend skirts: lot flattening 12 m, zone edge 40 m.
 inline constexpr double LotSkirt=12, ZoneSkirt=40;
+// Adapter-only: visual lot overlay fade-out skirt beyond the pad edge (metres).
+inline constexpr double LotPadSkirt=6;
 // Path is 2.4 m wide, sunk 0.08 m, with a 3 m tree-free margin beyond its edges.
 inline constexpr double PathHalfWidth=1.2, PathSink=0.08, PathMargin=3;
 // Zone = lot rectangle union 60 m around the path, cut off at y = ZoneEndY.
