@@ -147,7 +147,7 @@ int main() {
     const auto r = testWorld.region(cx, cy);
     const Vec3 center{r.origin.x, r.origin.y, testWorld.terrainHeight(r.origin.x, r.origin.y)};
     const auto climate = testWorld.sample(r.origin.x, r.origin.y);
-    const auto plan = planDiscovery(seed, cx, cy, center, climate, hFn, sXFn, sHWFn);
+    const auto plan = planDiscovery(seed, cx, cy, center, climate, hFn, sXFn, sHWFn, r.ruins);
     if(plan.valid && (plan.reservation.innerRadius > 0.0 || plan.reservation.outerRadius > 0.0)) {
      testReservations.push_back(plan.reservation);
     }
@@ -253,6 +253,20 @@ int main() {
    check(core.sample(first->x,first->y).biome[static_cast<std::size_t>(Biome::Taiga)]>=0.85,"nearestBiomeCore point meets the minimum Taiga weight");
   }
   check(!core.nearestBiomeCore(Biome::Taiga,-1002.724,-1605,0,0.85).has_value(),"nearestBiomeCore rejects zero radius");
+ }
+ // Independent region flags over 10,000 cells: unreal p=0.10, ruins p=1/3, co-occurrence equals the product.
+ {
+  World flags({42,128,32});
+  int unreal=0,ruins=0,both=0,total=0;
+  for(int q=-50;q<50;++q) for(int r=-50;r<50;++r) {
+   const auto g=flags.region(q,r);
+   ++total; unreal+=g.unreal; ruins+=g.ruins; both+=(g.unreal&&g.ruins);
+  }
+  const double pu=static_cast<double>(unreal)/total, pr=static_cast<double>(ruins)/total, pb=static_cast<double>(both)/total;
+  check(total==10000,"region flag sample covers 10000 cells");
+  check(pu>=0.09&&pu<=0.11,"unreal region fraction is about one tenth");
+  check(pr>=0.323&&pr<=0.343,"ruins region fraction is about one third");
+  check(std::abs(pb-pu*pr)<=0.01,"unreal and ruins region flags are independent");
  }
  bool badTime=false; try { o.advance(-1); } catch(const std::invalid_argument&) { badTime=true; }
  check(badTime,"negative elapsed time rejected");

@@ -476,7 +476,8 @@ DiscoveryPlan planDiscovery(
     const Surface& cellClimate,
     const std::function<double(double, double)>& heightFn,
     const std::function<double(double)>& streamXFn,
-    const std::function<double(double)>& streamHWFn)
+    const std::function<double(double)>& streamHWFn,
+    bool ruins)
 {
     const bool isHighlands = (cellClimate.biome[2] > 0.25) || (cellClimate.slope > 0.25) || (cellClimate.roughness > 0.5);
 
@@ -506,9 +507,8 @@ DiscoveryPlan planDiscovery(
     }
     const bool isStreamCrossing = hasStream && (dStream <= hw + 8.0);
 
-    // Constructed Discovery Allocation: approximately 1 in 3 cells
-    const std::uint32_t cellHash = hashCell(seed, cellQ, cellR);
-    if ((cellHash % 3) != 0) {
+    // Constructed Discovery Allocation: owning region's independent ruins flag (p=1/3)
+    if (!ruins) {
         return DiscoveryPlan{};
     }
 

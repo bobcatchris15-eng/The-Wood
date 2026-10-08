@@ -98,7 +98,8 @@ DiscoveryPlan planDiscovery(
     const Surface& cellClimate,
     const std::function<double(double, double)>& heightFn,
     const std::function<double(double)>& streamXFn,
-    const std::function<double(double)>& streamHWFn);
+    const std::function<double(double)>& streamHWFn,
+    bool ruins);
 
 DiscoveryPlan generateDryStoneShelter(
     std::uint32_t seed,

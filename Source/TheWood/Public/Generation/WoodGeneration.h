@@ -18,6 +18,8 @@ struct Region {
  double extent=3100, temperature=0, canopy=0, exposure=0, shelter=0;
  std::uint32_t identity=0;
  int q=0,r=0;
+ // Independent per-region flags: unreal p=0.10, ruins p=1/3.
+ bool unreal=false, ruins=false;
 };
 struct Surface {
  double height=0, forest=0, moisture=0, slope=0, waterHeight=0, depth=0;

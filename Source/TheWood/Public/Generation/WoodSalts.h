@@ -12,6 +12,10 @@ inline constexpr std::uint32_t RegionIdentity=701;
 inline constexpr std::uint32_t RegionFamily=704;
 // Region lighting phase (describe()).
 inline constexpr std::uint32_t RegionPhase=705;
+// Region unreal flag, p=0.10 (describe()).
+inline constexpr std::uint32_t RegionUnreal=716;
+// Region ruins flag, p=1/3 (describe()).
+inline constexpr std::uint32_t RegionRuins=717;
 // Value-noise lattice corner hash (noise()).
 inline constexpr std::uint32_t NoiseLattice=1;
 

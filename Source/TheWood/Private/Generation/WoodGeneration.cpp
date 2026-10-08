@@ -47,6 +47,8 @@ Region describe(const Settings& c,int gx,int gy) {
  r.moisture=moisture[i]; r.roughness=roughness[i]; r.temperature=temperature[i];
  r.canopy=canopy[i]; r.exposure=exposure[i]; r.shelter=1-r.exposure;
  r.phase=random(c.seed,gx,gy,Salt::RegionPhase)*2*pi;
+ r.unreal=(hash(c.seed,gx,gy,Salt::RegionUnreal)%1000)<100;
+ r.ruins=(hash(c.seed,gx,gy,Salt::RegionRuins)%3000)<1000;
  return r;
 }
 auto cellWeights(const Settings& c,double x,double y) {return hex::weights(hex::warp({x+180,y+180},c.seed));}
@@ -169,7 +171,7 @@ void World::forEachDiscoveryNear(int ownerQ,int ownerR,const std::function<void(
   const auto r=describe(config,col,row);
   const Vec3 cellCenter{r.origin.x,r.origin.y,terrainHeight(r.origin.x,r.origin.y)};
   const auto cellClimate=sample(r.origin.x,r.origin.y);
-  const auto plan=planDiscovery(config.seed,col,row,cellCenter,cellClimate,heightFn,streamXFn,streamHWFn);
+  const auto plan=planDiscovery(config.seed,col,row,cellCenter,cellClimate,heightFn,streamXFn,streamHWFn,r.ruins);
   if(!plan.valid) continue;
   fn(plan);
  }

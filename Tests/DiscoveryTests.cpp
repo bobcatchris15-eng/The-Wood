@@ -253,7 +253,7 @@ static void test_dry_stone_shelter_plan() {
     climate.biome[1] = 0.9; // DryGrassland
 
     wood::Vec3 center{0.0, 0.0, 12.0};
-    wood::DiscoveryPlan plan = wood::planDiscovery(42, 0, 0, center, climate, heightFn, streamXFn, streamHWFn);
+    wood::DiscoveryPlan plan = wood::planDiscovery(42, 0, 0, center, climate, heightFn, streamXFn, streamHWFn, true);
 
     EXPECT_TRUE(plan.valid);
     EXPECT_TRUE(plan.type == wood::DiscoveryType::DryStoneShelter);
@@ -287,7 +287,7 @@ static void test_cottage_corner_plan() {
     climate.biome[0] = 0.85; // TemperateForest
 
     wood::Vec3 center{0.0, 0.0, 8.0};
-    wood::DiscoveryPlan plan = wood::planDiscovery(12345, 0, 0, center, climate, heightFn, streamXFn, streamHWFn);
+    wood::DiscoveryPlan plan = wood::planDiscovery(12345, 0, 0, center, climate, heightFn, streamXFn, streamHWFn, true);
 
     EXPECT_TRUE(plan.valid);
     EXPECT_TRUE(plan.type == wood::DiscoveryType::CottageCorner);
@@ -324,7 +324,7 @@ static void test_ridge_tor_plan() {
     climate.slope = 0.35;
 
     wood::Vec3 center{950.0, 950.0, 45.0};
-    wood::DiscoveryPlan plan = wood::planDiscovery(999, 1, 1, center, climate, heightFn, streamXFn, streamHWFn);
+    wood::DiscoveryPlan plan = wood::planDiscovery(999, 1, 1, center, climate, heightFn, streamXFn, streamHWFn, true);
 
     EXPECT_TRUE(plan.valid);
     EXPECT_TRUE(plan.type == wood::DiscoveryType::RidgeTor);
@@ -354,18 +354,16 @@ static void test_stream_footbridge_plan() {
     auto streamHWFn = [](double) -> double { return 4.0; };
 
     const std::uint32_t seed = 777;
+    // Cell (2,0) is a ruins region by construction; placement is gated by the explicit ruins argument.
     int streamQ = 2;
     int streamR = 0;
-    while ((wood::hashCell(seed, streamQ, streamR) % 3) != 0) {
-        ++streamQ;
-    }
 
     const double centerY = 200.0;
     const double centerX = streamXFn(centerY);
     wood::Vec3 center{centerX, centerY, heightFn(centerX, centerY)};
     wood::Surface climate;
 
-    wood::DiscoveryPlan plan = wood::planDiscovery(seed, streamQ, streamR, center, climate, heightFn, streamXFn, streamHWFn);
+    wood::DiscoveryPlan plan = wood::planDiscovery(seed, streamQ, streamR, center, climate, heightFn, streamXFn, streamHWFn, true);
 
     EXPECT_TRUE(plan.valid);
     EXPECT_TRUE(plan.type == wood::DiscoveryType::StreamFootbridge);
@@ -395,20 +393,20 @@ static void test_guaranteed_sites() {
     // (0, 0) guaranteed CottageCorner or DryStoneShelter
     wood::Surface forestClimate;
     forestClimate.forest = 0.9;
-    wood::DiscoveryPlan plan00Forest = wood::planDiscovery(100, 0, 0, {0,0,10}, forestClimate, heightFn, streamXFn, streamHWFn);
+    wood::DiscoveryPlan plan00Forest = wood::planDiscovery(100, 0, 0, {0,0,10}, forestClimate, heightFn, streamXFn, streamHWFn, true);
     EXPECT_TRUE(plan00Forest.valid);
     EXPECT_TRUE(plan00Forest.type == wood::DiscoveryType::CottageCorner);
 
     wood::Surface dryClimate;
     dryClimate.forest = 0.05;
-    wood::DiscoveryPlan plan00Dry = wood::planDiscovery(100, 0, 0, {0,0,10}, dryClimate, heightFn, streamXFn, streamHWFn);
+    wood::DiscoveryPlan plan00Dry = wood::planDiscovery(100, 0, 0, {0,0,10}, dryClimate, heightFn, streamXFn, streamHWFn, true);
     EXPECT_TRUE(plan00Dry.valid);
     EXPECT_TRUE(plan00Dry.type == wood::DiscoveryType::DryStoneShelter);
 
     // (1, 1) in highlands guaranteed RidgeTor
     wood::Surface highlandClimate;
     highlandClimate.biome[2] = 0.6;
-    wood::DiscoveryPlan plan11High = wood::planDiscovery(100, 1, 1, {100,100,20}, highlandClimate, heightFn, streamXFn, streamHWFn);
+    wood::DiscoveryPlan plan11High = wood::planDiscovery(100, 1, 1, {100,100,20}, highlandClimate, heightFn, streamXFn, streamHWFn, true);
     EXPECT_TRUE(plan11High.valid);
     EXPECT_TRUE(plan11High.type == wood::DiscoveryType::RidgeTor);
 }
@@ -420,15 +418,12 @@ static void test_wilderness_cell_untouched() {
     auto streamHWFn = [](double) -> double { return 5.0; };
 
     const std::uint32_t seed = 42;
-    int unallocQ = 2;
-    int unallocR = 1;
-    while ((wood::hashCell(seed, unallocQ, unallocR) % 3) == 0) {
-        ++unallocQ;
-    }
+    const int unallocQ = 2;
+    const int unallocR = 1;
 
     wood::Surface climate;
     climate.forest = 0.2;
-    wood::DiscoveryPlan plan = wood::planDiscovery(seed, unallocQ, unallocR, {500,500,10}, climate, heightFn, streamXFn, streamHWFn);
+    wood::DiscoveryPlan plan = wood::planDiscovery(seed, unallocQ, unallocR, {500,500,10}, climate, heightFn, streamXFn, streamHWFn, false);
     EXPECT_FALSE(plan.valid);
     EXPECT_TRUE(plan.type == wood::DiscoveryType::None);
     EXPECT_TRUE(plan.pieces.empty());
@@ -449,7 +444,7 @@ static void test_all_four_types_heightfn_and_reservations() {
         wood::Surface dryClimate;
         dryClimate.forest = 0.0;
         dryClimate.biome[1] = 1.0;
-        wood::DiscoveryPlan planShelter = wood::planDiscovery(seed, 0, 0, {0, 0, 0}, dryClimate, complexHeightFn, streamXFn, streamHWFn);
+        wood::DiscoveryPlan planShelter = wood::planDiscovery(seed, 0, 0, {0, 0, 0}, dryClimate, complexHeightFn, streamXFn, streamHWFn, true);
         EXPECT_TRUE(planShelter.valid);
         EXPECT_TRUE(planShelter.type == wood::DiscoveryType::DryStoneShelter);
         EXPECT_FALSE(planShelter.pieces.empty());
@@ -462,7 +457,7 @@ static void test_all_four_types_heightfn_and_reservations() {
         wood::Surface forestClimate;
         forestClimate.forest = 0.8;
         forestClimate.biome[0] = 0.8;
-        wood::DiscoveryPlan planCottage = wood::planDiscovery(seed, 0, 0, {0, 0, 0}, forestClimate, complexHeightFn, streamXFn, streamHWFn);
+        wood::DiscoveryPlan planCottage = wood::planDiscovery(seed, 0, 0, {0, 0, 0}, forestClimate, complexHeightFn, streamXFn, streamHWFn, true);
         EXPECT_TRUE(planCottage.valid);
         EXPECT_TRUE(planCottage.type == wood::DiscoveryType::CottageCorner);
         EXPECT_FALSE(planCottage.pieces.empty());
@@ -475,7 +470,7 @@ static void test_all_four_types_heightfn_and_reservations() {
         wood::Surface highlandClimate;
         highlandClimate.biome[2] = 0.7;
         highlandClimate.slope = 0.4;
-        wood::DiscoveryPlan planTor = wood::planDiscovery(seed, 1, 1, {950, 950, 0}, highlandClimate, complexHeightFn, streamXFn, streamHWFn);
+        wood::DiscoveryPlan planTor = wood::planDiscovery(seed, 1, 1, {950, 950, 0}, highlandClimate, complexHeightFn, streamXFn, streamHWFn, true);
         EXPECT_TRUE(planTor.valid);
         EXPECT_TRUE(planTor.type == wood::DiscoveryType::RidgeTor);
         EXPECT_FALSE(planTor.pieces.empty());
@@ -485,15 +480,12 @@ static void test_all_four_types_heightfn_and_reservations() {
         }
 
         // 4. StreamFootbridge
-        int streamQ = 2;
-        int streamR = 0;
-        while ((wood::hashCell(seed, streamQ, streamR) % 3) != 0) {
-            ++streamQ;
-        }
+        const int streamQ = 2;
+        const int streamR = 0;
         const double sy = 150.0;
         const double sx = streamXFn(sy);
         wood::Surface neutralClimate;
-        wood::DiscoveryPlan planBridge = wood::planDiscovery(seed, streamQ, streamR, {sx, sy, 0}, neutralClimate, complexHeightFn, streamXFn, streamHWFn);
+        wood::DiscoveryPlan planBridge = wood::planDiscovery(seed, streamQ, streamR, {sx, sy, 0}, neutralClimate, complexHeightFn, streamXFn, streamHWFn, true);
         EXPECT_TRUE(planBridge.valid);
         EXPECT_TRUE(planBridge.type == wood::DiscoveryType::StreamFootbridge);
         EXPECT_FALSE(planBridge.pieces.empty());
