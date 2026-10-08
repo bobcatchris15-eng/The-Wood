@@ -7,6 +7,16 @@ below is derived by reading source. Where a claim depends on Unreal runtime
 behaviour that cannot be checked without the engine, it is marked **[unverified]**
 and the fix is designed to be correct under either outcome.
 
+**Verification status.** Every `file:line` below was re-derived by reading the
+live tree at commit `ae46f56` on 2026-10-08, not inherited from the parallel H4
+design or from the triage. That pass corrected three line citations
+(`WoodGeneration.cpp:292` → `:296` for `rate()`, `WoodCharacter.cpp:42` → `:45`
+for the seated speed clamp, and `StreamingTests.cpp`'s largest planned coordinate
+25 → 24), retracted one overstated claim (a `TArray` growth hazard in the unload
+loop that the code does not actually exhibit), and added `WoodCharacter.cpp:77`
+to the chunk-size literal list. No compiler was available, so nothing here is
+proven by a build or a test run.
+
 Related prior findings, with different ids: `.clanker/CLAUDE_REVIEW.md:33-37`
 (`gen-core-3`, "Generator throws at 1000 km with no catch anywhere") and
 `.clanker/CLAUDE_REVIEW.md:56-60` (`streaming-1`, stale pending jobs, no cancel
@@ -127,14 +137,22 @@ order does not matter. What matters is that both precede step 3.
 
 This is not a one-line fix at `:63`. `Runtime->Jobs` is mutated in three places
 (drain `:63`, dispatch `:79`, and — once M2 adds it — cancel), and `Runtime->Chunks`
-in two (`:27`, `:69`). The `:65-70` unload loop already has the fragile shape:
-`auto& C = Runtime->Chunks[Key]` at `:66`, work that can allocate (TArray growth in
-`C.Instances`) at `:67`, then `Runtime->Chunks.Remove(Key)` at `:69`.
+in two (`:27` `FindOrAdd`, `:69` `Remove`).
 
-Rule: **any loop that holds a reference into a `TMap` and later mutates the map must
-either do all throwing work first, or move the element into a local before touching
-the map.** `:65-70` should take `FWoodResident Resident = MoveTemp(Runtime->Chunks[Key]);`
-and then `Remove(Key)` before destroying components.
+**Stated honestly:** the unload loop at `:65-70` is *currently* safe in the strict
+reference sense. `auto& C = Runtime->Chunks[Key]` at `:66` is a `TMap` reference,
+and `:69` calls `Runtime->Chunks.Remove(Key)` — but `C` is not dereferenced after
+that statement in the same iteration, so today it is not a use-after-free. The
+hazard is latent, not live: it is one added line away, and the M2 cancel path will
+add lines to exactly this loop shape.
+
+Rule for all three sites: **any loop that holds a reference or a pointer into a
+`TMap` and later mutates that map must finish all work on the element before the
+removal, or move the element into a local first.** `:65-70` should become
+`FWoodResident Resident = MoveTemp(Runtime->Chunks[Key]); Runtime->Chunks.Remove(Key);`
+before any `DestroyComponent()` call, so the element's lifetime ends at a point the
+reader can see rather than at the end of a statement that also invalidates a
+reference.
 
 ---
 
@@ -254,10 +272,10 @@ with five different values in the engine-free core plus its adapter:
 
 | Constant | Location | Value | Enforced during chunk streaming? |
 | --- | --- | --- | --- |
-| Point sample limit | `WoodGeneration.cpp:25` (`validatePoint`) | 1,000,000 m | Yes — reached via `WoodPreparedChunk.cpp:15` |
-| Hex coordinate limit | `WoodHex.h:15` (`hex::owner`) | 2,000,000 m | Yes — reached via `cellWeights` → `hex::warp` → `hex::weights` |
+| Point sample limit | `WoodGeneration.cpp:25` (test), `:26` (throw), in `validatePoint` | 1,000,000 m | Yes — `World::sample` calls it at `:116`, reached from `WoodPreparedChunk.cpp:15-17` |
+| Hex coordinate limit | `WoodHex.h:15` (`hex::owner`) | 2,000,000 m | Yes — reached via `cellWeights` (`WoodGeneration.cpp:50`) → `hex::warp` → `hex::weights` |
 | Region lattice limit | `WoodGeneration.cpp:128` (`World::region`) | \|lattice\| ≤ 835 | **No** — `generate` calls `describe` directly (`:178`), bypassing `region()` |
-| Chunk origin limit | `WoodGeneration.cpp:151` (`World::generate`) | 999,000 m | **Yes — this is the one that throws** |
+| Chunk origin limit | `WoodGeneration.cpp:151` (test), `:152` (throw), in `World::generate` | 999,000 m | **Yes — this is the one that throws** |
 | Streaming window limit | `WoodStreaming.cpp:18-19` (`plan`) | `INT_MAX − retainRadius` | Yes — the only guard the scheduler has |
 
 The streaming guard is not merely a different number. It is **275,000× looser**: for
@@ -268,9 +286,11 @@ mistaken for a *domain* guard. Both are needed, and they have different jobs.
 
 ### 5.2 Also duplicated: the chunk size itself
 
-The literal `128` (and its cm form `12800`) appears in at least nine places:
+The literal `128` (and its cm form `12800`) appears in nine places:
 `WoodGeneration.h:9`, `WoodStreaming.h:12`, `WoodWorld.cpp:38`, `WoodWorld.cpp:122`,
-`WoodWorldStreaming.cpp:21`, `:39`, `:40`, `:74`. `WoodWorldStreaming.cpp:74` passes a
+`WoodWorldStreaming.cpp:21`, `:39`, `:40`, `:74`, and `WoodCharacter.cpp:77`.
+(`WoodWorldStreaming.cpp:39-40` and `:74` each contain more than one.)
+`WoodWorldStreaming.cpp:74` passes a
 literal `128` to `plan()` while the generator's `chunkSize` comes from
 `WoodWorld.cpp:38`. Change one and the layers desync — **the same anti-pattern that
 produced H4**, one level down. This belongs in the same change.
@@ -283,8 +303,9 @@ them, in `Source/TheWood/Public/Generation/WoodGeneration.h`:**
 ```cpp
 // Metres from the origin. World::generate refuses a chunk whose origin corner is
 // further from the origin than this. A deliberate milestone bound, not a numeric
-// range limit.
-constexpr double SupportedExtentMetres = 999000.0;
+// range limit. `inline` because this is a header constant included by many TUs;
+// WoodGeneration.h does not currently include <cmath>, which std::abs below needs.
+inline constexpr double SupportedExtentMetres = 999000.0;
 
 // The one predicate both layers must call. Deliberately the same expression as the
 // guard in World::generate -- do NOT re-derive it as a floor division, which can
@@ -478,10 +499,10 @@ every frame, and no change confined to `WoodWorldStreaming.cpp` helps.
 
 At 420 cm/s (`Status.md:17`), 99,904,000 cm is 237,867 s ≈ **2.8 days** of
 continuous walking in a straight line, and 8.3 days if every step were the 280 cm/s
-wading speed. Seated time dilation cannot help: `rate()`
-requires seated (`WoodGeneration.cpp:292`) and `WoodCharacter.cpp:42` sets
-`MaxWalkSpeed = 0` when seated. **Ordinary play cannot trigger H4**, consistent with
-`.clanker/CLAUDE_REVIEW.md:37`.
+wading speed. Seated time dilation cannot help either: `rate()` returns 20 only when
+seated **and** accelerated (`WoodGeneration.cpp:296`), and
+`WoodCharacter.cpp:45` sets `MaxWalkSpeed = 0` whenever seated. **Ordinary play
+cannot trigger H4**, consistent with `.clanker/CLAUDE_REVIEW.md:37`.
 
 The reachable triggers are:
 
@@ -544,7 +565,9 @@ run. What follows is what a worker with a compiler should write.
    `needed` fails `supportsChunk`. This is the direct regression for H4's enqueue arm.
 2. **`Tests/StreamingTests.cpp` — no drift in existing assertions.** Every existing
    assertion (`StreamingTests.cpp:12-42`) uses centres `0,0`, `-1,-2`, `1,0`, `20,-20`
-   with radii ≤ 5. The largest coord any of them reaches is 25, far inside 7804, so
+   with radii ≤ 5. The largest coord any of them reaches is 24
+   (`plan(128*20.,-128*20.,…)` centres on `(20,-20)` with the default
+   `desiredRadius=4`), far inside 7804, so
    **no existing assertion should change meaning**. A test that proves this is worth
    more than a claim that it is true.
 3. **`Tests/GenerationTests.cpp` — the anti-drift test, and the important one.**

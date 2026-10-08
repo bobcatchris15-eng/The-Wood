@@ -50,67 +50,103 @@ const arg = (flag, def) => {
   const i = process.argv.indexOf(flag);
   return i > -1 && process.argv[i + 1] ? Number(process.argv[i + 1]) : def;
 };
-const SPEC = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : "squadron.json";
+// The spec is the first bare argument, not argv[3] -- argv[3] is often a flag.
+// Getting this wrong once made the supervisor reconcile against a stale spec.
+const SPEC = process.argv.slice(2).find((a) => !a.startsWith("--") && isNaN(Number(a))) || "squadron.json";
 const INTERVAL_MIN = arg("--interval", 30);
-const MAX_ROUNDS = arg("--max-rounds", 3);
+const MAX_ROUNDS = arg("--max-rounds", 0);
 
 function journal(kind, data) {
   mkdirSync(SQ, { recursive: true });
   appendFileSync(HB, JSON.stringify({ ts: new Date().toISOString(), kind, ...data }) + "\n");
 }
 
+const ACTIVE = new Set(["STARTING", "RUNNING", "WAITING", "BLOCKED"]);
+const TERMINAL = new Set(["COMPLETE", "FAILED", "CANCELLED", "LOST"]);
+/** IDLE means the turn ended without worker_finish: the agent is alive but done. */
+const GAVE_UP = "IDLE";
+const STALL_MS = 25 * 60 * 1000;
+
 /**
  * Tasks in the spec, matched to every worker that ever attempted them.
  *
- * Earlier this matched only `task.assigned_worker`, which was a bug: a retried task
- * spawns a NEW task record, so each retry saw the original still-unassigned worker
- * and retried again. Three workers independently wrote the same 500-line design
- * because of it. Matching on title across ALL task buckets fixes it.
+ * Two bugs lived here.
+ *
+ * 1. It matched only `task.assigned_worker`. A retried task spawns a NEW task
+ *    record, so each retry saw the original unassigned worker and retried again
+ *    - three workers independently wrote the same 500-line design. Matching on
+ *    title across all buckets fixed that.
+ *
+ * 2. `neverFinished.length > 0` made a task permanently dead. One attempt dying
+ *    poisoned the result forever, so a task with a healthy worker running RIGHT
+ *    NOW was still reported dead and reassigned alongside it. A live worker must
+ *    protect the task; only its own silence may retire it.
  */
 function reconcile(spec) {
+  const now = Date.now();
   const all = tasks();
   return spec.workers.map((w) => {
     const attempts = all.filter((t) => t.title.startsWith(w.title));
-    const ws = attempts.map((t) => workers().find((x) => x.id === t.assigned_worker)).filter(Boolean);
-    const receipts = ws.flatMap((x) => (x.results?.length ? [x.results[x.results.length - 1]] : []));
-    const winner = ws.find((x) => x.results?.length);
-    const stalled = ws.filter((x) => !x.results?.length &&
-      !["COMPLETE", "FAILED", "CANCELLED", "LOST"].includes(x.status));
-    const lastActivity = ws.length
-      ? ws.map((x) => new Date(x.last_activity).getTime()).sort((a, b) => b - a)[0] : 0;
-    const stalledRecently = stalled.length && Date.now() - lastActivity > 25 * 60 * 1000;
-    const neverFinished = ws.filter((x) => !x.results?.length &&
-      ["FAILED", "CANCELLED", "LOST"].includes(x.status));
+    const ws = attempts
+      .map((t) => workers().find((x) => x.id === t.assigned_worker))
+      .filter(Boolean);
+
+    const receipts = ws.filter((x) => x.results?.length);
+    const done = receipts.length > 0;
+
+    const age = (x) => now - new Date(x.last_activity).getTime();
+    const active = ws.filter((x) => ACTIVE.has(x.status));
+    // An active worker that has touched the event log recently is making progress.
+    const progressing = active.filter((x) => age(x) < STALL_MS);
+    const stale = active.filter((x) => age(x) >= STALL_MS);
+    const gaveUp = ws.filter((x) => x.status === GAVE_UP && !x.results?.length);
+    const died = ws.filter((x) => TERMINAL.has(x.status) && x.status !== "COMPLETE" && !x.results?.length);
+
+    // A task is only dead when nothing is currently working on it.
+    const alive = progressing.length > 0;
+    const dead = !done && !alive;
+
+    const why = done ? ""
+      : ws.length === 0 ? "never spawned"
+      : alive ? "in progress"
+      : stale.length ? `stalled ${Math.round(Math.max(...stale.map(age)) / 60000)}m with no event`
+      : gaveUp.length ? `ended turn without worker_finish (${gaveUp.length})`
+      : died.length ? `${died.length} attempt(s) failed`
+      : "no active attempt";
 
     return {
-      key: w.key, spec: w, attempts: attempts.length,
-      worker: winner ?? ws[ws.length - 1] ?? null,
-      done: receipts.length > 0,
-      receipt: receipts[0] ?? null,
-      // Only dead if NO attempt ever produced a receipt.
-      dead: receipts.length === 0 && (ws.length === 0 || stalledRecently || neverFinished.length > 0),
-      why: ws.length === 0 ? "never spawned"
-        : receipts.length ? ""
-        : stalledRecently ? `stalled (${ws.length} attempt(s), none active)`
-        : `${neverFinished.length} attempt(s) died without a receipt`,
-      model: winner ? `${winner.provider}/${winner.model}` : null,
+      key: w.key, spec: w,
+      attempts: ws.length,
+      worker: receipts[0] ?? ws[ws.length - 1] ?? null,
+      done,
+      receipt: receipts.length ? receipts[0].results[receipts[0].results.length - 1] : null,
+      dead,
+      alive,
+      liveWorkers: progressing.length,
+      why,
+      model: receipts[0] ? `${receipts[0].provider}/${receipts[0].model}` : null,
     };
   });
 }
 
 async function reassign(op, row, tried) {
   const w = row.spec;
-  // Never retry a model this task already failed on: free-tier failures are
-  // usually the transport, and repeating it just burns quota.
-  const candidates = Object.keys(tried[row.key] || {});
-  const exclude = candidates.filter((m) => m !== undefined);
-  const pin = w.model && !exclude.includes(w.model) ? w.model : undefined;
+  // The operator must keep clanking across a flaky pool. A dead or silent endpoint
+  // is this layer's problem to absorb, NOT a reason to narrow the user's configured
+  // pool, so pin explicitly to a model this task has not already failed on.
+  // Selection has no "exclude these models" input, so the choice is made here.
+  const pool = Object.keys(jread(join(process.env.USERPROFILE, ".pi", "agent", "settings.json"), {})
+    .enabledModels || []);
+  const seen = tried[row.key] || {};
+  const triedModels = Object.keys(seen).filter((k) => k !== "__n");
+  const untried = pool.filter((m) => !triedModels.includes(m));
+  const pin = untried.length ? untried[0] : (triedModels[0] ?? w.model);
 
   const spec =
     `  assignment: ${JSON.stringify(w.assignment)}\n` +
-    `  task_title: ${JSON.stringify(w.title + " (round " + ((tried[row.key]?.__n || 1) + 1) + ")")}\n` +
+    `  task_title: ${JSON.stringify(w.title + " (round " + ((seen.__n || 1) + 1) + ")")}\n` +
     `  ability_profile: ${w.profile || "implementation"}\n` +
-    (pin ? `  model: ${JSON.stringify(pin)}\n` : `  (omit model - selection will pick an untried one)\n`) +
+    (pin ? `  model: ${JSON.stringify(pin)}\n` : `  (omit model - selection will pick)\n`)+
     `  worktree_required: ${w.worktree === false ? "false" : "true"}`;
 
   await ask(op,
@@ -126,10 +162,15 @@ async function reassign(op, row, tried) {
     const fresh = workers().filter((x) => !before.includes(x.id));
     if (fresh.length) {
       const m = fresh[0];
-      tried[row.key] = { ...(tried[row.key] || {}), __n: (tried[row.key]?.__n || 1) + 1 };
-      tried[row.key][`${m.provider}/${m.model}`] = new Date().toISOString();
+      const t = tried[row.key] || {};
+      t.__n = (t.__n || 1) + 1;
+      t[`${m.provider}/${m.model}`] = new Date().toISOString();
+      tried[row.key] = t;
       writeFileSync(TRIED, JSON.stringify(tried, null, 2));
-      journal("reassigned", { key: row.key, worker: m.id, model: `${m.provider}/${m.model}`, previous: row.model });
+      journal("reassigned", {
+        key: row.key, worker: m.id, model: `${m.provider}/${m.model}`,
+        previous: row.model, round: t.__n, alreadyTried: triedModels.length,
+      });
       return true;
     }
     await sleep(3000);
@@ -174,7 +215,8 @@ async function main() {
       round,
       done,
       live: live.length,
-      dead: dead.map((d) => ({ key: d.key, why: d.why, model: d.model })),
+      dead: dead.map((d) => ({ key: d.key, why: d.why, attempts: d.attempts })),
+      rows: rows.map((r) => ({ key: r.key, done: r.done, alive: r.alive, attempts: r.attempts, why: r.why })),
       workers: workers().map((w) => ({
         id: w.id, status: w.status, model: `${w.provider}/${w.model}`,
         name: w.display_name || null, last: w.last_activity,
@@ -185,11 +227,14 @@ async function main() {
       `\n${new Date().toISOString().slice(0, 16).replace("T", " ")}  round ${round}  ` +
       `${done} done / ${live.length} live / ${dead.length} dead`,
     );
-    for (const r of live) console.log(`  live  ${r.key.padEnd(20)} ${r.model} ${r.why}`);
-    for (const r of dead) console.log(`  DEAD  ${r.key.padEnd(20)} ${r.model ?? "-"} ${r.why}`);
+    for (const r of live) console.log(`  live  ${r.key.padEnd(22)} ${r.attempts} attempt(s) ${r.liveWorkers} active ${r.why}`);
+    for (const r of dead) console.log(`  DEAD  ${r.key.padEnd(22)} ${r.attempts} attempt(s) ${r.why}`);
 
-    if (!dead.length) {
-      console.log("  all tasks resolved");
+    // Exit only when EVERY task has produced a receipt. "No task is dead" is not
+    // completion: one worker still in flight made the whole squadron look settled
+    // once, and the supervisor exited out from under it.
+    if (rows.length && rows.every((r) => r.done)) {
+      console.log("  all tasks delivered a receipt");
       await integrateAll();
       journal("supervisor-complete", {});
       op.child.kill();
@@ -197,9 +242,14 @@ async function main() {
     }
 
     if (round >= MAX_ROUNDS) {
-      console.log(`  reached --max-rounds ${MAX_ROUNDS}; leaving remaining tasks for a human`);
-      journal("supervisor-out-of-rounds", { remaining: dead.map((d) => d.key) });
-      break;
+      // 0 means never give up: keep rotating through the pool. A flaky endpoint is
+      // the supervisor's job to absorb, not a reason to stop clanking.
+      if (MAX_ROUNDS !== 0) {
+        console.log(`  reached --max-rounds ${MAX_ROUNDS}; leaving remaining tasks for a human`);
+        journal("supervisor-out-of-rounds", { remaining: dead.map((d) => d.key) });
+        break;
+      }
+      console.log(`  still ${dead.length} unresolved - continuing, pool keeps rotating`);
     }
 
     for (const row of rows) {
@@ -214,24 +264,35 @@ async function main() {
     // workers produced zero artifacts on main. Do it every round.
     await integrateAll();
 
-    console.log(`  sleeping ${INTERVAL_MIN}m`);
-    await sleep(INTERVAL_MIN * 60 * 1000);
+    // Stay responsive when something is actually dead; back off when healthy.
+    const wait = dead.length ? Math.min(INTERVAL_MIN, 5) : INTERVAL_MIN;
+    console.log(`  sleeping ${wait}m`);
+    await sleep(wait * 60 * 1000);
   }
   shutdown();
 }
 
-/** Copy every completed worker's uncommitted files onto the working tree. */
+/** Copy every completed worker's uncommitted files onto the working tree.
+ *
+ *  The dedupe set is persisted across rounds. It used to be rebuilt each round, so
+ *  a worker that finished in round 1 got its file overwritten in round 2 by a later
+ *  attempt at the same task. First writer wins unless the content actually differs,
+ *  in which case the newer version is kept and journalled as a revision.
+ */
 async function integrateAll() {
   const wtRoot = join(SC, "worktrees");
   if (!existsSync(wtRoot)) return;
-  const { readdirSync, copyFileSync, mkdirSync } = await import("node:fs");
+  const { readdirSync, copyFileSync, mkdirSync, readFileSync: rf, existsSync: ex } = await import("node:fs");
   const { dirname, join: pjoin } = await import("node:path");
   const { execFileSync } = await import("node:child_process");
-  const done = new Set();
+
+  const SEEN = join(SQ, "integrated.json");
+  const seen = jread(SEEN, {});
+  let changed = 0;
 
   for (const id of readdirSync(wtRoot)) {
     const wt = pjoin(wtRoot, id);
-    if (!existsSync(pjoin(wt, ".git"))) continue;
+    if (!ex(pjoin(wt, ".git"))) continue;
     const w = workers().find((x) => x.id === id);
     if (!w?.results?.length) continue;           // only completed work
     let lines = [];
@@ -239,20 +300,35 @@ async function integrateAll() {
       lines = execFileSync("git", ["-C", wt, "status", "--porcelain"], { encoding: "utf8" })
         .split("\n").filter((l) => l.trim() && !l.includes(".clanker") && !l.includes("->"));
     } catch { continue; }
+
     for (const l of lines) {
       const rel = l.slice(3).trim().replace(/^"/, "").replace(/"$/, "");
       if (!rel) continue;
-      const key = rel;
-      if (done.has(key)) { journal("integrate-dup", { rel, skipped: true }); continue; }
-      try {
-        mkdirSync(dirname(pjoin(ROOT, rel)), { recursive: true });
-        copyFileSync(pjoin(wt, rel), pjoin(ROOT, rel));
-        done.add(key);
-        journal("integrated", { worker: id, model: `${w.provider}/${w.model}`, file: rel });
-        console.log(`  integrated ${rel}  (${id} ${w.provider}/${w.model})`);
-      } catch (e) { journal("integrate-error", { worker: id, rel, message: String(e) }); }
+      const dst = pjoin(ROOT, rel);
+      const src = pjoin(wt, rel);
+      let same = false;
+      try { same = ex(dst) && rf(src, "utf8") === rf(dst, "utf8"); } catch { same = false; }
+      if (same) continue;
+
+      const prior = seen[rel];
+      if (prior && prior !== `${id}:${w.provider}/${w.model}`) {
+        // A second attempt at the same task produced a different version. Keep the
+        // newer one, but say so - silent overwrites lose the earlier analysis.
+        journal("integrate-revised", {
+          rel, was: prior, now: `${id}:${w.provider}/${w.model}`,
+          lines: rf(src, "utf8").split("\n").length,
+        });
+        console.log(`  REVISED ${rel}  (${prior} -> ${id})`);
+      }
+      mkdirSync(dirname(dst), { recursive: true });
+      copyFileSync(src, dst);
+      seen[rel] = `${id}:${w.provider}/${w.model}`;
+      journal("integrated", { worker: id, model: `${w.provider}/${w.model}`, file: rel, revision: !!prior });
+      console.log(`  integrated ${rel}  (${id} ${w.provider}/${w.model})`);
+      changed++;
     }
   }
+  if (changed) writeFileSync(SEEN, JSON.stringify(seen, null, 2));
 }
 
 main().catch((e) => {
