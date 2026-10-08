@@ -197,6 +197,35 @@ std::optional<Vec3> World::nearestDiscovery(double x,double y,double radius) con
  });
  return best;
 }
+std::optional<Vec3> World::nearestBiomeCore(Biome family,double x,double y,double radius,double minWeight) const {
+ if(!(radius>0.0)||!(minWeight>0.0)) return std::nullopt;
+ // Owner cells enumerated exactly as nearestDiscovery; each owner's region origin seeds a 25 m refinement window.
+ const double step=config.chunkSize*0.5;
+ const int steps=static_cast<int>(std::ceil(radius/step));
+ std::set<std::pair<int,int>> owners;
+ for(int j=-steps;j<=steps;++j) for(int i=-steps;i<=steps;++i) {
+  const auto owner=hex::owner(hex::warp({x+i*step+180,y+j*step+180},config.seed));
+  owners.insert({owner.q,owner.r});
+ }
+ const auto index=static_cast<std::size_t>(family);
+ const double grid=25.0, half=500.0;
+ const int n=static_cast<int>(std::round(half/grid));
+ std::optional<Vec3> best;
+ double bestD2=radius*radius;
+ for(const auto& o:owners) {
+  const auto origin=region(o.first,o.second).origin;
+  for(int j=-n;j<=n;++j) for(int i=-n;i<=n;++i) {
+   const double px=origin.x+i*grid, py=origin.y+j*grid;
+   const double dx=px-x, dy=py-y, d2=dx*dx+dy*dy;
+   if(d2>=bestD2) continue;
+   if(sample(px,py).biome[index]>=minWeight) {
+    bestD2=d2;
+    best=Vec3{px,py,0.0};
+   }
+  }
+ }
+ return best;
+}
 Chunk World::generate(int x,int y,bool includeFeatures) const {
 
  if(std::abs(static_cast<double>(x)*config.chunkSize)>999000||std::abs(static_cast<double>(y)*config.chunkSize)>999000)

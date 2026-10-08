@@ -10,6 +10,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/DateTime.h"
 #include "Misc/Guid.h"
+#include "Misc/Parse.h"
 #include "UnrealClient.h"
 #include "TimerManager.h"
 
@@ -77,7 +78,12 @@ void AWoodCharacter::WoodView(const FString& View) {
  if(!Environment || !Controller) return;
  wood::World Landscape(wood::Settings{static_cast<uint32>(Environment->Seed),128,64});
  FVector Position=Environment->ExplorerStart();
+ const FVector Start=Position;
  FRotator Facing(-4,35,0);
+ // -WoodFrameBiome=<Grassland|Taiga|Highlands> moves the camera to the nearest core of that biome family, searched from the explorer start.
+ const FString Cmd=FCommandLine::Get();
+ FString FrameBiome;
+ FParse::Value(*Cmd,TEXT("-WoodFrameBiome="),FrameBiome);
  if(View.Equals(TEXT("Grassland"),ESearchCase::IgnoreCase)) {
   const auto R=Landscape.region(1,0);Position=FVector(R.origin.x*100,R.origin.y*100,0);Facing=FRotator(-6,35,0);
  } else if(View.Equals(TEXT("Taiga"),ESearchCase::IgnoreCase)) {
@@ -86,7 +92,6 @@ void AWoodCharacter::WoodView(const FString& View) {
   const auto R=Landscape.region(1,1);Position=FVector(R.origin.x*100,R.origin.y*100,0);Facing=FRotator(-8,35,0);
  } else if(View.Equals(TEXT("Ruins"),ESearchCase::IgnoreCase)) {
   // Frame the nearest generated ruin 12 m away, facing it; fixed fallback when none is in range.
-  const FString Cmd=FCommandLine::Get();
   const auto Ruin=Landscape.nearestDiscovery(Position.X/100.0,Position.Y/100.0,900.0);
   if(Ruin&&(Cmd.Contains(TEXT("-WoodFrameRuin"))||!Cmd.Contains(TEXT("WoodStartX=")))) {
    const double Yaw=45.0,Rad=FMath::DegreesToRadians(Yaw);
@@ -113,6 +118,23 @@ void AWoodCharacter::WoodView(const FString& View) {
   }
   Facing=FRotator(-12,180,0);
  }
+ if(!FrameBiome.IsEmpty()) {
+  wood::Biome Family=wood::Biome::DryGrassland;
+  bool Known=true;
+  if(FrameBiome.Equals(TEXT("Grassland"),ESearchCase::IgnoreCase)) Family=wood::Biome::DryGrassland;
+  else if(FrameBiome.Equals(TEXT("Taiga"),ESearchCase::IgnoreCase)) Family=wood::Biome::Taiga;
+  else if(FrameBiome.Equals(TEXT("Highlands"),ESearchCase::IgnoreCase)) Family=wood::Biome::RockyHighlands;
+  else Known=false;
+  if(!Known) {
+   UE_LOG(LogTemp,Error,TEXT("Unknown -WoodFrameBiome: %s"),*FrameBiome);
+  } else if(const auto Core=Landscape.nearestBiomeCore(Family,Start.X/100.0,Start.Y/100.0,2000.0,0.85)) {
+   Position=FVector(Core->x*100.0,Core->y*100.0,0);
+  } else {
+   UE_LOG(LogTemp,Warning,TEXT("No %s core within 2000 m of explorer start; keeping fixed frame"),*FrameBiome);
+  }
+ }
+ const auto Here=Landscape.sample(Position.X/100.0,Position.Y/100.0);
+ UE_LOG(LogTemp,Display,TEXT("WoodView biome weights: TemperateForest=%.3f DryGrassland=%.3f RockyHighlands=%.3f Taiga=%.3f"),Here.biome[0],Here.biome[1],Here.biome[2],Here.biome[3]);
  Position.Z=Environment->GroundAt(Position.X,Position.Y)+100;
  Environment->EnsureTerrainAround(Position);
  SetActorLocation(Position);

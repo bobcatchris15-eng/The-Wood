@@ -241,6 +241,19 @@ int main() {
   }
   check(!disc.nearestDiscovery(-60,-60,0).has_value(),"nearestDiscovery rejects zero radius");
  }
+ // Nearest biome core: deterministic, inside the radius, and meets the requested family weight.
+ {
+  World core({12345,128,64});
+  const auto first=core.nearestBiomeCore(Biome::Taiga,-1002.724,-1605,2000,0.85);
+  const auto second=core.nearestBiomeCore(Biome::Taiga,-1002.724,-1605,2000,0.85);
+  check(first.has_value(),"nearestBiomeCore finds a Taiga core within 2000 m of the Taiga review view");
+  if(first&&second) {
+   check(first->x==second->x&&first->y==second->y,"nearestBiomeCore is deterministic");
+   check(std::hypot(first->x+1002.724,first->y+1605)<=2000+1e-9,"nearestBiomeCore point lies within the search radius");
+   check(core.sample(first->x,first->y).biome[static_cast<std::size_t>(Biome::Taiga)]>=0.85,"nearestBiomeCore point meets the minimum Taiga weight");
+  }
+  check(!core.nearestBiomeCore(Biome::Taiga,-1002.724,-1605,0,0.85).has_value(),"nearestBiomeCore rejects zero radius");
+ }
  bool badTime=false; try { o.advance(-1); } catch(const std::invalid_argument&) { badTime=true; }
  check(badTime,"negative elapsed time rejected");
  if(failures) return 1;

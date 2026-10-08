@@ -5,8 +5,8 @@ $editor='C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-C
 $review=Join-Path $taskRoot 'Saved/Review'
 New-Item -ItemType Directory -Force -Path $review | Out-Null
 $startX=-180;$startY=-180
-switch ($View) { 'Grassland' {$startX=1465.448;$startY=-180} 'Taiga' {$startX=-1002.724;$startY=-1605} 'Highlands' {$startX=2288.172;$startY=1245} }
 $frame=@(); if($View -eq 'Ruins') { $frame=@('-WoodFrameRuin') }
+if($View -in 'Grassland','Taiga','Highlands') { $frame=@("-WoodFrameBiome=$View") }
 $start=Get-Date
 $name="${Seed}-${View}-${Time}"
 $log=Join-Path $review "$name.log"

@@ -48,6 +48,8 @@ public:
  Chunk generate(int x, int y, bool includeFeatures=true) const;
  // Centre of the discovery reservation nearest (x,y) whose centre lies within radius metres; empty if none.
  std::optional<Vec3> nearestDiscovery(double x, double y, double radius) const;
+ // Nearest 25 m grid point within radius metres of (x,y) whose biome[family] weight is at least minWeight; empty if none.
+ std::optional<Vec3> nearestBiomeCore(Biome family, double x, double y, double radius, double minWeight) const;
  Lighting lighting(double x, double y, double seconds) const;
  const Settings& settings() const { return config; }
 private:
