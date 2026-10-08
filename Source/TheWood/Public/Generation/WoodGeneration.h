@@ -11,6 +11,8 @@ struct DiscoveryPlan;
 struct Vec3 { double x=0, y=0, z=0; };
 struct Settings { std::uint32_t seed=12345; double chunkSize=128; int cells=64; };
 enum class Biome { TemperateForest, DryGrassland, RockyHighlands, Taiga };
+// False for pairs that may never border (DryGrassland<->Taiga); symmetric.
+bool allowedAdjacent(Biome a, Biome b);
 // A stable regional identity on a warped 950m-radius hex lattice; extent is influence diameter.
 struct Region {
  Vec3 origin; double moisture=0, roughness=0, phase=0;

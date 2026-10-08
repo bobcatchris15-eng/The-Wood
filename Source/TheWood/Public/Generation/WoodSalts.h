@@ -54,6 +54,12 @@ inline constexpr std::uint32_t Riparian=419;
 inline constexpr std::uint32_t PrairieClump=577;
 // Taiga moss carpet patch noise (chunk layers).
 inline constexpr std::uint32_t TaigaMoss=613;
+// Climate temperature field noise (regionFamily()).
+inline constexpr std::uint32_t ClimateTemperature=1009;
+// Climate moisture field noise (regionFamily()).
+inline constexpr std::uint32_t ClimateMoisture=1013;
+// Climate relief noise for rocky highlands (regionFamily()).
+inline constexpr std::uint32_t ClimateRelief=1019;
 
 // Discovery cell allocation hash (hashCell()).
 inline constexpr std::uint32_t DiscoveryCell=0xD15C07U;

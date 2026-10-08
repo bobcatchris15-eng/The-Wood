@@ -5,6 +5,9 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <array>
+#include <random>
+#include <vector>
 int failures=0;
 void check(bool ok,const char* message) { if(!ok) { ++failures; std::cerr<<"FAIL: "<<message<<'\n'; } }
 bool near(double a,double b) { return std::abs(a-b)<1e-9; }
@@ -267,6 +270,43 @@ int main() {
   check(pu>=0.09&&pu<=0.11,"unreal region fraction is about one tenth");
   check(pr>=0.323&&pr<=0.343,"ruins region fraction is about one third");
   check(std::abs(pb-pu*pr)<=0.01,"unreal and ruins region flags are independent");
+ }
+ // Regional family field: adjacency contract, shares, order independence, origin cells fixed.
+ {
+  const int span=60,lo=-30;
+  const int dirs[6][2]={{1,0},{1,-1},{0,-1},{-1,0},{-1,1},{0,1}};
+  const int fixed[7][3]={{0,0,0},{1,0,1},{0,1,1},{1,1,2},{1,-1,2},{0,-1,3},{-1,0,0}};
+  for(unsigned seed:{0u,42u,98765u}) {
+   World world({seed,128,64});
+   std::vector<Biome> fam(span*span);
+   std::array<std::size_t,4> shares{};
+   for(int q=0;q<span;++q) for(int r=0;r<span;++r) {
+    fam[q*span+r]=world.region(q+lo,r+lo).family;
+    ++shares[static_cast<std::size_t>(fam[q*span+r])];
+   }
+   bool adjacentOk=true;
+   for(int q=0;q<span;++q) for(int r=0;r<span;++r) for(const auto& d:dirs) {
+    const int nq=q+d[0],nr=r+d[1];
+    if(nq<0||nr<0||nq>=span||nr>=span) continue;
+    if(!allowedAdjacent(fam[q*span+r],fam[nq*span+nr])) adjacentOk=false;
+   }
+   check(adjacentOk,"no adjacent region pair violates allowedAdjacent over 60x60 window");
+   for(std::size_t i=0;i<4;++i) check(shares[i]>=0.08*span*span,"each region family holds at least 8 percent of the 60x60 window");
+   for(const auto& f:fixed) check(world.region(f[0],f[1]).family==static_cast<Biome>(f[2]),"origin-cell families unchanged");
+   std::vector<int> order(span*span);
+   for(int i=0;i<span*span;++i) order[i]=i;
+   std::mt19937 rng(7u);
+   std::shuffle(order.begin(),order.end(),rng);
+   World shuffled({seed,128,64});
+   bool orderOk=true;
+   for(int idx:order) {
+    const int q=idx/span,r=idx%span;
+    if(shuffled.region(q+lo,r+lo).family!=fam[idx]) orderOk=false;
+   }
+   check(orderOk,"region family is identical when cells are computed in shuffled order");
+  }
+  check(!allowedAdjacent(Biome::DryGrassland,Biome::Taiga)&&!allowedAdjacent(Biome::Taiga,Biome::DryGrassland),"DryGrassland and Taiga are forbidden neighbours");
+  check(allowedAdjacent(Biome::TemperateForest,Biome::Taiga)&&allowedAdjacent(Biome::RockyHighlands,Biome::DryGrassland),"other family pairs are allowed neighbours");
  }
  bool badTime=false; try { o.advance(-1); } catch(const std::invalid_argument&) { badTime=true; }
  check(badTime,"negative elapsed time rejected");

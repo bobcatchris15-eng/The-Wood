@@ -27,17 +27,56 @@ void validatePoint(double x,double y) {
  if(!std::isfinite(x)||!std::isfinite(y)||std::abs(x)>1000000||std::abs(y)>1000000)
   throw std::invalid_argument("Sample outside supported milestone coordinates");
 }
+struct ClimateField { double temperature01, moisture01; };
+// Low-frequency fields sampled at hex centres, wavelength ~6 cells; outputs in [0,1].
+ClimateField climateAt(const Settings& c,int gx,int gy) {
+ const double x=gx/6.0,y=gy/6.0;
+ return {0.5+0.5*noise(c.seed+Salt::ClimateTemperature,x,y),0.5+0.5*noise(c.seed+Salt::ClimateMoisture,x,y)};
+}
+double reliefAt(const Settings& c,int gx,int gy) { return 0.5+0.5*noise(c.seed+Salt::ClimateRelief,gx/6.0,gy/6.0); }
+std::optional<Biome> originOverride(int gx,int gy) {
+ if(gx==0&&gy==0) return Biome::TemperateForest;
+ if((gx==1&&gy==0)||(gx==0&&gy==1)) return Biome::DryGrassland;
+ if((gx==1&&gy==1)||(gx==1&&gy==-1)) return Biome::RockyHighlands;
+ if(gx==0&&gy==-1) return Biome::Taiga;
+ if(gx==-1&&gy==0) return Biome::TemperateForest;
+ return std::nullopt;
+}
+Biome tableFamily(const Settings& c,int gx,int gy) {
+ const auto f=climateAt(c,gx,gy);
+ if(f.temperature01<0.30) return Biome::Taiga;
+ if(f.moisture01<0.35) return Biome::DryGrassland;
+ if(reliefAt(c,gx,gy)>0.62) return Biome::RockyHighlands;
+ return Biome::TemperateForest;
+}
+// Strict total order on cells by (hash,gx,gy); the lower key yields on a forbidden pair.
+bool lowerKey(std::uint32_t h1,int x1,int y1,std::uint32_t h2,int x2,int y2) {
+ if(h1!=h2) return h1<h2;
+ if(x1!=x2) return x1<x2;
+ return y1<y2;
+}
+Biome regionFamily(const Settings& c,int gx,int gy) {
+ if(const auto fixed=originOverride(gx,gy)) return *fixed;
+ const Biome base=tableFamily(c,gx,gy);
+ const auto self=hash(c.seed,gx,gy,Salt::RegionFamily);
+ for(const auto d:hex::directions) {
+  const int nx=gx+d.q,ny=gy+d.r;
+  const auto fixed=originOverride(nx,ny);
+  const Biome partner=fixed?*fixed:tableFamily(c,nx,ny);
+  if(allowedAdjacent(base,partner)) continue;
+  // Origin cells are authored and cannot yield, so the free neighbour always does.
+  if(fixed) return Biome::TemperateForest;
+  if(lowerKey(self,gx,gy,hash(c.seed,nx,ny,Salt::RegionFamily),nx,ny)) return Biome::TemperateForest;
+ }
+ return base;
+}
+
 Region describe(const Settings& c,int gx,int gy) {
  Region r;
  r.identity=hash(c.seed,gx,gy,Salt::RegionIdentity);
  const auto center=hex::center({gx,gy});
  r.origin={center.x-180,center.y-180,0};r.q=gx;r.r=gy;r.extent=hex::radius*2;
- r.family=static_cast<Biome>(hash(c.seed,gx,gy,Salt::RegionFamily)%4);
- if(gx==0&&gy==0) r.family=Biome::TemperateForest;
- if((gx==1&&gy==0)||(gx==0&&gy==1)) r.family=Biome::DryGrassland;
- if((gx==1&&gy==1)||(gx==1&&gy==-1)) r.family=Biome::RockyHighlands;
- if(gx==0&&gy==-1) r.family=Biome::Taiga;
- if(gx==-1&&gy==0) r.family=Biome::TemperateForest;
+ r.family=regionFamily(c,gx,gy);
  const auto i=static_cast<std::size_t>(r.family);
  constexpr double moisture[]={0.78,0.24,0.38,0.58};
  constexpr double roughness[]={0.22,0.16,0.85,0.36};
@@ -110,6 +149,9 @@ double ground(const Settings& c,double x,double y,double stream,const Surface* c
  const double base=water+3.0+broad+detail+valleyWall+mountainMass+crags+prairie;
  return bank+(base-bank)*smooth((distance-10.0)/25.0);
 }
+}
+bool allowedAdjacent(Biome a,Biome b) {
+ return !((a==Biome::DryGrassland&&b==Biome::Taiga)||(a==Biome::Taiga&&b==Biome::DryGrassland));
 }
 World::World(Settings settings):config(settings) {
  if(!std::isfinite(config.chunkSize)||config.chunkSize<=0||config.cells<2||config.cells>256)
