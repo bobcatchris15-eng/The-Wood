@@ -252,8 +252,12 @@ async function main() {
       console.log(`  still ${dead.length} unresolved - continuing, pool keeps rotating`);
     }
 
+    // Only genuinely dead tasks may be reassigned. This loop previously iterated all
+    // rows and skipped only `done`, so a task with a healthy worker in flight was
+    // re-dispatched alongside it - two workers on one task, as happened to
+    // blender-plant-prep at round 4. The predicate lives in reconcile(); trust it.
     for (const row of rows) {
-      if (row.done) continue;
+      if (!row.dead) continue;
       console.log(`  reassigning ${row.key} (${row.why})`);
       await reassign(op, row, tried);
       await sleep(3000);

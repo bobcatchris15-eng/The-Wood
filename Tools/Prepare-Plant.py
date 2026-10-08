@@ -11,6 +11,15 @@ Run headless:
     blender --background --python Tools/Prepare-Plant.py -- \
         ArtSource/PolyHaven/<asset>/<asset>.gltf --asset <asset> [options]
 
+    --asset NAME         report/output stem (defaults to the source file stem)
+    --kind KIND          plant | canopy | shrub | fern | grass (default plant)
+    --target-height M    rescale so the prepared plant is M metres tall
+    --base-band M        height of the rooted base band used for the pivot
+    --lods N             number of distance LOD stages, 2-3 (default 3)
+    --output DIR         destination directory (default ArtSource/Prepared/Plants)
+
+Exits 0 when every Specification.md section 10 check passes and 2 when any check
+fails, so a caller can trust the exit code instead of reading the traceback.
 No engine work is performed or required by this script.
 """
 import bpy
@@ -36,10 +45,25 @@ LOD_SILHOUETTE_MINIMUM = 0.75
 LOD_BASE_FRACTION = 0.95
 # Height slabs used to compare a LOD's outline against LOD0's.
 LOD_SLABS = 12
+# A slab may lose this fraction of the plant's widest reach without counting as
+# a silhouette loss. A leaf card's outermost tip is a single vertex, and losing
+# it is not a readability change; a slab that halves its reach is.
+LOD_SLAB_TOLERANCE = 0.15
+# A prepared plant outside this height range is a unit mismatch, not a plant.
+PLANT_HEIGHT_RANGE_M = (0.01, 50.0)
 
 
 class PlantError(RuntimeError):
     """Preparation refused to continue; the source mesh is not usable as-is."""
+
+
+USAGE = """Usage: blender --background --python Tools/Prepare-Plant.py -- <mesh> [options]
+  --asset NAME       report and output stem (default: source file stem)
+  --kind KIND        plant | canopy | shrub | fern | grass (default: plant)
+  --target-height M  rescale the prepared plant to M metres tall
+  --base-band M      height of the rooted base band used for the pivot
+  --lods N           distance LOD stages to emit, 2-3 (default: 3)
+  --output DIR       destination (default: ArtSource/Prepared/Plants)"""
 
 
 def parse_arguments(argv):
@@ -48,6 +72,9 @@ def parse_arguments(argv):
         raise PlantError('Pass arguments after "--", e.g. '
                          'blender --background --python Tools/Prepare-Plant.py -- <mesh> --asset <name>')
     tail = argv[argv.index('--') + 1:]
+    if '--help' in tail or '-h' in tail:
+        print(USAGE)
+        raise SystemExit(0)
     options = {'asset': None, 'target_height': None, 'output': None,
                'kind': 'plant', 'base_band': None, 'lods': len(LOD_RATIOS)}
     named = {'--asset': 'asset', '--target-height': 'target_height',
@@ -247,12 +274,27 @@ def normalize_normals(obj):
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.shade_smooth_by_angle(angle=math.radians(50.0))
     mesh = obj.data
-    degenerate = sum(1 for polygon in mesh.polygons if polygon.area <= 1e-9)
     if len(mesh.polygons) == 0:
         raise PlantError('Source mesh has no faces after normal repair')
+    degenerate = sum(1 for polygon in mesh.polygons if polygon.area <= 1e-9)
+    used = np.zeros(len(mesh.vertices), dtype=bool)
+    corners = np.empty(len(mesh.loops), dtype=np.int32)
+    mesh.loops.foreach_get('vertex_index', corners)
+    used[corners] = True
+    loose = int((~used).sum())
+    if loose:
+        # Loose vertices export as unreferenced points and inflate the engine's
+        # vertex buffer for nothing; drop them before anything is written.
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.mesh.select_mode(type='VERT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.delete_loose(use_verts=True, use_edges=True, use_faces=False)
+        bpy.ops.object.mode_set(mode='OBJECT')
     return {'faces': len(mesh.polygons), 'degenerate_faces': degenerate,
-            'loose_vertices': sum(1 for vertex in mesh.vertices if not any(
-                vertex.index in edge.vertices for edge in mesh.edges[:0])) and 0}
+            'loose_vertices_removed': loose,
+            'smooth_angle_degrees': 50.0,
+            'outward': True}
 
 
 def export_glb(obj, path, asset, cutoff, materials):
@@ -368,12 +410,15 @@ def verify_lod(source_points, lod_points, source_weights, lod_weights):
     height = max(high - low, 1e-9)
     source_outline = outline_by_slab(source, low, high)
     reduced_outline = outline_by_slab(reduced, low, high)
+    width = float(source_outline.max()) if source_outline.size else 0.0
+    tolerance = width * LOD_SLAB_TOLERANCE
     occupied = source_outline > 1e-9
     # Compare only slabs LOD0 actually occupies; a slab that is empty in the
-    # source carries no silhouette to preserve.
-    retention = np.divide(reduced_outline[occupied], source_outline[occupied],
-                          out=np.ones(int(occupied.sum())), where=occupied[occupied])
-    silhouette = float(retention.mean()) if len(retention) else 0.0
+    # source carries no silhouette to preserve. A slab whose reach shrank by no
+    # more than the tolerance counts as fully retained.
+    ratios = np.clip((reduced_outline[occupied] + tolerance) /
+                     np.maximum(source_outline[occupied], tolerance), 0.0, 1.0)
+    silhouette = float(ratios.mean()) if len(ratios) else 0.0
     lowest = float(reduced[:, 2].min())
     base_retained = 1.0 - (lowest - low) / height
     still = sum(1 for value in lod_weights if value <= 1e-6)
@@ -474,131 +519,169 @@ def reduce_mesh(obj, ratio):
     normalize_normals(obj)
 
 
-options = parse_arguments(sys.argv)
-source = options['source']
-output = options['output'].resolve()
-output.mkdir(parents=True, exist_ok=True)
-asset = options['asset']
-variant = asset
-reports = []
+def main():
+    """Prepare one source plant and return its report, or refuse."""
+    options = parse_arguments(sys.argv)
+    source = options['source']
+    output = options['output'].resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    asset = options['asset']
+    variant = asset
+    reports = []
 
-objects = import_source(source)
-prepared = merge_meshes(objects, variant)
-bpy.ops.object.select_all(action='DESELECT')
-bpy.context.view_layer.objects.active = prepared
-prepared.select_set(True)
-bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-mesh = prepared.data
-
-source_triangles = 0
-mesh.calc_loop_triangles()
-source_triangles = len(mesh.loop_triangles)
-if source_triangles == 0:
-    raise PlantError('Source mesh has no triangles')
-
-coords = world_positions(mesh)
-low = float(coords[:, 2].min())
-pivot, base_radius, base_vertices, height = ground_contact_pivot(coords, options['base_band'])
-raw_height = float(coords[:, 2].max() - low)
-raw_span = [float(np.ptp(coords[:, axis])) for axis in range(3)]
-
-scale = 1.0
-if options['target_height'] is not None and raw_height > 1e-6:
-    scale = float(options['target_height']) / raw_height
-    prepared.scale = (scale, scale, scale)
+    objects = import_source(source)
+    prepared = merge_meshes(objects, variant)
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.objects.active = prepared
+    prepared.select_set(True)
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    mesh = prepared.data
+
+    mesh.calc_loop_triangles()
+    source_triangles = len(mesh.loop_triangles)
+    if source_triangles == 0:
+        raise PlantError('Source mesh has no triangles')
+
     coords = world_positions(mesh)
     low = float(coords[:, 2].min())
     pivot, base_radius, base_vertices, height = ground_contact_pivot(coords, options['base_band'])
+    raw_height = float(coords[:, 2].max() - low)
+    raw_span = [float(np.ptp(coords[:, axis])) for axis in range(3)]
 
-weights = wind_weights(coords, height, low, options['kind'])
-write_wind_attribute(mesh, weights)
+    scale = 1.0
+    if options['target_height'] is not None and raw_height > 1e-6:
+        scale = float(options['target_height']) / raw_height
+        prepared.scale = (scale, scale, scale)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        coords = world_positions(mesh)
+        low = float(coords[:, 2].min())
+        pivot, base_radius, base_vertices, height = ground_contact_pivot(coords, options['base_band'])
 
-# Apply the ground-contact pivot as geometry, then leave the object at the
-# origin so every exported node shares one grounded local frame.
-for index, vertex in enumerate(mesh.vertices):
-    vertex.co -= pivot
-grounded = world_positions(mesh)
-if abs(float(grounded[:, 2].min())) > 1e-4:
-    raise PlantError('Ground-contact pivot did not seat the base at Z=0')
-# The pivot is the base band's XY centroid, so the band's own centre must land
-# on the origin. Comparing the band centre (not its outermost vertex) is what
-# actually proves the instance sits on its root rather than beside it.
-seated = grounded[grounded[:, 2] <= float(grounded[:, 2].min()) + max(1e-6, height * 0.08)]
-if abs(float(seated[:, 0].mean())) > 1e-4 or abs(float(seated[:, 1].mean())) > 1e-4:
-    raise PlantError('Ground-contact pivot is not inside the rooted base footprint')
+    weights = wind_weights(coords, height, low, options['kind'])
+    write_wind_attribute(mesh, weights)
 
-materials = normalize_materials(mesh, asset, ALPHA_CUTOFF)
-normals = normalize_normals(prepared)
-# Normals were rebuilt after the pivot and material edits, so refresh the ramp
-# and coordinates once more before anything is exported.
-write_wind_attribute(mesh, weights)
+    # Apply the ground-contact pivot as geometry, then leave the object at the
+    # origin so every exported node shares one grounded local frame.
+    for index, vertex in enumerate(mesh.vertices):
+        vertex.co -= pivot
+    grounded = world_positions(mesh)
+    if abs(float(grounded[:, 2].min())) > 1e-4:
+        raise PlantError('Ground-contact pivot did not seat the base at Z=0')
+    # The pivot is the base band's XY centroid, so the band's own centre must land
+    # on the origin. Comparing the band centre (not its outermost vertex) is what
+    # actually proves the instance sits on its root rather than beside it.
+    seated = grounded[grounded[:, 2] <= float(grounded[:, 2].min()) + max(1e-6, height * 0.08)]
+    if abs(float(seated[:, 0].mean())) > 1e-4 or abs(float(seated[:, 1].mean())) > 1e-4:
+        raise PlantError('Ground-contact pivot is not inside the rooted base footprint')
 
-lod0_path = output / (variant + '.glb')
-lod0 = export_glb(prepared, lod0_path, asset, ALPHA_CUTOFF, materials)
-if lod0['uv_channels'] < 2:
-    raise PlantError('Exported GLB has no UV1 for the existing wind material')
-if not lod0['wind']:
-    raise PlantError('Exported GLB lost the ' + WIND_ATTRIBUTE + ' wind weight attribute')
-if min(lod0['wind']) > 0.0:
-    raise PlantError('No vertex is fully still; the rooted base must carry zero wind')
-if max(lod0['wind']) < 0.05:
-    raise PlantError('Canopy never reaches wind weight 1; the plant would not move')
-if lod0['normals_primitives'] == 0:
-    raise PlantError('Exported GLB has no vertex normals')
-if any(mode != 'MASK' for _, mode, _ in lod0['alpha_modes']):
-    raise PlantError('A material did not export as alphaMode MASK')
+    materials = normalize_materials(mesh, asset, ALPHA_CUTOFF)
+    normals = normalize_normals(prepared)
+    # Normal repair can delete loose vertices, so the ramp is rebuilt from the
+    # mesh that is about to be exported rather than reused from before the pass.
+    coords = world_positions(mesh)
+    low = float(coords[:, 2].min())
+    height = float(coords[:, 2].max() - low)
+    weights = wind_weights(coords, height, low, options['kind'])
+    write_wind_attribute(mesh, weights)
+    grounded = world_positions(mesh)
+    # Ground contact is re-asserted here because deleting loose vertices can
+    # remove a stray point that was sitting below the real base.
+    if abs(float(grounded[:, 2].min())) > 1e-4:
+        raise PlantError('Loose vertex removal lifted the plant off the ground')
 
-lods = lod_stage(prepared, mesh, grounded, weights, asset, output,
-                 ALPHA_CUTOFF, materials, options['lods'])
+    # Scale is verified, not assumed: a source authored in centimetres or
+    # kilometres survives this stage only as a recorded dimension, because the
+    # engine places these instances in metres.
+    if not PLANT_HEIGHT_RANGE_M[0] <= height <= PLANT_HEIGHT_RANGE_M[1]:
+        raise PlantError('Prepared height %.3f m is outside the plausible plant '
+                         'range %s m; the source is probably in the wrong units '
+                         '(pass --target-height to rescale)'
+                         % (height, str(PLANT_HEIGHT_RANGE_M)))
 
-mesh.calc_loop_triangles()
-triangles = len(mesh.loop_triangles)
-# One shared material set with a fixed name family is what makes HISM
-# instancing viable; per-face unique materials would force a material instance
-# per instance and break the instanced draw.
-instancing_ok = (len(set(lod0['materials'])) == len(lod0['materials'])
-                  and all(name.startswith('M_Plant_' + asset + '_') for name in lod0['materials']))
-reports.append({
-    'asset': asset,
-    'variant': variant,
-    'source': str(source),
-    'file': lod0_path.name,
-    'kind': options['kind'],
-    'pivot': 'rooted_base_ground_center',
-    'pivot_offset_m': [round(pivot.x * scale, 6), round(pivot.y * scale, 6),
-                       round(pivot.z * scale, 6)],
-    'base_contact_vertices': base_vertices,
-    'base_footprint_radius_m': round(base_radius * scale, 6),
-    'dimensions_m': [round(value * scale, 6) for value in
-                     (float(np.ptp(grounded[:, 0])), float(np.ptp(grounded[:, 1])), height)],
-    'source_dimensions_m': [round(value, 6) for value in raw_span],
-    'scale_factor': round(scale, 6),
-    'triangles': triangles,
-    'source_triangles': source_triangles,
-    'materials': len(lod0['materials']),
-    'material_names': lod0['materials'],
-    'alpha_modes': [{'name': name, 'alphaMode': mode, 'alphaCutoff': cutoff}
-                    for name, mode, cutoff in lod0['alpha_modes']],
-    'alpha_cutoff': ALPHA_CUTOFF,
-    'uv_channels': lod0['uv_channels'],
-    'wind_attribute': WIND_ATTRIBUTE,
-    'wind_uv': WIND_UV,
-    'wind_min': round(min(lod0['wind']), 4),
-    'wind_max': round(max(lod0['wind']), 4),
-    'wind_static_vertices': sum(1 for value in lod0['wind'] if value <= 1e-6),
-    'collision': 'none_by_design',
-    'collision_note': 'Thin foliage is placed, not walked on. The world adapter '
-                      'supplies trunk collision for woody assets; this plant '
-                      'needs no hull and must import with collision disabled.',
-    'instancing_compatible': instancing_ok,
-    'normals': normals,
-    'lods': lods,
-    'prepared_by': 'Tools/Prepare-Plant.py',
-})
-(output / 'plant-inspection.json').write_text(
-    json.dumps(reports, indent=2), encoding='utf-8')
-print('Prepared %s: %d triangles, %d materials, %d LOD stages, pivot at rooted '
-      'base (%.1f cm radius). See %s'
-      % (variant, triangles, len(lod0['materials']), len(lods),
-         base_radius * scale * 100, output / 'plant-inspection.json'))
+    lod0_path = output / (variant + '.glb')
+    lod0 = export_glb(prepared, lod0_path, asset, ALPHA_CUTOFF, materials)
+    if lod0['uv_channels'] < 2:
+        raise PlantError('Exported GLB has no UV1 for the existing wind material')
+    if not lod0['wind']:
+        raise PlantError('Exported GLB lost the ' + WIND_ATTRIBUTE + ' wind weight attribute')
+    if min(lod0['wind']) > 0.0:
+        raise PlantError('No vertex is fully still; the rooted base must carry zero wind')
+    if max(lod0['wind']) < 0.05:
+        raise PlantError('Canopy never reaches wind weight 1; the plant would not move')
+    if lod0['normals_primitives'] == 0:
+        raise PlantError('Exported GLB has no vertex normals')
+    if any(mode != 'MASK' for _, mode, _ in lod0['alpha_modes']):
+        raise PlantError('A material did not export as alphaMode MASK')
+
+    lods = lod_stage(prepared, mesh, grounded, weights, asset, output,
+                     ALPHA_CUTOFF, materials, options['lods'])
+
+    mesh.calc_loop_triangles()
+    triangles = len(mesh.loop_triangles)
+    # One shared material set with a fixed name family is what makes HISM
+    # instancing viable; per-face unique materials would force a material instance
+    # per instance and break the instanced draw.
+    instancing_ok = (len(set(lod0['materials'])) == len(lod0['materials'])
+                      and all(name.startswith('M_Plant_' + asset + '_') for name in lod0['materials']))
+    if not instancing_ok:
+        raise PlantError('Material names are not instancing safe for ' + asset)
+    if not normals['faces'] or normals['degenerate_faces'] > normals['faces'] * 0.05:
+        raise PlantError('Normals pass left %d degenerate of %d faces'
+                         % (normals['degenerate_faces'], normals['faces']))
+    reports.append({
+        'asset': asset,
+        'variant': variant,
+        'source': str(source),
+        'file': lod0_path.name,
+        'kind': options['kind'],
+        'pivot': 'rooted_base_ground_center',
+        # Every measurement below is taken after any rescale, so none of them is
+        # multiplied by scale_factor again; source_dimensions_m is untouched.
+        'pivot_offset_m': [round(pivot.x, 6), round(pivot.y, 6), round(pivot.z, 6)],
+        'base_contact_vertices': base_vertices,
+        'base_footprint_radius_m': round(base_radius, 6),
+        'dimensions_m': [round(float(np.ptp(grounded[:, axis])), 6) for axis in range(3)],
+        'source_dimensions_m': [round(value, 6) for value in raw_span],
+        'scale_factor': round(scale, 6),
+        'scale_check': {'unit': 'm', 'height_m': round(height, 6),
+                        'plausible_range_m': list(PLANT_HEIGHT_RANGE_M),
+                        'passed': True},
+        'triangles': triangles,
+        'source_triangles': source_triangles,
+        'materials': len(lod0['materials']),
+        'material_names': lod0['materials'],
+        'alpha_modes': [{'name': name, 'alphaMode': mode, 'alphaCutoff': cutoff}
+                        for name, mode, cutoff in lod0['alpha_modes']],
+        'alpha_cutoff': ALPHA_CUTOFF,
+        'uv_channels': lod0['uv_channels'],
+        'wind_attribute': WIND_ATTRIBUTE,
+        'wind_uv': WIND_UV,
+        'wind_min': round(min(lod0['wind']), 4),
+        'wind_max': round(max(lod0['wind']), 4),
+        'wind_static_vertices': sum(1 for value in lod0['wind'] if value <= 1e-6),
+        'collision': 'none_by_design',
+        'collision_note': 'Thin foliage is placed, not walked on. The world adapter '
+                          'supplies trunk collision for woody assets; this plant '
+                          'needs no hull and must import with collision disabled.',
+        'instancing_compatible': instancing_ok,
+        'normals': normals,
+        'lods': lods,
+        'prepared_by': 'Tools/Prepare-Plant.py',
+    })
+    (output / 'plant-inspection.json').write_text(
+        json.dumps(reports, indent=2), encoding='utf-8')
+    print('Prepared %s: %d triangles, %d materials, %d LOD stages, pivot at rooted '
+          'base (%.1f cm radius). See %s'
+          % (variant, triangles, len(lod0['materials']), len(lods),
+             base_radius * 100, output / 'plant-inspection.json'))
+    return 0
+
+
+if __name__ == '__main__':
+    # Blender exits 0 even when a --python script raises, so the refusal has to
+    # exit explicitly or a caller would record a failed preparation as a pass.
+    try:
+        raise SystemExit(main())
+    except PlantError as error:
+        print('Prepare-Plant refused: ' + str(error), file=sys.stderr)
+        raise SystemExit(2)
