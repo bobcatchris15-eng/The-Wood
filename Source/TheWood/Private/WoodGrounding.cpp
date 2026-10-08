@@ -57,7 +57,8 @@ FTransform WoodGroundedTransform(const wood::Feature& Feature,const FWoodPlaceme
   }
   // Five centimetres of soil contact hides the scan's open cut at its base.
   if(!Profile.Roots.IsEmpty()) Result.SetTranslation(FVector(X,Y,Base-5));
- } else if(Feature.kind==wood::Kind::Rock||Feature.kind==wood::Kind::Prop) {
+ } else if(Feature.kind==wood::Kind::Rock) {
+  // Props stay flat at terrain height under the base centre: no root fit, no tilt.
   Result.AddToTranslation(FVector(0,0,-Profile.Bounds.GetSize().Z*Feature.scale*.18));
  }
  return Result;

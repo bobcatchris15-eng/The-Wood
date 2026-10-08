@@ -10,7 +10,10 @@ struct FWoodPlacementProfile {
  FBox Bounds{ForceInit};
  bool Young=false;
  bool Prairie=false;
+ int32 PropId=-1;
 };
+// Palette Props slots and prop bucket count; prop buckets are 6+propId.
+inline constexpr int32 WoodPropCount=4;
 THEWOOD_API FWoodPlacementProfile WoodPlacementProfile(const UStaticMesh& Asset);
 
 // Cached imported root skirt vertices, in local Unreal centimetres.

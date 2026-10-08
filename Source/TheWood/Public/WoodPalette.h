@@ -17,6 +17,8 @@ public:
  // Prairie-layer (type 3) clumps, >=0.6m footprint; kept separate from the shared Grasses slot.
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> Prairie;
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> Rocks;
+ // Prop meshes (E2): array index is the propId carried by Kind::Prop features.
+ UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> Props;
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UMaterialInterface> GroundMaterial;
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UMaterialInterface> WaterMaterial;
 };

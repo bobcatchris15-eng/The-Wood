@@ -365,6 +365,9 @@ for record in records:
     # Source grasses feed prairie clumps only; they are not palette slots.
     if record['asset'] in ('grass_bermuda_01','grass_medium_02'):
         continue
+    # Records outside the palette slot map (e.g. E2a trailhead props) are not palette slots.
+    if record['asset'] not in slots:
+        continue
     destination='/Game/Art/PolyHaven/' + VERSION + '/' + record['variant']
     existing=LIB.list_assets(destination,recursive=True)
     if not existing or record['asset'] in ('pine_tree_01','prairie_clump','rock_07','boulder_01','rock_moss_set_01','rock_moss_set_02'):
@@ -417,6 +420,36 @@ for slot,meshes in groups.items():
         raise RuntimeError('Empty required palette slot: '+slot)
     # Explicit library migration: never preserve obsolete sapling-only slots.
     palette.set_editor_property(slot,meshes)
+# Props (E2): palette index equals propId. Forced replace-reimport, one simple
+# box collision per mesh, and instancing-usable materials as for rocks.
+props=[]
+for index in range(4):
+    name='prop_%02d' % index
+    source=prepared/(name+'.glb')
+    if not source.exists():
+        raise RuntimeError('Missing prop source: '+str(source))
+    destination='/Game/Art/Props/'+VERSION
+    task=unreal.AssetImportTask()
+    task.set_editor_property('filename',str(source))
+    task.set_editor_property('destination_path',destination)
+    task.set_editor_property('automated',True)
+    task.set_editor_property('save',True)
+    task.set_editor_property('replace_existing',True)
+    TOOLS.import_asset_tasks([task])
+    found=[LIB.load_asset(path) for path in LIB.list_assets(destination,recursive=True)]
+    found=[mesh for mesh in found if isinstance(mesh,unreal.StaticMesh) and mesh.get_name()==name]
+    if len(found)!=1:
+        raise RuntimeError('Prop import produced no unique mesh: '+name)
+    mesh=found[0]
+    SMES.remove_collisions(mesh)
+    SMES.add_simple_collisions(mesh,unreal.ScriptingCollisionShapeType.BOX)
+    for i,item in enumerate(mesh.get_editor_property('static_materials')):
+        interface=item.get_editor_property('material_interface')
+        if interface is not None and '/Game/Wood/RockMaterials/' not in interface.get_path_name():
+            mesh.set_material(i,with_instancing(interface))
+    LIB.save_loaded_asset(mesh)
+    props.append(mesh)
+palette.set_editor_property('props',props)
 LIB.save_loaded_asset(palette)
 
 # Preserve low-root vertex data on older sapling assets too, for packaged

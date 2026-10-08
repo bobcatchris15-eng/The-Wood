@@ -34,12 +34,22 @@ FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
  };
  // Candidate tables are immutable within the job, avoiding allocation per plant.
  TArray<TArray<int32>> Candidates;
- Candidates.SetNum(6);
- for(int32 I=0;I<Kinds.Num();++I) if(Available[I]) Candidates[Profiles[I].Prairie?5:Profiles[I].Young?4:static_cast<int32>(Kinds[I])].Add(I);
+ // Buckets: 0-3 kinds, 4 young, 5 prairie, 6+propId props.
+ Candidates.SetNum(6+WoodPropCount);
+ for(int32 I=0;I<Kinds.Num();++I) {
+  if(!Available[I]) continue;
+  const auto& Profile=Profiles[I];
+  const bool PropMesh=Kinds[I]==wood::Kind::Prop&&Profile.PropId>=0&&Profile.PropId<WoodPropCount;
+  Candidates[Profile.Prairie?5:Profile.Young?4:PropMesh?6+Profile.PropId:static_cast<int32>(Kinds[I])].Add(I);
+ }
  for(const auto& Feature:Chunk.features) {
-  // Props render as rocks until E2 supplies prop meshes.
   int32 Bucket=Feature.young?4:static_cast<int32>(Feature.kind==wood::Kind::Prop?wood::Kind::Rock:Feature.kind);
   if(Feature.prairie && !Candidates[5].IsEmpty()) Bucket=5;
+  // Prop features take their propId bucket; an empty bucket falls back to Rock.
+  if(Feature.kind==wood::Kind::Prop) {
+   const bool HasProp=Feature.propId>=0&&Feature.propId<WoodPropCount&&!Candidates[6+Feature.propId].IsEmpty();
+   Bucket=HasProp?6+Feature.propId:static_cast<int32>(wood::Kind::Rock);
+  }
   const auto& Matches=Candidates[Bucket];
   if(Matches.IsEmpty()) continue;
   const int32 NumMatches=Matches.Num();
