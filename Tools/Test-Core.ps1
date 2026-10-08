@@ -5,7 +5,7 @@ if (!(Test-Path -LiteralPath $compiler)) { throw 'Install the test compiler: pyt
 $outputDir = Join-Path $taskRoot '.cache/tests'
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 $exe = Join-Path $outputDir 'generation-tests.exe'
-& $compiler c++ -std=c++17 -Wall -Wextra -Werror -I "$taskRoot/Source/TheWood/Public" "$taskRoot/Source/TheWood/Private/Generation/WoodGeneration.cpp" "$taskRoot/Source/TheWood/Private/Generation/WoodDiscovery.cpp" "$taskRoot/Tests/GenerationTests.cpp" -o $exe
+& $compiler c++ -std=c++17 -Wall -Wextra -Werror -I "$taskRoot/Source/TheWood/Public" "$taskRoot/Source/TheWood/Private/Generation/WoodGeneration.cpp" "$taskRoot/Source/TheWood/Private/Generation/WoodDiscovery.cpp" "$taskRoot/Source/TheWood/Private/Generation/WoodEntrance.cpp" "$taskRoot/Tests/GenerationTests.cpp" -o $exe
 if ($LASTEXITCODE -ne 0) { throw 'C++ test compilation failed' }
 & $exe
 if ($LASTEXITCODE -ne 0) { throw 'Generation tests failed' }

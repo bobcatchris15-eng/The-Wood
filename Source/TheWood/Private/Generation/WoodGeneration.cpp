@@ -3,6 +3,7 @@
 #include "Generation/WoodSalts.h"
 #include "Generation/WoodHex.h"
 #include "Generation/WoodDiscovery.h"
+#include "Generation/WoodEntrance.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -112,7 +113,7 @@ double waterLevel(double y) { return 8-0.018*y; }
 double channelHalfWidth(const Settings& c,double y) {
  return 1.4+0.5*(1+noise(c.seed+Salt::ChannelWidth,0,y/160));
 }
-double ground(const World& world,double x,double y,double stream,const Surface* cachedClimate=nullptr) {
+double groundBase(const World& world,double x,double y,double stream,const Surface* cachedClimate=nullptr) {
  const Settings& c=world.settings();
  const double distance=std::abs(x-stream),water=waterLevel(y);
  // A sub-cell bed margin keeps the narrow water surface above the 2m mesh.
@@ -152,6 +153,16 @@ double ground(const World& world,double x,double y,double stream,const Surface* 
  const double base=water+3.0+broad+detail+valleyWall+mountainMass+crags+prairie;
  return bank+(base-bank)*smooth((distance-10.0)/25.0);
 }
+// Wilderness base height, blended toward the trailhead entrance inside its zone while not entered.
+double ground(const World& world,double x,double y,double stream,const Surface* cachedClimate=nullptr) {
+ const double base=groundBase(world,x,y,stream,cachedClimate);
+ if(world.entered()) return base;
+ const double w=entrance::blend(x,y);
+ if(w<=0) return base;
+ const double lotHeight=groundBase(world,entrance::LotX,entrance::LotY,world.streamX(entrance::LotY));
+ const double shaped=entrance::shapedHeight(x,y,base,lotHeight);
+ return w>=1?shaped:base+(shaped-base)*w;
+}
 }
 bool allowedAdjacent(Biome a,Biome b) {
  return !((a==Biome::DryGrassland&&b==Biome::Taiga)||(a==Biome::Taiga&&b==Biome::DryGrassland));
@@ -164,6 +175,8 @@ void World::setEpochs(std::function<std::uint32_t(int q,int r)> epochOf) {
  if(!epochOf) epochOf=[](int,int){return std::uint32_t{0};};
  epochOf_=std::move(epochOf);
 }
+void World::setEntered(bool value) { entered_=value; }
+bool World::entered() const { return entered_; }
 std::uint32_t World::regionSeed(int q,int r) const {
  const std::uint32_t epoch=epochOf_(q,r);
  return epoch==0?config.seed:hash(config.seed,q,r,Salt::RegionEpoch+epoch);
@@ -346,6 +359,7 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
    const double px=(gx+random(seed,gx,gy,salt))*spacing;
    const double py=(gy+random(seed,gx,gy,salt+Salt::LayerJitterY))*spacing;
    if(px<minX||px>=maxX||py<minY||py>=maxY) continue;
+   if(!entered_&&entrance::inZone(px,py)) continue;
    const auto surface=sample(px,py);
    if(surface.depth>0||std::abs(px-streamX(py))<streamHalfWidth(py)+0.5) continue;
    const double choice=random(seed,gx,gy,salt+Salt::LayerChoice);
@@ -431,6 +445,11 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
  layer(6,Salt::RockLayer,2);
  layer(1.0,Salt::PrairieLayer,3);
  layer(1.5,Salt::TaigaMossLayer,4);
+ if(!entered_) for(auto feature:entrance::fixedFeatures()) {
+  if(feature.position.x<minX||feature.position.x>=maxX||feature.position.y<minY||feature.position.y>=maxY) continue;
+  feature.position.z=terrainHeight(feature.position.x,feature.position.y);
+  habitat.features.push_back(feature);
+ }
  return habitat;
 }
 // Generation pipeline, in order: region -> structure -> terrain -> hydrology -> habitat -> presentation.
@@ -461,6 +480,7 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
 }
 Lighting World::lighting(double x,double y,double seconds) const {
  if(!std::isfinite(seconds)) throw std::invalid_argument("Lighting time must be finite");
+ if(!entered_&&entrance::inZone(x,y)) return Lighting{1.0,5600.0};
  Lighting result; double total=0;
  for(const auto& cell:cellWeights(config,x,y)) {
   if(cell.weight<=0) continue;

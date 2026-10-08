@@ -37,7 +37,8 @@ FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
  Candidates.SetNum(6);
  for(int32 I=0;I<Kinds.Num();++I) if(Available[I]) Candidates[Profiles[I].Prairie?5:Profiles[I].Young?4:static_cast<int32>(Kinds[I])].Add(I);
  for(const auto& Feature:Chunk.features) {
-  int32 Bucket=Feature.young?4:static_cast<int32>(Feature.kind);
+  // Props render as rocks until E2 supplies prop meshes.
+  int32 Bucket=Feature.young?4:static_cast<int32>(Feature.kind==wood::Kind::Prop?wood::Kind::Rock:Feature.kind);
   if(Feature.prairie && !Candidates[5].IsEmpty()) Bucket=5;
   const auto& Matches=Candidates[Bucket];
   if(Matches.IsEmpty()) continue;

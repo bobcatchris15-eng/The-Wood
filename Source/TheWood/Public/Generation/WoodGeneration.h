@@ -32,8 +32,9 @@ struct Surface {
  std::array<double,4> biome{};
  double temperature=0, exposure=0, shelter=0, roughness=0;
 };
-enum class Kind { Tree, Fern, Grass, Rock };
-struct Feature { Kind kind; Vec3 position; double yaw=0, scale=1; bool young=false; bool prairie=false; };
+enum class Kind { Tree, Fern, Grass, Rock, Prop };
+// Prop features carry propId (0 signboard, 1 picnic table, 2 bin, 3 fence segment); -1 otherwise.
+struct Feature { Kind kind; Vec3 position; double yaw=0, scale=1; bool young=false; bool prairie=false; int propId=-1; };
 struct Chunk { int x=0, y=0, cells=0; std::vector<Vec3> vertices; std::vector<std::uint32_t> triangles; std::vector<Feature> features; };
 struct Lighting { double brightness=0, kelvin=0; };
 // Outputs of the generate() pipeline stages; each stage reads Settings and earlier stage outputs only.
@@ -74,6 +75,9 @@ public:
  const Settings& settings() const { return config; }
  // Per-region epoch source (default: always 0). Copied on set; generation only reads it.
  void setEpochs(std::function<std::uint32_t(int q,int r)> epochOf);
+ // Entered (default true, wilderness): false activates the trailhead entrance zone and its terrain, habitat and lighting.
+ void setEntered(bool value);
+ bool entered() const;
  // Seed for a region's identity, family, phase, flags and habitat: config.seed at epoch 0.
  std::uint32_t regionSeed(int q,int r) const;
  // Hex lattice cell owning (x,y) metres. Depends on the seed only, never on epochs.
@@ -81,6 +85,7 @@ public:
 private:
  Settings config;
  std::function<std::uint32_t(int q,int r)> epochOf_=[](int,int){return std::uint32_t{0};};
+ bool entered_=true;
  // Pipeline stages, called in this order by generate().
  stage::RegionStage regionStage(int x,int y) const;
  stage::TerrainStage terrainStage(int x,int y) const;
