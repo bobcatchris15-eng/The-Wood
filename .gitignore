@@ -14,3 +14,5 @@ __pycache__/
 *.pdb
 *.log
 .claude/
+graphify-out/*
+!graphify-out/graph.json

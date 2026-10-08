@@ -1,5 +1,5 @@
 # Spec v1.1 roadmap — orchestrator ledger
-Updated: 2026-10-08 | HEAD: ebdd6c6 | Graph: none (P0.5 pending)
+Updated: 2026-10-08 | HEAD: ebdd6c6 | Graph: 58f0e77
 
 ## Objective
 Take The Wood from current prototype to Docs/Specification.md v1.1 (M1–M5) via the roadmap at
@@ -18,8 +18,8 @@ Take The Wood from current prototype to Docs/Specification.md v1.1 (M1–M5) via
 | P0.1 | CLAUDE.md | DONE f9385c9 | 1 | PASS; Fast 26s, UE build 5s incr, UE tests 4/4 30s |
 | P0.2 | docs | DONE 8d9964c | 1 | PASS; 10 boxes ticked (biome-art tick = judgement) |
 | P0.3 | WoodSalts.h + Generation/Discovery.cpp | DONE ebdd6c6 | 1 | PASS; pure move, also named noise seed offsets |
-| P0.4 | ledger | DONE | - | - |
-| P0.5 | graphify | TODO | | |
+| P0.4 | ledger | DONE 58f0e77 | - | - |
+| P0.5 | graphify | DONE | - | AST-only, 626 nodes, 37 communities, built_at 58f0e77 |
 
 ## Unverified assumptions
 - Soundscape never heard in a running game (S1 closes this).
