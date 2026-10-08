@@ -229,6 +229,18 @@ int main() {
   }
   check(continuous,"terrain is continuous across chunk seams near the stream");
  }
+ // Nearest discovery: deterministic, inside the search radius, and rejects a non-positive radius.
+ {
+  World disc({12345,128,64});
+  const auto first=disc.nearestDiscovery(-60,-60,900);
+  const auto second=disc.nearestDiscovery(-60,-60,900);
+  check(first.has_value(),"nearestDiscovery finds a discovery within 900 m of the ruin origin");
+  if(first&&second) {
+   check(first->x==second->x&&first->y==second->y,"nearestDiscovery is deterministic");
+   check(std::hypot(first->x+60,first->y+60)<=900+1e-9,"nearestDiscovery point lies within the search radius");
+  }
+  check(!disc.nearestDiscovery(-60,-60,0).has_value(),"nearestDiscovery rejects zero radius");
+ }
  bool badTime=false; try { o.advance(-1); } catch(const std::invalid_argument&) { badTime=true; }
  check(badTime,"negative elapsed time rejected");
  if(failures) return 1;

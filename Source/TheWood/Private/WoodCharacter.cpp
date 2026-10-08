@@ -7,6 +7,7 @@
 #include "EngineUtils.h"
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
+#include "Misc/CommandLine.h"
 #include "Misc/DateTime.h"
 #include "Misc/Guid.h"
 #include "UnrealClient.h"
@@ -84,7 +85,16 @@ void AWoodCharacter::WoodView(const FString& View) {
  } else if(View.Equals(TEXT("Highlands"),ESearchCase::IgnoreCase)) {
   const auto R=Landscape.region(1,1);Position=FVector(R.origin.x*100,R.origin.y*100,0);Facing=FRotator(-8,35,0);
  } else if(View.Equals(TEXT("Ruins"),ESearchCase::IgnoreCase)) {
-  Position=FVector(-6800,-6800,0);Facing=FRotator(-5,45,0);
+  // Frame the nearest generated ruin 12 m away, facing it; fixed fallback when none is in range.
+  const FString Cmd=FCommandLine::Get();
+  const auto Ruin=Landscape.nearestDiscovery(Position.X/100.0,Position.Y/100.0,900.0);
+  if(Ruin&&(Cmd.Contains(TEXT("-WoodFrameRuin"))||!Cmd.Contains(TEXT("WoodStartX=")))) {
+   const double Yaw=45.0,Rad=FMath::DegreesToRadians(Yaw);
+   Position=FVector((Ruin->x-12.0*FMath::Cos(Rad))*100.0,(Ruin->y-12.0*FMath::Sin(Rad))*100.0,0);
+   Facing=FRotator(-5,Yaw,0);
+  } else {
+   Position=FVector(-6800,-6800,0);Facing=FRotator(-5,45,0);
+  }
  } else if(View.Equals(TEXT("Roots"),ESearchCase::IgnoreCase)) {
   const auto Chunk=Landscape.generate(-2,-2);
   for(const auto& Feature:Chunk.features) if(Feature.kind==wood::Kind::Tree) {

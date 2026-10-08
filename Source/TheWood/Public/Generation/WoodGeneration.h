@@ -2,9 +2,12 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include <functional>
+#include <optional>
 
 // Engine-independent generation coordinates are metres; the Unreal adapter converts to cm.
 namespace wood {
+struct DiscoveryPlan;
 struct Vec3 { double x=0, y=0, z=0; };
 struct Settings { std::uint32_t seed=12345; double chunkSize=128; int cells=64; };
 enum class Biome { TemperateForest, DryGrassland, RockyHighlands, Taiga };
@@ -43,10 +46,14 @@ public:
  double streamDepth(double x,double y) const;
  // Terrain-only generation skips ecological work but produces identical geometry.
  Chunk generate(int x, int y, bool includeFeatures=true) const;
+ // Centre of the discovery reservation nearest (x,y) whose centre lies within radius metres; empty if none.
+ std::optional<Vec3> nearestDiscovery(double x, double y, double radius) const;
  Lighting lighting(double x, double y, double seconds) const;
  const Settings& settings() const { return config; }
 private:
  Settings config;
+ // Visits every valid discovery plan of the cells within two lattice steps of the owner cell.
+ void forEachDiscoveryNear(int ownerQ, int ownerR, const std::function<void(const DiscoveryPlan&)>& fn) const;
 };
 struct Observation {
  bool seated=false, accelerated=false;

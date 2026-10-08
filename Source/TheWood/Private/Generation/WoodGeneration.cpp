@@ -1,4 +1,5 @@
 #include "Generation/WoodGeneration.h"
+#include <set>
 #include "Generation/WoodSalts.h"
 #include "Generation/WoodHex.h"
 #include "Generation/WoodDiscovery.h"
@@ -158,6 +159,44 @@ double World::terrainHeight(double x,double y) const {
  const double d=ground(config,x0+spacing,y0+spacing,streamX(y0+spacing));
  return d+(c-d)*(1-u)+(b-d)*(1-v);
 }
+void World::forEachDiscoveryNear(int ownerQ,int ownerR,const std::function<void(const DiscoveryPlan&)>& fn) const {
+ auto heightFn=[this](double hx,double hy){return terrainHeight(hx,hy);};
+ auto streamXFn=[this](double sy){return streamX(sy);};
+ auto streamHWFn=[this](double sy){return streamHalfWidth(sy);};
+ for(int dy=-2;dy<=2;++dy) for(int dx=-2;dx<=2;++dx) {
+  if(std::max({std::abs(dx),std::abs(dy),std::abs(dx+dy)})>2) continue;
+  const int col=ownerQ+dx,row=ownerR+dy;
+  const auto r=describe(config,col,row);
+  const Vec3 cellCenter{r.origin.x,r.origin.y,terrainHeight(r.origin.x,r.origin.y)};
+  const auto cellClimate=sample(r.origin.x,r.origin.y);
+  const auto plan=planDiscovery(config.seed,col,row,cellCenter,cellClimate,heightFn,streamXFn,streamHWFn);
+  if(!plan.valid) continue;
+  fn(plan);
+ }
+}
+std::optional<Vec3> World::nearestDiscovery(double x,double y,double radius) const {
+ if(!(radius>0.0)) return std::nullopt;
+ // Owner cells of a lattice of sample points covering the search square; neighbours are added by forEachDiscoveryNear.
+ const double step=config.chunkSize*0.5;
+ const int steps=static_cast<int>(std::ceil(radius/step));
+ std::set<std::pair<int,int>> owners;
+ for(int j=-steps;j<=steps;++j) for(int i=-steps;i<=steps;++i) {
+  const auto owner=hex::owner(hex::warp({x+i*step+180,y+j*step+180},config.seed));
+  owners.insert({owner.q,owner.r});
+ }
+ std::optional<Vec3> best;
+ double bestD2=radius*radius;
+ for(const auto& o:owners) forEachDiscoveryNear(o.first,o.second,[&](const DiscoveryPlan& plan){
+  if(!(plan.reservation.outerRadius>0.0)) return;
+  const double dx=plan.reservation.center.x-x, dy=plan.reservation.center.y-y;
+  const double d2=dx*dx+dy*dy;
+  if(d2<=bestD2) {
+   bestD2=d2;
+   best=plan.reservation.center;
+  }
+ });
+ return best;
+}
 Chunk World::generate(int x,int y,bool includeFeatures) const {
 
  if(std::abs(static_cast<double>(x)*config.chunkSize)>999000||std::abs(static_cast<double>(y)*config.chunkSize)>999000)
@@ -177,21 +216,10 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
  const double maxX=(x+1)*config.chunkSize,maxY=(y+1)*config.chunkSize;
  const double midX=(minX+maxX)*0.5,midY=(minY+maxY)*0.5;
  const auto owner=hex::owner(hex::warp({midX+180,midY+180},config.seed));
- auto heightFn=[this](double hx,double hy){return terrainHeight(hx,hy);};
- auto streamXFn=[this](double sy){return streamX(sy);};
- auto streamHWFn=[this](double sy){return streamHalfWidth(sy);};
-
  std::vector<DiscoveryReservation> reservations;
  std::vector<DiscoveryPiece> chunkPieces;
 
- for(int dy=-2;dy<=2;++dy) for(int dx=-2;dx<=2;++dx) {
-  if(std::max({std::abs(dx),std::abs(dy),std::abs(dx+dy)})>2) continue;
-  const int col=owner.q+dx,row=owner.r+dy;
-  const auto r=describe(config,col,row);
-  const Vec3 cellCenter{r.origin.x,r.origin.y,terrainHeight(r.origin.x,r.origin.y)};
-  const auto cellClimate=sample(r.origin.x,r.origin.y);
-  const auto plan=planDiscovery(config.seed,col,row,cellCenter,cellClimate,heightFn,streamXFn,streamHWFn);
-  if(!plan.valid) continue;
+ forEachDiscoveryNear(owner.q,owner.r,[&](const DiscoveryPlan& plan) {
   if(plan.reservation.innerRadius>0.0||plan.reservation.outerRadius>0.0) {
    reservations.push_back(plan.reservation);
   }
@@ -200,7 +228,7 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
     chunkPieces.push_back(piece);
    }
   }
- }
+ });
 
  // Independent global lattices keep layers dense and chunk ownership unambiguous.
  // Full-cell jitter and broad habitat patches conceal the underlying lattice.
