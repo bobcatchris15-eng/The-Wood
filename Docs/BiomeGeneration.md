@@ -2,7 +2,7 @@
 
 Design specification Â· 6 October 2026
 
-This is the proposed next generation architecture, following the request for efficiently packed hexagonal biome cells and edge-local blending. It supersedes the intended regional layout in the earlier prototype plan. The current runtime now has the initial hex ownership and edge-weight foundation. The full climate selection, boundary contracts, drainage and discovery catalog described here remain future implementation. The full experience remains defined in [Specification.md](Specification.md), implementation evidence in [Status.md](Status.md), the [biome roster](BiomeCatalog.md), and planned discovery content in [DiscoveryCatalog.md](DiscoveryCatalog.md).
+This is the proposed next generation architecture, following the request for efficiently packed hexagonal biome cells and edge-local blending. It supersedes the intended regional layout in the earlier prototype plan. The current runtime now has the initial hex ownership and edge-weight foundation, the climate table and adjacency rule, fresh-identity forgetting, and save/resume (section 10). The weighted compatibility pass, boundary contracts, drainage and discovery catalog described here remain future implementation. The full experience remains defined in [Specification.md](Specification.md), implementation evidence in [Status.md](Status.md), the [biome roster](BiomeCatalog.md), and planned discovery content in [DiscoveryCatalog.md](DiscoveryCatalog.md).
 
 ## 1. What a cell means
 
@@ -79,7 +79,7 @@ Practical relationships include prairie/savannah to dry woodland or rocky upland
 
 A cell is not homogeneous. Its dominant family controls the overall read, while terrain and habitat fields create riparian vegetation, exposed grass, sheltered moss, wet hollows and dry ridges within it. Small habitats do not require additional full-size hex cells. A related cluster can share a broad climate while varying openness, landforms, substrate and discoveries.
 
-Constructed discoveries—ruins, intact structures and anomalous objects—are eligible independently in approximately one third of generated cells. Unreal character is eligible independently in approximately one tenth. Neither flag changes cell ownership or causes abrupt boundary cuts. Their random streams are independent of each other and of asset variant selection, so adding a grass asset does not reroll a region's ruin status. These are long-run probabilities, not an exact repeating three-cell or ten-cell pattern. A cell can contain both. An anomalous structure is not restricted to unreal-flagged cells: the flag describes sustained environmental character, not the object’s historical genre.
+Constructed discoveriesï¿½ruins, intact structures and anomalous objectsï¿½are eligible independently in approximately one third of generated cells. Unreal character is eligible independently in approximately one tenth. Neither flag changes cell ownership or causes abrupt boundary cuts. Their random streams are independent of each other and of asset variant selection, so adding a grass asset does not reroll a region's ruin status. These are long-run probabilities, not an exact repeating three-cell or ten-cell pattern. A cell can contain both. An anomalous structure is not restricted to unreal-flagged cells: the flag describes sustained environmental character, not the objectï¿½s historical genre.
 
 ## 5. Ordered generation and shared structural inputs
 
@@ -130,7 +130,7 @@ Retain visible landmarks, nearby backtracking geography, pending jobs and any ce
 
 Boundary contracts remain alive while either incident incarnation or a visible shared feature needs them. Store first-committed contracts explicitly; canonical identities provide order-independent initial creation, while retained contracts constrain replacements. Save/resume records retained incarnations, contracts, relevant features, lighting/weather state, pending identities and recipe versions. Do not promise reconstructing a whole session from one seed after forgotten identities have been discarded.
 
-The current build reconstructs old seeded geography after unloading. Fresh-identity forgetting and save/resume are separate future implementation stages.
+Fresh-identity forgetting and save/resume are implemented (section 10). Boundary contracts and retained-edge replacement remain future work.
 
 ## 9. Validation and migration order
 
@@ -163,3 +163,92 @@ The current build reconstructs old seeded geography after unloading. Fresh-ident
 6. Add fresh identities, retained-edge replacement and save/resume, with visibility-based forgetting tests.
 
 This order changes one important source of complexity at a time. Hex ownership, terrain chunks, discoveries and irreversible forgetting have separate contracts and separate acceptance evidence.
+
+## 10. Implemented contracts (as of 8 October 2026)
+
+Sources: `Source/TheWood/Private/Generation/WoodGeneration.cpp`, `WoodMemory.cpp`, `WoodSave.cpp`; `Source/TheWood/Private/WoodWorld.cpp`, `WoodWorldStreaming.cpp`; constants in `Public/Generation/WoodSalts.h` and `WoodHex.h`. Where this section and sections 1-9 differ, this section describes the code.
+
+### Pipeline stages
+
+`World::generate(x, y, includeFeatures)` calls these stages in this order:
+
+| Order | Stage | Reads | Produces |
+| --- | --- | --- | --- |
+| 1 | terrain | Settings, x, y | Vertex heights and triangles. Always run, even when features are skipped. |
+| 2 | region | Settings, x, y | Chunk bounds and the hex owner of the chunk midpoint. |
+| 3 | structure | region | Discovery reservations and chunk-local discovery pieces. |
+| 4 | hydrology | terrain | Stream centre and half-width per terrain row. |
+| 5 | habitat | region, structure | Ecological feature layers. Its hydrology argument is not read. |
+| - | presentation | terrain, habitat, structure | `Chunk`: habitat features, then structure pieces. |
+
+The header declaration order differs from this call order. The call order is the one that applies.
+
+**Order-independence rule:** `generate(x, y)` depends only on Settings, the epoch source and `(x, y)`. No stage may read state left by another chunk or an earlier call. `GenerationTests` checks this with eight fixed-seed shuffles of a 3x3 chunk block, comparing per-chunk fingerprints against an in-order run.
+
+### Region flags and climate families
+
+Each hex region is described by `describe()`. It uses `regionSeed(q, r)`, so its values change with its epoch (see Forgetting).
+
+**Flags.** Both are independent, with their own salts:
+- `unreal`: `hash % 1000 < 100`, so p = 0.10 (salt `RegionUnreal`, 716). It is computed but nothing in `Source` reads it yet, so it has no generation or visual effect.
+- `ruins`: `hash % 3000 < 1000`, so p = 1/3 (salt `RegionRuins`, 717). Discovery planning consumes it.
+
+**Climate fields.** Each is `0.5 + 0.5 * noise(...)` at the hex centre `(q/6, r/6)`, keyed by the region seed:
+- temperature01 (salt `ClimateTemperature`, 1009)
+- moisture01 (salt `ClimateMoisture`, 1013)
+- relief (salt `ClimateRelief`, 1019)
+
+**Base table**, applied in this order:
+1. temperature01 < 0.30: Taiga
+2. moisture01 < 0.35: DryGrassland
+3. relief > 0.62: RockyHighlands
+4. otherwise: TemperateForest
+
+**Origin overrides** (fixed, not sampled): `(0,0)` and `(-1,0)` TemperateForest; `(1,0)` and `(0,1)` DryGrassland; `(1,1)` and `(1,-1)` RockyHighlands; `(0,-1)` Taiga.
+
+**Adjacency contract.** `allowedAdjacent` forbids only DryGrassland with Taiga, symmetrically. In `regionFamily()`, a cell compares its base-table family with each of its six neighbours' base-table family (or origin override). On a forbidden pair, the cell yields to TemperateForest if its key is lower. The key is the hash of the cell's region seed with the RegionFamily salt, then `q`, then `r`. Origin cells never yield, so the free neighbour does. The rule is a single pass on base families. Final neighbour families are never consulted. It is a hard pairwise rule, not the weighted compatibility pass described in section 4.
+
+**Per-family constants** from `describe()`:
+
+| Family | Moisture | Roughness | Temperature (C) | Canopy | Exposure |
+| --- | --- | --- | --- | --- | --- |
+| TemperateForest | 0.78 | 0.22 | 16 | 0.96 | 0.18 |
+| DryGrassland | 0.24 | 0.16 | 24 | 0.055 | 0.86 |
+| RockyHighlands | 0.38 | 0.85 | 8 | 0.09 | 0.94 |
+| Taiga | 0.58 | 0.36 | -3 | 0.70 | 0.38 |
+
+Family enum order is TemperateForest, DryGrassland, RockyHighlands, Taiga. The blend weights of `Surface.biome[]` follow that order.
+
+### Forgetting
+
+- **Clock.** Observation uses the shared observation clock (`ObservationSeconds`), not wall time. It advances at 1x, or 20x while seated and accelerated.
+- **Observation.** On each streaming step, `UpdateForgetting()` observes every region touched by a retained chunk. A chunk touches its four corners and centre. Observed regions get `lastSeen = now` and are no longer marked forgotten.
+- **Trigger.** A region that was seen at least once, is not touched this step, is not already forgotten, and has been absent for at least `ForgetGraceSeconds` gets its epoch incremented. The default is 90 s, the `UPROPERTY` on `AWoodWorld`. The grace is measured from `lastSeen`.
+- **Epoch to seed.** `regionSeed(q, r)` is `Settings.seed` at epoch 0. At epoch > 0 it is `hash(seed, q, r, RegionEpoch + epoch)`, with `RegionEpoch = 0xE90C0000`.
+- **Hex lattice.** `regionOwner()` depends on the seed only. Epochs never move cell ownership.
+- **Epoch source.** Generation reads an immutable snapshot passed to `setEpochs()`. Background jobs copy the `World`, so each keeps the snapshot it was given.
+- **Stale jobs.** In-flight jobs that touch a forgotten region are discarded and never realized. The invariant that no resident chunk touches a forgotten region is asserted with `ensureMsgf`.
+- **Changes on forget:** region identity, family, the climate values in the per-family table, lighting phase, the unreal and ruins flags, discovery planning and habitat. Per-cell ground amplitude also changes, because `ground()` weights its highland, prairie and broad terms by the family and roughness of nearby regions. The terrain shape near a forgotten cell can therefore change.
+- **Stays:** the `Settings.seed`-keyed noise fields and the stream centreline (`streamX` uses `Settings.seed` only), the hex lattice, chunk layout, and chunks owned only by distant epoch-0 regions, which `GenerationTests` checks as byte-identical.
+
+### Save/resume
+
+- **File.** `<ProjectSavedDir>/Wood/resume.json`, set by `AWoodWorld::ResumePath`. Writes go to `resume.json.tmp` first.
+- **Write.** The temp file is moved over the target, then read back. The write succeeds only if the text matches and `fromJson` parses it. `SaveResumeNow()` writes synchronously. `RequestResumeSave()` writes on a background thread. One write runs at a time, and a newer payload replaces any queued one.
+- **Format.** Compact JSON, fixed key order:
+  - `version`, `seed`
+  - `playerX`, `playerY`, `playerZ`, `yaw`, `pitch`
+  - `clockSeconds`, `seated`, `accelerated`, `enteredWild`
+  - `retainedChunks`: array of `{x, y}`
+  - `epochs`: array of `{q, r, epoch}`, only regions with epoch > 0
+- **Version.** `version` is 1 and `kSupportedVersion` is 1. The reader rejects version < 1 or > 1. Any parse failure starts the session fresh and logs a warning. Unknown keys are ignored. Missing keys keep their defaults.
+- **Numbers.** Doubles use `max_digits10`, so they round-trip exactly. A non-finite double is written as `null`, and the reader rejects it.
+- **Saved but not restored.** `seed` is written, but `ApplyResume` does not read it. The generator seed comes from the `Seed` property or `-WoodSeed`. `enteredWild` is in the schema but the runtime never sets it, so it is always false.
+- **Load.** On `BeginPlay`, before generation: clock, seated and accelerated state, region epochs (`Memory.restore` and generator epochs), the player transform, and prefetch of `retainedChunks`.
+- **Triggers:**
+  - `EndPlay`: synchronous write, if ready.
+  - Autosave: every 60 s of wall time while not seated, checked in `Tick`.
+  - Standing up from a seat: background write.
+  - A streaming step that forgets at least one region: background write.
+  - Explicit `SaveResumeNow()`.
+- **`-WoodFresh`.** Disables loading and all saves. `RequestResumeSave()` and `SaveResumeNow()` return without writing. An existing file is neither read nor deleted.

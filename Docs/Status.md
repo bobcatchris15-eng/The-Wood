@@ -1,16 +1,16 @@
 # Implementation status â€” four-biome streaming iteration
 
-Updated 2026-10-06. This iteration is ready for human review. Fresh runtime checks and rendered biome/root inspections are recorded below. The photographic acceptance gate remains open.
+Updated 2026-10-08. This iteration is ready for human review. Fresh runtime checks and rendered biome/root inspections from 6 October are recorded below. The photographic acceptance gate remains open. Forgetting and save/resume were added on 8 October; see the section near the end.
 
 ## Current implementation scope
 
-The generator now exposes temperate forest, dry grassland, rocky highlands and taiga, with smooth regional weights on a 1,200 m lattice. Terrain, habitat queries and ground material treatment use those shared influences. This is four environmental families using a limited art library, not a completed collection of distinct climate-specific ecosystems.
+The generator now exposes temperate forest, dry grassland, rocky highlands and taiga, with smooth regional weights on packed hex cells (950 m radius, see Hex-cell foundation). Terrain, habitat queries and ground material treatment use those shared influences. This is four environmental families using a limited art library, not a completed collection of distinct climate-specific ecosystems.
 
 The runtime now supports asynchronous traversal streaming beyond the original sixteen-chunk benchmark. The implementation schedules near chunks first, allows two concurrent value-generation jobs, requests a radius-four neighborhood (81 desired chunks), and uses a radius-six retention buffer (at most 169 retained chunks). Terrain chunks remain 128 m across. Runtime object realization stays separate from background value generation.
 
 The old bounded walking clamp is removed. Generated ground under the player is protected while surrounding chunks are prepared. Ordinary instanced static meshes use stable instance identities for chunk lifecycle handling. Roots are fitted to the actual realized terrain footprint. Region lights occupy a fixed regional grid; sky presentation follows the viewer.
 
-Unloading and walking back currently reconstructs reproducible seeded geography. This is not irreversible forgetting: fresh identities for discarded places and saved retained surroundings are deferred.
+Regions left unobserved for the grace period are forgotten and regenerate with a fresh identity. Forgetting and save/resume are described in the section near the end.
 
 ## Controls and layout
 
@@ -18,13 +18,13 @@ Unloading and walking back currently reconstructs reproducible seeded geography.
 - E sit/stand with free look; T toggles seated 20Ã— environmental time; standing clears acceleration.
 - C/right-click takes a UI-free photograph saved locally in `Saved/Photos`.
 - No tree growth. Light, mist/cloud, wind and water animation express passing time.
-- Start around (-180, -180) m. Current blend centers include dry grassland east near (930, -120) and north near (-80, 1040), rocky highlands northeast near (1080, 1130), and taiga south near (-100, -1410). These are development references, not a player map or guaranteed exclusive-biome sites.
+- Start around (-180, -180) m. Developer views follow hex cell origins (see Hex-cell foundation). These are development references, not a player map or guaranteed exclusive-biome sites.
 
 ## Verification evidence and its limits
 
 - Unreal 5.8.3 editor target compiled; current content bootstrap completed without Python errors.
-- Four engine-independent suites pass: generation, biomes, atmosphere and streaming. Biome coverage includes three seeds, far coordinates, normalized blends, neighboring chunk order, water continuity, walkable routes and actual triangle heights.
-- All four Unreal runtime tests pass: continuous exploration beyond the old boundary, movement/observation, actual imported tree-root contact, and two successive vegetation unloads preserving retained transforms.
+- Four engine-independent suites passed on 6 October: generation, biomes, atmosphere and streaming. The suite set has since grown (see the section near the end). Biome coverage includes three seeds, far coordinates, normalized blends, neighboring chunk order, water continuity, walkable routes and actual triangle heights.
+- On 6 October all four Unreal runtime tests passed (the suite now has seven): continuous exploration beyond the old boundary, movement/observation, actual imported tree-root contact, and two successive vegetation unloads preserving retained transforms.
 - Actual tree-root test compares independently sampled terrain triangles: original worst root gap 7.34 cm; fitted lowest skirt contacts remain below soil across three imported models.
 - D3D12 photographs inspected for temperate forest/root close-up, dry grassland, rocky highlands and taiga. Captures are in `Saved/Review/12345-{Roots,Grassland,Highlands,Taiga}-0.png`; material warm-up required a second initial grassland capture.
 - Independent review found no definite floating tree or hard terrain seam in these captures. Distinct ground treatment, terrain and density are visible. Still images do not establish long-session temporal stability or packaged performance.
@@ -45,7 +45,7 @@ The Ryzen AI 7 PRO 350 / integrated Radeon 860M development machine is not a cer
 
 ## Deferred journey features
 
-Irreversible fresh-identity forgetting and save/resume; fixed parking-lot opening and occluded entrance threshold; additional climate families and species; independent ruin/unreal assignments; and occasional nonattacking wildlife remain deferred. Streaming implementation does not mean the full endless journey is complete.
+Fixed parking-lot opening and occluded entrance threshold; additional climate families and species; visual or generation use of the unreal flag (computed, not yet read); and occasional nonattacking wildlife remain deferred. Streaming implementation does not mean the full endless journey is complete.
 
 ## Follow-up: camera and plant maturity
 
@@ -57,10 +57,18 @@ Fresh editor build/content bootstrap, generation and biome suites, and all four 
 
 The regional layout now uses packed pointy-top hex cells (950 m corner radius), with smooth bounded coordinate warping and 200 m-wide edge transition bands. Normalized product weights preserve distinct cell interiors and three-cell corner blends. Terrain climate, habitat and lighting consume those same weights. Square 128 m rendering chunks and existing asynchronous streaming remain separate. Canonical undirected edge keys and axial ownership are available in WoodHex.h; adjacent region origins now come from hex centers.
 
-This is the geometric foundation, not the full generation specification. Family assignment retains the four-family seeded prototype and starter overrides. Climate-driven compatibility, complete edge contracts, macro-catchments, expanded catalog assets and irreversible forgetting remain future work. Existing discovery placement uses the new axial neighborhood, preserving current prototype compositions.
+This is the geometric foundation, not the full generation specification. Family assignment uses climate fields, fixed origin overrides and a hard DryGrassland-Taiga adjacency rule. The weighted compatibility pass, complete edge contracts, macro-catchments and expanded catalog assets remain future work. Forgetting is implemented (see below). Existing discovery placement uses the new axial neighborhood, preserving current prototype compositions.
 
 Developer views follow cell origins: Grassland (1,0), Taiga (0,-1), Highlands (1,1). Previous hardcoded development coordinates are obsolete. Fresh verification: hex geometry, biome and general generation suites pass; Unreal editor target builds successfully; all four Unreal runtime tests pass. Rendered motion across the new hex boundaries and packaged performance remain unverified in this quota-limited pass.
 
+
+## Forgetting and save/resume — 8 October 2026
+
+- Forgetting is implemented. A region with no retained chunk for the grace period (90 s by default, on the shared observation clock) gets a new epoch. Its generation identity is then reseeded. Terrain shape near it can change too, because per-cell ground amplitude follows the region's family and roughness. Seeded base noise and the stream centreline do not change. Details are in BiomeGeneration.md section 10.
+- Save/resume is implemented. The file is `<ProjectSavedDir>/Wood/resume.json`, written atomically and read back. The schema is version 1. Saves happen on exit, on autosave every 60 s of walking, when standing up, and when a region is forgotten. `-WoodFresh` disables loading and saving.
+- Known gap: the saved `seed` is not applied on load. The generator seed comes from `Seed` or `-WoodSeed`.
+- Unreal flag: computed per region (p = 0.10), with no reader yet. Ruins flag: independent (p = 1/3), used by discovery planning.
+- Test coverage present: Memory and Save engine-independent suites, and the Unreal automation tests `Wood.Runtime.Forgetting` and `Wood.Runtime.SaveResume`. This documentation pass did not run them.
 
 ## Procedural Ruins and Discoveries Foundation — 6 October 2026
 
