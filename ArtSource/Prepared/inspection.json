@@ -1240,5 +1240,77 @@
       "grass_medium_01_04"
     ],
     "wind_uv_version": 2
+  },
+  {
+    "asset": "standing_chalkboard_01",
+    "variant": "prop_00",
+    "file": "prop_00.glb",
+    "dimensions_m": [
+      1.2186971306800842,
+      1.0055511593818665,
+      1.9999999611374193
+    ],
+    "triangles": 2372,
+    "materials": 2,
+    "pivot": "base_center",
+    "source_meshes": 1,
+    "scale_factor": 1.325352590159707,
+    "target_axis": "height",
+    "target_m": 2.0,
+    "licence": "CC0-1.0"
+  },
+  {
+    "asset": "wooden_picnic_table",
+    "variant": "prop_01",
+    "file": "prop_01.glb",
+    "dimensions_m": [
+      2.2409759759902954,
+      3.022329568862915,
+      0.7459869086742401
+    ],
+    "triangles": 10210,
+    "materials": 2,
+    "pivot": "base_center",
+    "source_meshes": 1,
+    "scale_factor": 1.0,
+    "target_axis": "none",
+    "target_m": null,
+    "licence": "CC0-1.0"
+  },
+  {
+    "asset": "metal_trash_can",
+    "variant": "prop_02",
+    "file": "prop_02.glb",
+    "dimensions_m": [
+      0.8585786707699299,
+      0.6138980984687805,
+      0.9999999839274096
+    ],
+    "triangles": 6428,
+    "materials": 1,
+    "pivot": "base_center",
+    "source_meshes": 4,
+    "scale_factor": 1.1035580194226868,
+    "target_axis": "height",
+    "target_m": 1.0,
+    "licence": "CC0-1.0"
+  },
+  {
+    "asset": "modular_chainlink_fence",
+    "variant": "prop_03",
+    "file": "prop_03.glb",
+    "dimensions_m": [
+      4.0,
+      1.0593480579555035,
+      1.2435797452926636
+    ],
+    "triangles": 89232,
+    "materials": 2,
+    "pivot": "base_center",
+    "source_meshes": 20,
+    "scale_factor": 0.4929142396968456,
+    "target_axis": "horizontal",
+    "target_m": 4.0,
+    "licence": "CC0-1.0"
   }
 ]

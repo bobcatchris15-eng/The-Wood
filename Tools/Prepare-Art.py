@@ -347,6 +347,79 @@ def build_prairie_clumps():
                         'wind_uv_version': 2})
 
 
+# Gameplay props for the entrance zone (ids 0-3). Source orientation is kept (+Y forward as imported).
+# Each prop is scaled uniformly so the named axis matches real-world metres, then origin set to base centre.
+PROP_SOURCES = {
+    'prop_00': ('standing_chalkboard_01', 'height', 2.0),       # id 0 signboard
+    'prop_01': ('wooden_picnic_table', 'none', None),           # id 1 picnic table, already real-world scale
+    'prop_02': ('metal_trash_can', 'height', 1.0),              # id 2 bin, one clean can (rust variant dropped)
+    'prop_03': ('modular_chainlink_fence', 'horizontal', 4.0),  # id 3 fence segment, longest horizontal span
+}
+# Source objects kept per prop. metal_trash_can holds two cans (clean at x=+0.5, rust at x=-0.5); keep the clean one.
+PROP_KEEP = {
+    'metal_trash_can': lambda name: 'rust' not in name,
+}
+
+
+def build_props():
+    """Import each prop source, join to one mesh, scale to target metres and export base-centred GLB."""
+    for prop, (source, axis, target) in PROP_SOURCES.items():
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.import_scene.gltf(filepath=str(root / 'ArtSource' / 'PolyHaven' / source / (source + '.gltf')))
+        keep = PROP_KEEP.get(source, lambda name: True)
+        meshes = sorted((obj for obj in bpy.context.scene.objects if obj.type == 'MESH'), key=lambda obj: obj.name)
+        for obj in meshes:
+            if not keep(obj.name):
+                bpy.data.objects.remove(obj, do_unlink=True)
+        meshes = [obj for obj in bpy.context.scene.objects if obj.type == 'MESH']
+        if not meshes:
+            raise RuntimeError('No meshes in ' + source)
+        for obj in meshes:
+            matrix = obj.matrix_world.copy()
+            obj.parent = None
+            obj.matrix_world = matrix
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in meshes:
+            obj.select_set(True)
+        bpy.context.view_layer.objects.active = meshes[0]
+        if len(meshes) > 1:
+            bpy.ops.object.join()
+        obj = bpy.context.view_layer.objects.active
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        low = Vector(tuple(min(v.co[i] for v in obj.data.vertices) for i in range(3)))
+        high = Vector(tuple(max(v.co[i] for v in obj.data.vertices) for i in range(3)))
+        measured = (high.z - low.z) if axis == 'height' else max(high.x - low.x, high.y - low.y)
+        if axis == 'none':
+            measured = 1.0
+        factor = 1.0 if axis == 'none' else target / measured
+        for vertex in obj.data.vertices:
+            vertex.co *= factor
+        low = Vector(tuple(min(v.co[i] for v in obj.data.vertices) for i in range(3)))
+        high = Vector(tuple(max(v.co[i] for v in obj.data.vertices) for i in range(3)))
+        pivot = Vector(((low.x + high.x) / 2, (low.y + high.y) / 2, low.z))
+        for vertex in obj.data.vertices:
+            vertex.co -= pivot
+        obj.location = (0.0, 0.0, 0.0)
+        obj.name = prop
+        obj.data.calc_loop_triangles()
+        dims = [high.x - low.x, high.y - low.y, high.z - low.z]
+        path = output / (prop + '.glb')
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.export_scene.gltf(filepath=str(path), export_format='GLB', use_selection=True)
+        reports.append({'asset': source, 'variant': prop, 'file': prop + '.glb',
+                        'dimensions_m': dims,
+                        'triangles': len(obj.data.loop_triangles),
+                        'materials': len(obj.data.materials), 'pivot': 'base_center',
+                        'source_meshes': len(meshes), 'scale_factor': factor,
+                        'target_axis': axis, 'target_m': target, 'licence': 'CC0-1.0'})
+
+
 build_prairie_clumps()
+build_props()
 (output / 'inspection.json').write_text(json.dumps(reports, indent=2), encoding='utf-8')
 print(f'Prepared {len(reports)} grounded variants. See ArtSource/Prepared/inspection.json')

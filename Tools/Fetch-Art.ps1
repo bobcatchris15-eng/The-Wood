@@ -56,6 +56,31 @@ foreach ($taskId in @('forest_ground_04','forest_floor','withered_grass','gravel
  }
  Write-Output "Verified textures $taskId"
 }
+# Prop sources for Prepare-Art.py build_props (1k glTF; prop_00 sign, prop_01 picnic table, prop_02 bin, prop_03 fence).
+foreach ($taskId in @('standing_chalkboard_01','wooden_picnic_table','metal_trash_can','modular_chainlink_fence')) {
+ $taskFiles = Invoke-RestMethod -Uri "https://api.polyhaven.com/files/$taskId" -Headers $taskHeaders
+ $taskModel = $taskFiles.gltf.'1k'.gltf
+ if (!$taskModel) { throw "No 1k glTF for $taskId" }
+ $taskDir = Join-Path $taskArtRoot $taskId
+ New-Item -ItemType Directory -Force -Path $taskDir | Out-Null
+ $taskDownloads = @([PSCustomObject]@{Relative="$taskId.gltf";File=$taskModel})
+ foreach ($taskProperty in $taskModel.include.PSObject.Properties) {
+  $taskDownloads += [PSCustomObject]@{Relative=$taskProperty.Name;File=$taskProperty.Value}
+ }
+ foreach ($taskDownload in $taskDownloads) {
+  $taskDestination = [IO.Path]::GetFullPath((Join-Path $taskDir $taskDownload.Relative))
+  if (!$taskDestination.StartsWith(([IO.Path]::GetFullPath($taskDir)+[IO.Path]::DirectorySeparatorChar),[StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe asset-relative path' }
+  New-Item -ItemType Directory -Force -Path (Split-Path $taskDestination -Parent) | Out-Null
+  $taskValid = (Test-Path -LiteralPath $taskDestination) -and ((Get-FileHash -LiteralPath $taskDestination -Algorithm MD5).Hash -eq $taskDownload.File.md5)
+  if (!$taskValid) {
+   Invoke-WebRequest -Uri $taskDownload.File.url -OutFile ($taskDestination+'.partial') -Headers $taskHeaders
+   if ((Get-FileHash -LiteralPath ($taskDestination+'.partial') -Algorithm MD5).Hash -ne $taskDownload.File.md5) { throw "Asset checksum failed: $taskDestination" }
+   Move-Item -LiteralPath ($taskDestination+'.partial') -Destination $taskDestination -Force
+  }
+  $taskRecords += [PSCustomObject]@{Asset=$taskId;Source="https://polyhaven.com/a/$taskId";License='CC0-1.0';RelativePath="PolyHaven/$taskId/$($taskDownload.Relative)";Resolution='1k';MD5=$taskDownload.File.md5}
+ }
+ Write-Output "Verified $taskId"
+}
 $taskRecords | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $taskRoot 'ArtSource/manifest.json')
 Write-Output 'Powered by Poly Haven — https://polyhaven.com'
 

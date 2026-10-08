@@ -24,3 +24,34 @@ Tree meshes enable CPU access before builds/saves, including existing sapling as
 
 Prairie grass candidates are two CC0 Poly Haven 1k glTF models: [grass_bermuda_01](https://polyhaven.com/a/grass_bermuda_01) (glTF MD5 `a1bdd74118d2387a42dba4f605226f87`, 21 variants, 2–8cm horizontal spans per fragment) and [grass_medium_02](https://polyhaven.com/a/grass_medium_02) (glTF MD5 `dd8f166a6399238553bc3b2931677b68`, 5 variants, 0.12–0.43m across, 0.4m tall at most). Both are prepared by `Tools/Prepare-Art.py` into `ArtSource/Prepared`. Neither source clump reaches the 0.6m prairie footprint on its own; the grassland prairie slot must scale or assemble clumps before this is accepted. Blender's exporter reports multiple image-sampler warnings on source materials. All 42 GLB headers, UV1 weight ranges and source MD5 checksums passed verification, and the mature canopy silhouette was rendered in Blender. The initial Unreal import and material bootstrap passed in UE5.8.3. The corrected CanopyV3 cards, distance LODs and final rendered appearance are verified by the editor integration owner. Runtime trunk-only tree collision must be supplied by the world adapter; glTF imports do not provide a trustworthy collision hull. Native Unreal `.uasset` files are project content; preserve manifests even when excluding source downloads from a future Git repository.
 
+## Entrance zone props (prop_00..prop_03)
+
+All four are CC0 Poly Haven 1k glTF sources, fetched by `Tools/Fetch-Art.ps1` into `ArtSource/PolyHaven/<id>/` and verified against the API MD5. Every file (`.gltf`, `.bin`, textures) has its own MD5 in `ArtSource/manifest.json`. The glTF MD5s are listed below. `Tools/Prepare-Art.py` (`build_props`) joins each source to one mesh, scales it to real-world metres, sets the origin at base centre, keeps the source orientation (+Y forward as imported), and exports `ArtSource/Prepared/prop_0N.glb`. Dimensions are in `ArtSource/Prepared/inspection.json`.
+
+| Prop id | Source | Source URL | glTF MD5 | Target | Output MD5 | Output dims (X x Y x Z, m) |
+|---|---|---|---|---|---|---|
+| prop_00 signboard | standing_chalkboard_01 (Standing Chalkboard 01), CC0-1.0 | https://polyhaven.com/a/standing_chalkboard_01 | 7cdb491ebdea655db8402f7d6fc817c6 | height 2.0 m | 6398478c4d768f7575a86116d23dbda6 | 1.22 x 1.01 x 2.00 |
+| prop_01 picnic table | wooden_picnic_table (Wooden Picnic Table), CC0-1.0 | https://polyhaven.com/a/wooden_picnic_table | 6da01f8a75e559f356b494059f7b0eda | native scale (1.0) | 5bf7275eb1bd3236fc302d06afd2c07b | 2.24 x 3.02 x 0.75 |
+| prop_02 bin | metal_trash_can (Metal Trash Can), CC0-1.0 | https://polyhaven.com/a/metal_trash_can | c322802832a61ad7b17711dfbbc52e6b | height 1.0 m | fdeb92b17335a52100c6d20f69355a40 | 0.86 x 0.61 x 1.00 |
+| prop_03 fence segment | modular_chainlink_fence (Modular Chainlink Fence), CC0-1.0 | https://polyhaven.com/a/modular_chainlink_fence | 8c8f0c91cf48ba68fb32178bcbd6351a | longest horizontal 4.0 m | 97ec8c945abd55ba05a758eefdcc6d68 | 4.00 x 1.06 x 1.24 |
+
+Notes on the picks:
+- No fallbacks were built. Every id matched a Poly Haven model by name and tags.
+- prop_00 is a standing chalkboard, not a wooden board. prop_03 is galvanised chainlink, not wood. Both are CC0 and were chosen for shape and name. Swap them if the entrance needs wood.
+- prop_01 is at native scale (1.0). The source is already real-world size: 3.02 m long, 2.24 m wide, 0.75 m tall.
+- The native chainlink segment is 8.1 m long and 2.5 m tall. At 4 m long it is about 1.24 m tall.
+- prop_02 keeps one clean can from metal_trash_can: the body, lid and handles, with the rust variant dropped. It is scaled uniformly to 1.0 m tall. Body footprint is about 0.61 m. Handles extend the X span to 0.86 m.
+- prop_00 through prop_03 have no wind UV (they are not foliage).
+
+### Gravel022 (ground texture, from the Vivarium project)
+
+`ArtSource/Textures/Gravel022/` holds three files copied byte-for-byte from `C:\Misc\Vivarium\game\Textures\`. They were not fetched by the script. Original source: ambientCG, https://ambientcg.com/view?id=Gravel022, licence CC0-1.0. Resolution 1K JPEG.
+
+| File | MD5 |
+|---|---|
+| Gravel022_1K-JPG_Color.jpg | 5df8085ea81cae13e0cedbee07a28f00 |
+| Gravel022_1K-JPG_NormalGL.jpg | 4e82cc6c91982cff262b144fa1af024a |
+| Gravel022_1K-JPG_Roughness.jpg | 7d0c3565a154de45414fa5ecc535c892 |
+
+The copies match the Vivarium originals byte-for-byte (MD5 checked). The CC0 licence and source URL are from the packet, not re-verified against the ambientCG site.
+
