@@ -1,6 +1,9 @@
 #include "Generation/WoodGeneration.h"
 #include "Generation/WoodDiscovery.h"
+#include "Generation/WoodHex.h"
 #include <cmath>
+#include <set>
+#include <utility>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -354,6 +357,52 @@ int main() {
    std::printf("golden seed=%u chunk=(%d,%d) features=%d hash=0x%016llx\n",gc.seed,gc.x,gc.y,gc.features?1:0,static_cast<unsigned long long>(h));
    check(h==gc.expected,"generation output matches golden fingerprint");
   }
+ }
+ // Forgotten regions: epoch 1 on the owner of chunk (3,-2) regenerates that chunk; a distant epoch-0 chunk stays identical.
+ {
+  const auto ownerOfChunk=[](int cx,int cy,std::uint32_t seed) {
+   return hex::owner(hex::warp({(cx+0.5)*128.0+180,(cy+0.5)*128.0+180},seed));
+  };
+  const auto target=ownerOfChunk(3,-2,42);
+  const auto epochFn=[target](int q,int r)->std::uint32_t { return (q==target.q&&r==target.r)?1u:0u; };
+  World base({42,128,32}), forgot({42,128,32}), zeroed({42,128,32});
+  forgot.setEpochs(epochFn);
+  zeroed.setEpochs([](int,int)->std::uint32_t { return 0u; });
+  check(fingerprintChunk(base,base.generate(0,0))==fingerprintChunk(zeroed,zeroed.generate(0,0)),"epoch-0 setEpochs output matches default output");
+  const auto before=base.generate(3,-2), after=forgot.generate(3,-2);
+  std::set<std::pair<double,double>> kept;
+  for(const auto& f:after.features) kept.insert({f.position.x,f.position.y});
+  std::size_t moved=0;
+  for(const auto& f:before.features) moved+=kept.count({f.position.x,f.position.y})==0;
+  const double movedShare=before.features.empty()?0.0:static_cast<double>(moved)/static_cast<double>(before.features.size());
+  std::printf("forgotten chunk (3,-2): %zu of %zu features moved (%.1f%%)\n",moved,before.features.size(),100*movedShare);
+  check(movedShare>0.30,"forgotten chunk moves more than 30 percent of features");
+  check(fingerprintChunk(base,before)!=fingerprintChunk(forgot,after),"forgotten chunk fingerprint differs");
+  bool found=false;
+  for(int cy=-40;cy<=40&&!found;++cy) for(int cx=-40;cx<=40&&!found;++cx) {
+   const auto o=ownerOfChunk(cx,cy,42);
+   const int dq=o.q-target.q, dr=o.r-target.r;
+   if(std::max({std::abs(dq),std::abs(dr),std::abs(dq+dr)})<5) continue;
+   found=true;
+   check(fingerprintChunk(base,base.generate(cx,cy))==fingerprintChunk(forgot,forgot.generate(cx,cy)),"chunk owned by distant epoch-0 regions is byte-identical");
+  }
+  check(found,"distant epoch-0 chunk exists");
+  // Order independence: 8 fixed-seed shuffles of a 3x3 chunk block, full features, per-chunk fingerprints vs in-order run.
+  std::vector<std::pair<int,int>> block;
+  for(int cy=-3;cy<=-1;++cy) for(int cx=2;cx<=4;++cx) block.push_back({cx,cy});
+  std::vector<std::uint64_t> expected;
+  for(const auto& c:block) expected.push_back(fingerprintChunk(forgot,forgot.generate(c.first,c.second,true)));
+  std::vector<std::size_t> order(block.size());
+  for(std::size_t i=0;i<order.size();++i) order[i]=i;
+  std::mt19937 rng(11u);
+  std::size_t shuffleMismatch=0;
+  for(int s=0;s<2;++s) {
+   std::shuffle(order.begin(),order.end(),rng);
+   for(std::size_t idx:order) {
+    if(fingerprintChunk(forgot,forgot.generate(block[idx].first,block[idx].second,true))!=expected[idx]) ++shuffleMismatch;
+   }
+  }
+  check(shuffleMismatch==0,"epoch-set generation is identical across 8 shuffled chunk orders");
  }
  if(failures) return 1;
  std::cout<<"PASS: generation, hydrology, placement, lighting and observation contracts\n";

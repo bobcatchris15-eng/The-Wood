@@ -71,8 +71,13 @@ public:
  std::optional<Vec3> nearestBiomeCore(Biome family, double x, double y, double radius, double minWeight) const;
  Lighting lighting(double x, double y, double seconds) const;
  const Settings& settings() const { return config; }
+ // Per-region epoch source (default: always 0). Copied on set; generation only reads it.
+ void setEpochs(std::function<std::uint32_t(int q,int r)> epochOf);
+ // Seed for a region's identity, family, phase, flags and habitat: config.seed at epoch 0.
+ std::uint32_t regionSeed(int q,int r) const;
 private:
  Settings config;
+ std::function<std::uint32_t(int q,int r)> epochOf_=[](int,int){return std::uint32_t{0};};
  // Pipeline stages, called in this order by generate().
  stage::RegionStage regionStage(int x,int y) const;
  stage::TerrainStage terrainStage(int x,int y) const;

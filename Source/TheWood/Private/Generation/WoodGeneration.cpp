@@ -29,11 +29,12 @@ void validatePoint(double x,double y) {
 }
 struct ClimateField { double temperature01, moisture01; };
 // Low-frequency fields sampled at hex centres, wavelength ~6 cells; outputs in [0,1].
-ClimateField climateAt(const Settings& c,int gx,int gy) {
+ClimateField climateAt(const World& w,int gx,int gy) {
+ const auto seed=w.regionSeed(gx,gy);
  const double x=gx/6.0,y=gy/6.0;
- return {0.5+0.5*noise(c.seed+Salt::ClimateTemperature,x,y),0.5+0.5*noise(c.seed+Salt::ClimateMoisture,x,y)};
+ return {0.5+0.5*noise(seed+Salt::ClimateTemperature,x,y),0.5+0.5*noise(seed+Salt::ClimateMoisture,x,y)};
 }
-double reliefAt(const Settings& c,int gx,int gy) { return 0.5+0.5*noise(c.seed+Salt::ClimateRelief,gx/6.0,gy/6.0); }
+double reliefAt(const World& w,int gx,int gy) { return 0.5+0.5*noise(w.regionSeed(gx,gy)+Salt::ClimateRelief,gx/6.0,gy/6.0); }
 std::optional<Biome> originOverride(int gx,int gy) {
  if(gx==0&&gy==0) return Biome::TemperateForest;
  if((gx==1&&gy==0)||(gx==0&&gy==1)) return Biome::DryGrassland;
@@ -42,11 +43,11 @@ std::optional<Biome> originOverride(int gx,int gy) {
  if(gx==-1&&gy==0) return Biome::TemperateForest;
  return std::nullopt;
 }
-Biome tableFamily(const Settings& c,int gx,int gy) {
- const auto f=climateAt(c,gx,gy);
+Biome tableFamily(const World& w,int gx,int gy) {
+ const auto f=climateAt(w,gx,gy);
  if(f.temperature01<0.30) return Biome::Taiga;
  if(f.moisture01<0.35) return Biome::DryGrassland;
- if(reliefAt(c,gx,gy)>0.62) return Biome::RockyHighlands;
+ if(reliefAt(w,gx,gy)>0.62) return Biome::RockyHighlands;
  return Biome::TemperateForest;
 }
 // Strict total order on cells by (hash,gx,gy); the lower key yields on a forbidden pair.
@@ -55,28 +56,29 @@ bool lowerKey(std::uint32_t h1,int x1,int y1,std::uint32_t h2,int x2,int y2) {
  if(x1!=x2) return x1<x2;
  return y1<y2;
 }
-Biome regionFamily(const Settings& c,int gx,int gy) {
+Biome regionFamily(const World& w,int gx,int gy) {
  if(const auto fixed=originOverride(gx,gy)) return *fixed;
- const Biome base=tableFamily(c,gx,gy);
- const auto self=hash(c.seed,gx,gy,Salt::RegionFamily);
+ const Biome base=tableFamily(w,gx,gy);
+ const auto self=hash(w.regionSeed(gx,gy),gx,gy,Salt::RegionFamily);
  for(const auto d:hex::directions) {
   const int nx=gx+d.q,ny=gy+d.r;
   const auto fixed=originOverride(nx,ny);
-  const Biome partner=fixed?*fixed:tableFamily(c,nx,ny);
+  const Biome partner=fixed?*fixed:tableFamily(w,nx,ny);
   if(allowedAdjacent(base,partner)) continue;
   // Origin cells are authored and cannot yield, so the free neighbour always does.
   if(fixed) return Biome::TemperateForest;
-  if(lowerKey(self,gx,gy,hash(c.seed,nx,ny,Salt::RegionFamily),nx,ny)) return Biome::TemperateForest;
+  if(lowerKey(self,gx,gy,hash(w.regionSeed(nx,ny),nx,ny,Salt::RegionFamily),nx,ny)) return Biome::TemperateForest;
  }
  return base;
 }
 
-Region describe(const Settings& c,int gx,int gy) {
+Region describe(const World& w,int gx,int gy) {
+ const auto seed=w.regionSeed(gx,gy);
  Region r;
- r.identity=hash(c.seed,gx,gy,Salt::RegionIdentity);
+ r.identity=hash(seed,gx,gy,Salt::RegionIdentity);
  const auto center=hex::center({gx,gy});
  r.origin={center.x-180,center.y-180,0};r.q=gx;r.r=gy;r.extent=hex::radius*2;
- r.family=regionFamily(c,gx,gy);
+ r.family=regionFamily(w,gx,gy);
  const auto i=static_cast<std::size_t>(r.family);
  constexpr double moisture[]={0.78,0.24,0.38,0.58};
  constexpr double roughness[]={0.22,0.16,0.85,0.36};
@@ -85,21 +87,21 @@ Region describe(const Settings& c,int gx,int gy) {
  constexpr double exposure[]={0.18,0.86,0.94,0.38};
  r.moisture=moisture[i]; r.roughness=roughness[i]; r.temperature=temperature[i];
  r.canopy=canopy[i]; r.exposure=exposure[i]; r.shelter=1-r.exposure;
- r.phase=random(c.seed,gx,gy,Salt::RegionPhase)*2*pi;
- r.unreal=(hash(c.seed,gx,gy,Salt::RegionUnreal)%1000)<100;
- r.ruins=(hash(c.seed,gx,gy,Salt::RegionRuins)%3000)<1000;
+ r.phase=random(seed,gx,gy,Salt::RegionPhase)*2*pi;
+ r.unreal=(hash(seed,gx,gy,Salt::RegionUnreal)%1000)<100;
+ r.ruins=(hash(seed,gx,gy,Salt::RegionRuins)%3000)<1000;
  return r;
 }
 auto cellWeights(const Settings& c,double x,double y) {return hex::weights(hex::warp({x+180,y+180},c.seed));}
-Surface climate(const Settings& c,double x,double y) {
+Surface climate(const World& world,double x,double y) {
  Surface s; double total=0;
- for(const auto& cell:cellWeights(c,x,y)) {
+ for(const auto& cell:cellWeights(world.settings(),x,y)) {
   if(cell.weight<=0) continue;
-  const auto r=describe(c,cell.cell.q,cell.cell.r);const double w=cell.weight;
-  total+=w; s.biome[static_cast<std::size_t>(r.family)]+=w;
-  s.forest+=w*r.canopy; s.moisture+=w*r.moisture;
-  s.temperature+=w*r.temperature; s.exposure+=w*r.exposure;
-  s.shelter+=w*r.shelter; s.roughness+=w*r.roughness;
+  const auto r=describe(world,cell.cell.q,cell.cell.r);const double weight=cell.weight;
+  total+=weight; s.biome[static_cast<std::size_t>(r.family)]+=weight;
+  s.forest+=weight*r.canopy; s.moisture+=weight*r.moisture;
+  s.temperature+=weight*r.temperature; s.exposure+=weight*r.exposure;
+  s.shelter+=weight*r.shelter; s.roughness+=weight*r.roughness;
  }
  for(auto& w:s.biome) w/=total;
  s.forest/=total; s.moisture/=total; s.temperature/=total;
@@ -110,7 +112,8 @@ double waterLevel(double y) { return 8-0.018*y; }
 double channelHalfWidth(const Settings& c,double y) {
  return 1.4+0.5*(1+noise(c.seed+Salt::ChannelWidth,0,y/160));
 }
-double ground(const Settings& c,double x,double y,double stream,const Surface* cachedClimate=nullptr) {
+double ground(const World& world,double x,double y,double stream,const Surface* cachedClimate=nullptr) {
+ const Settings& c=world.settings();
  const double distance=std::abs(x-stream),water=waterLevel(y);
  // A sub-cell bed margin keeps the narrow water surface above the 2m mesh.
  const double bedHalfWidth=channelHalfWidth(c,y)+0.9;
@@ -128,7 +131,7 @@ double ground(const Settings& c,double x,double y,double stream,const Surface* c
  else if(u<2.0) bank=water+(std::max(bank,water+0.04)-water)*smooth((u-1.05)/0.95);
  // Hydrology owns the continuous low terrace; no climatic query is needed here.
  if(distance<=10) return bank;
- const auto regionClimate=cachedClimate?*cachedClimate:climate(c,x,y);
+ const auto regionClimate=cachedClimate?*cachedClimate:climate(world,x,y);
  const double highlands=regionClimate.biome[2];
  const double grassland=regionClimate.biome[1];
  const double broad=(7+regionClimate.roughness*16)*noise(c.seed,x/190,y/190);
@@ -157,6 +160,14 @@ World::World(Settings settings):config(settings) {
  if(!std::isfinite(config.chunkSize)||config.chunkSize<=0||config.cells<2||config.cells>256)
   throw std::invalid_argument("Chunk size must be positive and cells must be between 2 and 256");
 }
+void World::setEpochs(std::function<std::uint32_t(int q,int r)> epochOf) {
+ if(!epochOf) epochOf=[](int,int){return std::uint32_t{0};};
+ epochOf_=std::move(epochOf);
+}
+std::uint32_t World::regionSeed(int q,int r) const {
+ const std::uint32_t epoch=epochOf_(q,r);
+ return epoch==0?config.seed:hash(config.seed,q,r,Salt::RegionEpoch+epoch);
+}
 double World::streamX(double y) const {
  return 24*std::sin(y/135.0+config.seed*0.01)+9*std::sin(y/52.0+config.seed*0.023)+3.5*std::sin(y/19.0+config.seed*0.047);
 }
@@ -167,14 +178,14 @@ double World::bankProfile(double d01) { return 1-smooth(d01); }
 double World::streamDepth(double x,double y) const {
  validatePoint(x,y);
  if(std::abs(x-streamX(y))>=2.0*streamHalfWidth(y)) return 0;
- return std::max(0.0,waterLevel(y)-ground(config,x,y,streamX(y)));
+ return std::max(0.0,waterLevel(y)-ground(*this,x,y,streamX(y)));
 }
 Surface World::sample(double x,double y) const {
  validatePoint(x,y);
- Surface s=climate(config,x,y);
- s.height=ground(config,x,y,streamX(y),&s);
- const double dx=(ground(config,x+0.25,y,streamX(y))-ground(config,x-0.25,y,streamX(y)))/0.5;
- const double dy=(ground(config,x,y+0.25,streamX(y+0.25))-ground(config,x,y-0.25,streamX(y-0.25)))/0.5;
+ Surface s=climate(*this,x,y);
+ s.height=ground(*this,x,y,streamX(y),&s);
+ const double dx=(ground(*this,x+0.25,y,streamX(y))-ground(*this,x-0.25,y,streamX(y)))/0.5;
+ const double dy=(ground(*this,x,y+0.25,streamX(y+0.25))-ground(*this,x,y-0.25,streamX(y-0.25)))/0.5;
  s.slope=std::hypot(dx,dy);
  s.waterHeight=waterLevel(y);
  s.depth=std::abs(x-streamX(y))<streamHalfWidth(y)?std::max(0.0,s.waterHeight-s.height):0;
@@ -184,11 +195,11 @@ Surface World::sample(double x,double y) const {
 Region World::region(int latticeX,int latticeY) const {
  if(std::abs(static_cast<double>(latticeX))>835||std::abs(static_cast<double>(latticeY))>835)
   throw std::invalid_argument("Region outside supported milestone coordinates");
- return describe(config,latticeX,latticeY);
+ return describe(*this,latticeX,latticeY);
 }
 std::vector<Region> World::regions(double x,double y) const {
  validatePoint(x,y); std::vector<Region> result;
- for(const auto& cell:cellWeights(config,x,y)) if(cell.weight>0) result.push_back(describe(config,cell.cell.q,cell.cell.r));
+ for(const auto& cell:cellWeights(config,x,y)) if(cell.weight>0) result.push_back(describe(*this,cell.cell.q,cell.cell.r));
  return result;
 }
 double World::terrainHeight(double x,double y) const {
@@ -196,11 +207,11 @@ double World::terrainHeight(double x,double y) const {
  const double spacing=config.chunkSize/config.cells;
  const double cellX=std::floor(x/spacing),cellY=std::floor(y/spacing);
  const double x0=cellX*spacing,y0=cellY*spacing,u=x/spacing-cellX,v=y/spacing-cellY;
- const double a=ground(config,x0,y0,streamX(y0));
- const double b=ground(config,x0+spacing,y0,streamX(y0));
- const double c=ground(config,x0,y0+spacing,streamX(y0+spacing));
+ const double a=ground(*this,x0,y0,streamX(y0));
+ const double b=ground(*this,x0+spacing,y0,streamX(y0));
+ const double c=ground(*this,x0,y0+spacing,streamX(y0+spacing));
  if(u+v<=1) return a+(b-a)*u+(c-a)*v;
- const double d=ground(config,x0+spacing,y0+spacing,streamX(y0+spacing));
+ const double d=ground(*this,x0+spacing,y0+spacing,streamX(y0+spacing));
  return d+(c-d)*(1-u)+(b-d)*(1-v);
 }
 void World::forEachDiscoveryNear(int ownerQ,int ownerR,const std::function<void(const DiscoveryPlan&)>& fn) const {
@@ -210,10 +221,10 @@ void World::forEachDiscoveryNear(int ownerQ,int ownerR,const std::function<void(
  for(int dy=-2;dy<=2;++dy) for(int dx=-2;dx<=2;++dx) {
   if(std::max({std::abs(dx),std::abs(dy),std::abs(dx+dy)})>2) continue;
   const int col=ownerQ+dx,row=ownerR+dy;
-  const auto r=describe(config,col,row);
+  const auto r=describe(*this,col,row);
   const Vec3 cellCenter{r.origin.x,r.origin.y,terrainHeight(r.origin.x,r.origin.y)};
   const auto cellClimate=sample(r.origin.x,r.origin.y);
-  const auto plan=planDiscovery(config.seed,col,row,cellCenter,cellClimate,heightFn,streamXFn,streamHWFn,r.ruins);
+  const auto plan=planDiscovery(regionSeed(col,row),col,row,cellCenter,cellClimate,heightFn,streamXFn,streamHWFn,r.ruins);
   if(!plan.valid) continue;
   fn(plan);
  }
@@ -284,7 +295,7 @@ stage::TerrainStage World::terrainStage(int x,int y) const {
  const int n=config.cells;
  for(int row=0;row<=n;++row) for(int col=0;col<=n;++col) {
   const double px=(x+static_cast<double>(col)/n)*config.chunkSize, py=(y+static_cast<double>(row)/n)*config.chunkSize;
-  s.vertices.push_back({px,py,ground(config,px,py,streamX(py))});
+  s.vertices.push_back({px,py,ground(*this,px,py,streamX(py))});
  }
  for(int row=0;row<n;++row) for(int col=0;col<n;++col) {
   const auto i=static_cast<std::uint32_t>(row*(n+1)+col), stride=static_cast<std::uint32_t>(n+1);
@@ -326,12 +337,15 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
   const int firstX=static_cast<int>(std::floor(minX/spacing)),firstY=static_cast<int>(std::floor(minY/spacing));
   const int endX=static_cast<int>(std::ceil(maxX/spacing)),endY=static_cast<int>(std::ceil(maxY/spacing));
   for(int gy=firstY;gy<endY;++gy) for(int gx=firstX;gx<endX;++gx) {
-   const double px=(gx+random(config.seed,gx,gy,salt))*spacing;
-   const double py=(gy+random(config.seed,gx,gy,salt+Salt::LayerJitterY))*spacing;
+   // Feature random() seed is the region owning the lattice cell's nominal centre: pure in (gx,gy), config.seed at epoch 0.
+   const auto owner=hex::owner(hex::warp({(gx+0.5)*spacing+180,(gy+0.5)*spacing+180},config.seed));
+   const std::uint32_t seed=regionSeed(owner.q,owner.r);
+   const double px=(gx+random(seed,gx,gy,salt))*spacing;
+   const double py=(gy+random(seed,gx,gy,salt+Salt::LayerJitterY))*spacing;
    if(px<minX||px>=maxX||py<minY||py>=maxY) continue;
    const auto surface=sample(px,py);
    if(surface.depth>0||std::abs(px-streamX(py))<streamHalfWidth(py)+0.5) continue;
-   const double choice=random(config.seed,gx,gy,salt+Salt::LayerChoice);
+   const double choice=random(seed,gx,gy,salt+Salt::LayerChoice);
    const double patch=0.5+0.5*noise(config.seed+Salt::PatchCover,px/38,py/38);
    const double routeDistance=std::abs(px-(streamX(py)-7));
    Kind kind; double scale; bool young=false;
@@ -344,8 +358,8 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     kind=Kind::Tree;
     // Loose regeneration patches and a wide spread of multi-tiered cohorts.
     const double regeneration=0.5+0.5*noise(config.seed+Salt::Regeneration,px/55,py/55);
-    young=random(config.seed,gx,gy,salt+Salt::LayerYoung)<0.11+0.28*regeneration;
-    const double size=random(config.seed,gx,gy,salt+Salt::LayerSize);
+    young=random(seed,gx,gy,salt+Salt::LayerYoung)<0.11+0.28*regeneration;
+    const double size=random(seed,gx,gy,salt+Salt::LayerSize);
     if(young) {
      scale=0.55+size*1.45;
     } else if(size<0.26) {
@@ -370,14 +384,14 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     if(choice>cover*routeCover) continue;
     const double fernChance=surface.moisture*(surface.biome[0]*(0.70+0.65*colony)+
                                                 0.04*surface.biome[1]+0.08*surface.biome[2]+0.15*surface.biome[3]);
-    kind=random(config.seed,gx,gy,salt+Salt::LayerFernChance)<fernChance?Kind::Fern:Kind::Grass;
+    kind=random(seed,gx,gy,salt+Salt::LayerFernChance)<fernChance?Kind::Fern:Kind::Grass;
     const double streamDist=std::abs(px-streamX(py));
-    if(streamDist>=streamHalfWidth(py)+0.6&&streamDist<=5.0&&routeDistance>2.2&&random(config.seed,gx,gy,salt+Salt::LayerRockChance)<0.22) {
+    if(streamDist>=streamHalfWidth(py)+0.6&&streamDist<=5.0&&routeDistance>2.2&&random(seed,gx,gy,salt+Salt::LayerRockChance)<0.22) {
      kind=Kind::Rock;
-     scale=0.55+random(config.seed,gx,gy,salt+Salt::LayerSize)*0.9;
+     scale=0.55+random(seed,gx,gy,salt+Salt::LayerSize)*0.9;
     } else {
-     scale=kind==Kind::Fern?(0.42+random(config.seed,gx,gy,salt+Salt::LayerSize)*1.65)*(1-0.25*surface.biome[3]):
-                           (0.48+random(config.seed,gx,gy,salt+Salt::LayerSize)*2.05)*(1-0.45*surface.biome[2]);
+     scale=kind==Kind::Fern?(0.42+random(seed,gx,gy,salt+Salt::LayerSize)*1.65)*(1-0.25*surface.biome[3]):
+                           (0.48+random(seed,gx,gy,salt+Salt::LayerSize)*2.05)*(1-0.45*surface.biome[2]);
     }
    } else if(type==3) {
     // Tallgrass prairie: dense, slightly clumped grass confined to grassland cores.
@@ -385,14 +399,14 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     const double clump=0.5+0.5*noise(config.seed+Salt::PrairieClump,px/9,py/9);
     if(core<=0||routeDistance<2.2||choice>core*(0.25+0.5*clump)) continue;
     kind=Kind::Grass;
-    scale=0.7+random(config.seed,gx,gy,salt+Salt::LayerSize)*0.9;
+    scale=0.7+random(seed,gx,gy,salt+Salt::LayerSize)*0.9;
    } else if(type==4) {
     // Taiga moss and low shrub carpet: dense small cover confined to taiga cores.
     const double carpet=smooth((surface.biome[3]-0.5)/0.4);
     const double mossPatch=0.5+0.5*noise(config.seed+Salt::TaigaMoss,px/15,py/15);
     if(carpet<=0||routeDistance<1.2||choice>carpet*(0.55+0.45*mossPatch)) continue;
-    kind=random(config.seed,gx,gy,salt+Salt::LayerFernChance)<0.10?Kind::Fern:Kind::Grass;
-    scale=0.30+random(config.seed,gx,gy,salt+Salt::LayerSize)*0.45;
+    kind=random(seed,gx,gy,salt+Salt::LayerFernChance)<0.10?Kind::Fern:Kind::Grass;
+    scale=0.30+random(seed,gx,gy,salt+Salt::LayerSize)*0.45;
    } else {
     // Larger rock groups occur in patches, particularly on exposed highlands.
     const double rocky=0.5+0.5*noise(config.seed+Salt::Rocky,px/24,py/24);
@@ -404,9 +418,9 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     if(routeDistance<2.5||choice>totalAbundance) continue;
     kind=Kind::Rock;
     const double highlandBoost=surface.biome[2]>0.35?(1.2+1.5*surface.biome[2]):1.0;
-    scale=((streamDist<=4.5)?(0.65+random(config.seed,gx,gy,salt+Salt::LayerSize)*1.5):(0.95+random(config.seed,gx,gy,salt+Salt::LayerSize)*2.6))*highlandBoost;
+    scale=((streamDist<=4.5)?(0.65+random(seed,gx,gy,salt+Salt::LayerSize)*1.5):(0.95+random(seed,gx,gy,salt+Salt::LayerSize)*2.6))*highlandBoost;
    }
-   habitat.features.push_back({kind,{px,py,terrainHeight(px,py)},random(config.seed,gx,gy,salt+Salt::LayerYaw)*360,scale,young,type==3});
+   habitat.features.push_back({kind,{px,py,terrainHeight(px,py)},random(seed,gx,gy,salt+Salt::LayerYaw)*360,scale,young,type==3});
   }
  };
  layer(8.5,Salt::TreeLayer,0);
@@ -447,7 +461,7 @@ Lighting World::lighting(double x,double y,double seconds) const {
  Lighting result; double total=0;
  for(const auto& cell:cellWeights(config,x,y)) {
   if(cell.weight<=0) continue;
-  const auto r=describe(config,cell.cell.q,cell.cell.r);const double w=cell.weight;
+  const auto r=describe(*this,cell.cell.q,cell.cell.r);const double w=cell.weight;
   const double day=0.5+0.5*std::sin(seconds*2*pi/(2400+700*r.roughness)+r.phase);
   total+=w; result.brightness+=w*(0.18+0.82*day);
   result.kelvin+=w*(4300+900*r.exposure+1500*(1-day));
