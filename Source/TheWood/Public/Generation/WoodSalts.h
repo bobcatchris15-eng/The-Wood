@@ -46,6 +46,8 @@ inline constexpr std::uint32_t Colony=311;
 inline constexpr std::uint32_t Rocky=207;
 // Riparian rock spread (chunk layers).
 inline constexpr std::uint32_t Riparian=419;
+// Tallgrass prairie clump noise (chunk layers).
+inline constexpr std::uint32_t PrairieClump=577;
 
 // Discovery cell allocation hash (hashCell()).
 inline constexpr std::uint32_t DiscoveryCell=0xD15C07U;
@@ -65,6 +67,8 @@ inline constexpr std::uint32_t TreeLayer=20;
 inline constexpr std::uint32_t GroundCoverLayer=40;
 // Rock layer base (layer spacing 6).
 inline constexpr std::uint32_t RockLayer=60;
+// Tallgrass prairie layer base (layer spacing 1.0, grassland cores only).
+inline constexpr std::uint32_t PrairieLayer=80;
 
 // Layer offsets, added to a layer base salt.
 // Y position jitter (+1).

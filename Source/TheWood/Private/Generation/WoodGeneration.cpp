@@ -261,6 +261,13 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
      scale=kind==Kind::Fern?(0.42+random(config.seed,gx,gy,salt+Salt::LayerSize)*1.65)*(1-0.25*surface.biome[3]):
                            (0.48+random(config.seed,gx,gy,salt+Salt::LayerSize)*2.05)*(1-0.45*surface.biome[2]);
     }
+   } else if(type==3) {
+    // Tallgrass prairie: dense, slightly clumped grass confined to grassland cores.
+    const double core=smooth((surface.biome[1]-0.65)/0.25);
+    const double clump=0.5+0.5*noise(config.seed+Salt::PrairieClump,px/9,py/9);
+    if(core<=0||routeDistance<2.2||choice>core*(0.25+0.5*clump)) continue;
+    kind=Kind::Grass;
+    scale=0.7+random(config.seed,gx,gy,salt+Salt::LayerSize)*0.9;
    } else {
     // Larger rock groups occur in patches, particularly on exposed highlands.
     const double rocky=0.5+0.5*noise(config.seed+Salt::Rocky,px/24,py/24);
@@ -280,6 +287,7 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
  layer(8.5,Salt::TreeLayer,0);
  layer(1.5,Salt::GroundCoverLayer,1);
  layer(6,Salt::RockLayer,2);
+ layer(1.0,Salt::PrairieLayer,3);
  for(const auto& piece:chunkPieces) {
   const Kind kind=(piece.mesh.find("Fern")!=std::string::npos||piece.name.find("fern")!=std::string::npos)?Kind::Fern:Kind::Rock;
   const double normYaw=std::fmod(std::fmod(piece.yaw,360.0)+360.0,360.0);

@@ -120,6 +120,27 @@ int main() {
   check(minTree<.5&&maxTree>1.2,"trees include intermediate and mature sizes");
   check(minFern<.6&&maxFern>1.5,"understory includes small new growth and full sized plants");
  }
+ {
+  // Grassland core density: grass lattice count inside a 100 m x 100 m square centred on the grassland origin.
+  World world({98765,128,64});
+  const auto g=world.region(1,0);
+  const double half=50.0;
+  const int cx0=static_cast<int>(std::floor((g.origin.x-half)/128)),cx1=static_cast<int>(std::floor((g.origin.x+half)/128));
+  const int cy0=static_cast<int>(std::floor((g.origin.y-half)/128)),cy1=static_cast<int>(std::floor((g.origin.y+half)/128));
+  std::size_t grass=0;
+  for(int cy=cy0;cy<=cy1;++cy) for(int cx=cx0;cx<=cx1;++cx)
+   for(const auto& f:world.generate(cx,cy).features) {
+    if(f.kind!=Kind::Grass) continue;
+    if(std::abs(f.position.x-g.origin.x)>half||std::abs(f.position.y-g.origin.y)>half) continue;
+    ++grass;
+   }
+  const double grassPer100=grass*100.0/((2*half)*(2*half));
+  // Pre-change baseline measured on seed 98765 before the prairie layer: 15.59 grass per 100 m2 (raw 1559).
+  const double grassBaseline=15.59;
+  std::cout<<"Grassland core grass per 100 m2: "<<grassPer100<<" (raw "<<grass<<")\n";
+  check(world.sample(g.origin.x,g.origin.y).biome[1]>0.65,"grassland core origin is grassland-dominant");
+  check(grassPer100>=3.5*grassBaseline,"grassland core grass density is at least 3.5x the pre-change baseline");
+ }
  if(!failures) std::cout<<"PASS: regional planning, ecology, climate blends, lighting, routes and triangulated grounding\n";
  return failures?1:0;
 }
