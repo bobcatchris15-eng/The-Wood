@@ -40,7 +40,7 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
    const double L=FMath::Clamp(X-Half,Chunk.x*128.0,(Chunk.x+1)*128.0),R=FMath::Clamp(X+Half,Chunk.x*128.0,(Chunk.x+1)*128.0);
    const double Z=Generator.sample(X,Y).waterHeight+.015;
    WV.Add(FVector(L,Y,Z)*100);WV.Add(FVector(R,Y,Z)*100);
-   WN.Add(FVector::UpVector);WN.Add(FVector::UpVector);WU.Add(FVector2D(0,Y/8));WU.Add(FVector2D(1,Y/8));WC.Add(FLinearColor::White);WC.Add(FLinearColor::White);
+   WN.Add(FVector::UpVector);WN.Add(FVector::UpVector);WU.Add(FVector2D(0,Y/4));WU.Add(FVector2D(1,Y/4));WC.Add(FLinearColor::White);WC.Add(FLinearColor::White);
    if(I>0&&(R>L||WV[(I-1)*2+1].X>WV[(I-1)*2].X)) {const int32 N=(I-1)*2;WT.Append({N,N+2,N+1,N+1,N+2,N+3});}
   }
   if(!WT.IsEmpty()) {

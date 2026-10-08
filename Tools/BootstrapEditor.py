@@ -172,7 +172,22 @@ float2 p2=float2((P.x+T*18.0)*0.08,(P.y-T*95.0)*0.07);
 float a=cos(p1.x+sin(p1.y*0.8))*0.14+sin(p2.x*1.3)*0.09;
 float b=sin(p1.y+cos(p1.x*0.7))*0.18+cos(p2.y*1.1)*0.11;
 return normalize(float3(a,b,1.0));''', {'P':(pos,''),'T':(time,'')})
-    prop(ripples,'',unreal.MaterialProperty.MP_NORMAL)
+    # Downstream flow: ribbon UV0 is (across channel, Y/4); scroll V along the flow.
+    uv=expr(water,unreal.MaterialExpressionTextureCoordinate,coordinate_index=0)
+    flow_tex=texture('forest_ground_04','nor_dx')
+    scroll_a=expr(water,unreal.MaterialExpressionPanner,speed_x=0.0,speed_y=0.35)
+    link(uv,'',scroll_a,'Coordinate')
+    link(time,'',scroll_a,'Time')
+    tiled=custom(water,'return UV*1.7;',{'UV':(uv,'')},unreal.CustomMaterialOutputType.CMOT_FLOAT2)
+    scroll_b=expr(water,unreal.MaterialExpressionPanner,speed_x=0.0,speed_y=0.21)
+    link(tiled,'',scroll_b,'Coordinate')
+    link(time,'',scroll_b,'Time')
+    flow_a=sample(water,flow_tex,scroll_a,True)
+    flow_b=sample(water,flow_tex,scroll_b,True)
+    flow=custom(water,'''float3 f=normalize(A*0.5+B*0.5);
+float3 r=normalize(R);
+return normalize(float3(r.xy*0.6+f.xy,r.z*f.z));''',{'A':(flow_a,'RGB'),'B':(flow_b,'RGB'),'R':(ripples,'')})
+    prop(flow,'',unreal.MaterialProperty.MP_NORMAL)
     color=custom(water,'float shimmer=0.5+0.5*sin(P.x/140.0+(P.y-T*60.0)/180.0); return lerp(float3(0.015,0.040,0.038),float3(0.028,0.072,0.064),shimmer);',{'P':(pos,''),'T':(time,'')})
     prop(color,'',unreal.MaterialProperty.MP_BASE_COLOR)
     prop(constant(water,0.12),'',unreal.MaterialProperty.MP_ROUGHNESS)
