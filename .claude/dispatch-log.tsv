@@ -2,3 +2,8 @@ ts	task_id	clanker	model	n_targets	wall_s	turns	attempts	outcome	returned_bytes
 2026-10-08	P0.1	impl-worker	haiku	1	97	8	1	PASS	~600
 2026-10-08	P0.2	impl-worker	haiku	5	58	15	1	PASS	~900
 2026-10-08	P0.3	impl-worker	haiku	3	167	10	1	PASS	~1200
+2026-10-08	P1.A1	impl-worker	haiku	3	377	16	2	FAIL(packet)	~2000
+2026-10-08	P1.A1b	impl-worker	haiku	3	?	?	1	PASS	~900
+2026-10-08	P1.A2	impl-worker	haiku	2	147	18	1	PASS(visual flake)	~1500
+2026-10-08	P1.A2-fa	failure-analyst	haiku	-	97	13	1	CONF:LOW	~800
+2026-10-08	P1.A2b	impl-worker	haiku	1	217	12	1	PASS(no change)	~900

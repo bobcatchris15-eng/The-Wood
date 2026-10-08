@@ -17,6 +17,7 @@ Probe: `Tools\Render-Review.ps1 [-Seed <int>] [-View Forest|Stream|Ridge|Grassla
 Seed: `.cache/toolchain/ziglang` (zig 0.13.0, 323 MB; install with `python -m pip install --target .cache/toolchain ziglang==0.13.0`). `Content/` is 704 MB and is required for Unreal Full. Measured with `du -sh`.
 Cost: Disk per tree is about 1.0 GB (324 MB toolchain + 704 MB Content), not counting Saved/ and Intermediate/. Provisioning time not measured.
 Notes:
+- Render-Review after -InitializeContent can show grey checker or crash (ShaderCompiler NumPendingJobs assert) on a cold shader cache; re-run once before diagnosing.
 - Test-Core compiles `WoodGeneration.cpp`, `WoodDiscovery.cpp`, and `Tests/GenerationTests.cpp` with `-Werror` and runs the generation executable. Output in `.cache/tests`.
 - Test-Unreal writes log to `.cache/unreal-tests.log` and report to `Saved/Automation`. Runs with `-nullrhi`.
 - Build-Unreal uses `-WaitMutex`. Stale build output: rerun Build-Unreal before Test-Unreal.
