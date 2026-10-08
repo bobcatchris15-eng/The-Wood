@@ -1,4 +1,5 @@
 #include "Generation/WoodGeneration.h"
+#include "Generation/WoodSalts.h"
 #include "Generation/WoodHex.h"
 #include "Generation/WoodDiscovery.h"
 #include <algorithm>
@@ -17,7 +18,7 @@ double random(std::uint32_t seed,int x,int y,std::uint32_t salt) { return hash(s
 double noise(std::uint32_t seed,double x,double y) {
  const int ix=static_cast<int>(std::floor(x)), iy=static_cast<int>(std::floor(y));
  const double u=smooth(x-ix),v=smooth(y-iy);
- const double a=random(seed,ix,iy,1),b=random(seed,ix+1,iy,1),c=random(seed,ix,iy+1,1),d=random(seed,ix+1,iy+1,1);
+ const double a=random(seed,ix,iy,Salt::NoiseLattice),b=random(seed,ix+1,iy,Salt::NoiseLattice),c=random(seed,ix,iy+1,Salt::NoiseLattice),d=random(seed,ix+1,iy+1,Salt::NoiseLattice);
  return ((a+(b-a)*u)*(1-v)+(c+(d-c)*u)*v)*2-1;
 }
 
@@ -27,10 +28,10 @@ void validatePoint(double x,double y) {
 }
 Region describe(const Settings& c,int gx,int gy) {
  Region r;
- r.identity=hash(c.seed,gx,gy,701);
+ r.identity=hash(c.seed,gx,gy,Salt::RegionIdentity);
  const auto center=hex::center({gx,gy});
  r.origin={center.x-180,center.y-180,0};r.q=gx;r.r=gy;r.extent=hex::radius*2;
- r.family=static_cast<Biome>(hash(c.seed,gx,gy,704)%4);
+ r.family=static_cast<Biome>(hash(c.seed,gx,gy,Salt::RegionFamily)%4);
  if(gx==0&&gy==0) r.family=Biome::TemperateForest;
  if((gx==1&&gy==0)||(gx==0&&gy==1)) r.family=Biome::DryGrassland;
  if((gx==1&&gy==1)||(gx==1&&gy==-1)) r.family=Biome::RockyHighlands;
@@ -44,7 +45,7 @@ Region describe(const Settings& c,int gx,int gy) {
  constexpr double exposure[]={0.18,0.86,0.94,0.38};
  r.moisture=moisture[i]; r.roughness=roughness[i]; r.temperature=temperature[i];
  r.canopy=canopy[i]; r.exposure=exposure[i]; r.shelter=1-r.exposure;
- r.phase=random(c.seed,gx,gy,705)*2*pi;
+ r.phase=random(c.seed,gx,gy,Salt::RegionPhase)*2*pi;
  return r;
 }
 auto cellWeights(const Settings& c,double x,double y) {return hex::weights(hex::warp({x+180,y+180},c.seed));}
@@ -65,16 +66,16 @@ Surface climate(const Settings& c,double x,double y) {
 }
 double waterLevel(double y) { return 8-0.018*y; }
 double channelHalfWidth(const Settings& c,double y) {
- return 1.4+0.5*(1+noise(c.seed+911,0,y/160));
+ return 1.4+0.5*(1+noise(c.seed+Salt::ChannelWidth,0,y/160));
 }
 double ground(const Settings& c,double x,double y,double stream,const Surface* cachedClimate=nullptr) {
  const double distance=std::abs(x-stream),water=waterLevel(y);
  // A sub-cell bed margin keeps the narrow water surface above the 2m mesh.
  const double bedHalfWidth=channelHalfWidth(c,y)+0.9;
- const double poolDepth=0.34+0.08*noise(c.seed+617,0,y/26.0);
+ const double poolDepth=0.34+0.08*noise(c.seed+Salt::PoolDepth,0,y/26.0);
  const double channel=water-poolDepth+(poolDepth+0.04)*std::pow(std::min(distance/bedHalfWidth,1.0),2);
- const double bankWidth=2.2+1.0*(1.0+noise(c.seed+401,0,y/32.0));
- const double bankContour=0.45*noise(c.seed+331,x/6.0,y/6.0)+0.20*noise(c.seed+709,x/14.0,y/14.0);
+ const double bankWidth=2.2+1.0*(1.0+noise(c.seed+Salt::BankWidth,0,y/32.0));
+ const double bankContour=0.45*noise(c.seed+Salt::BankContour,x/6.0,y/6.0)+0.20*noise(c.seed+Salt::BankContourFine,x/14.0,y/14.0);
  const double effectiveDist=std::max(0.0,distance+bankContour*smooth((distance-bedHalfWidth*0.8)/2.0));
  double bank=channel+(water+0.75-channel)*smooth((effectiveDist-bedHalfWidth)/bankWidth);
  if(distance<=bedHalfWidth*0.85) bank=std::min(bank,water-0.01);
@@ -84,19 +85,19 @@ double ground(const Settings& c,double x,double y,double stream,const Surface* c
  const double highlands=regionClimate.biome[2];
  const double grassland=regionClimate.biome[1];
  const double broad=(7+regionClimate.roughness*16)*noise(c.seed,x/190,y/190);
- const double detail=noise(c.seed+17,x/22,y/22)*(0.45+regionClimate.roughness*3.2);
+ const double detail=noise(c.seed+Salt::Detail,x/22,y/22)*(0.45+regionClimate.roughness*3.2);
 
  // Flanking valley wall: climbs out of the low river terrace onto the higher terrain
  const double valleyWall=12.0*smooth((distance-10.0)/60.0);
 
  // Highlands: towering mountain mass with stepped geological crag bluffs & rocky terraces
- const double mountainMass=highlands*(28.0+46.0*std::pow(0.5+0.5*noise(c.seed+83,x/280.0,y/280.0),2));
- const double cragN=0.5+0.5*noise(c.seed+199,x/55.0,y/55.0);
+ const double mountainMass=highlands*(28.0+46.0*std::pow(0.5+0.5*noise(c.seed+Salt::MountainMass,x/280.0,y/280.0),2));
+ const double cragN=0.5+0.5*noise(c.seed+Salt::CragNoise,x/55.0,y/55.0);
  const double cragSteps=std::floor(cragN*3.0)*3.5+3.5*std::pow(cragN*3.0-std::floor(cragN*3.0),3.0);
- const double crags=highlands*(cragSteps+12.0*std::pow(0.5+0.5*noise(c.seed+251,x/85.0,y/85.0),3));
+ const double crags=highlands*(cragSteps+12.0*std::pow(0.5+0.5*noise(c.seed+Salt::CragRelief,x/85.0,y/85.0),3));
 
  // Grassland: wide, sweeping rolling prairie topography with long open sightlines
- const double prairie=grassland*8.0*noise(c.seed+151,x/260.0,y/260.0);
+ const double prairie=grassland*8.0*noise(c.seed+Salt::Prairie,x/260.0,y/260.0);
 
  const double base=water+3.0+broad+detail+valleyWall+mountainMass+crags+prairie;
  return bank+(base-bank)*smooth((distance-10.0)/25.0);
@@ -197,12 +198,12 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
   const int endX=static_cast<int>(std::ceil(maxX/spacing)),endY=static_cast<int>(std::ceil(maxY/spacing));
   for(int gy=firstY;gy<endY;++gy) for(int gx=firstX;gx<endX;++gx) {
    const double px=(gx+random(config.seed,gx,gy,salt))*spacing;
-   const double py=(gy+random(config.seed,gx,gy,salt+1))*spacing;
+   const double py=(gy+random(config.seed,gx,gy,salt+Salt::LayerJitterY))*spacing;
    if(px<minX||px>=maxX||py<minY||py>=maxY) continue;
    const auto surface=sample(px,py);
    if(surface.depth>0||std::abs(px-streamX(py))<streamHalfWidth(py)+0.5) continue;
-   const double choice=random(config.seed,gx,gy,salt+2);
-   const double patch=0.5+0.5*noise(config.seed+101,px/38,py/38);
+   const double choice=random(config.seed,gx,gy,salt+Salt::LayerChoice);
+   const double patch=0.5+0.5*noise(config.seed+Salt::PatchCover,px/38,py/38);
    const double routeDistance=std::abs(px-(streamX(py)-7));
    Kind kind; double scale; bool young=false;
    if(type==0) {
@@ -213,9 +214,9 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
     if(isInsideReservation(reservations,px,py,true)) continue;
     kind=Kind::Tree;
     // Loose regeneration patches and a wide spread of multi-tiered cohorts.
-    const double regeneration=0.5+0.5*noise(config.seed+509,px/55,py/55);
-    young=random(config.seed,gx,gy,salt+7)<0.11+0.28*regeneration;
-    const double size=random(config.seed,gx,gy,salt+3);
+    const double regeneration=0.5+0.5*noise(config.seed+Salt::Regeneration,px/55,py/55);
+    young=random(config.seed,gx,gy,salt+Salt::LayerYoung)<0.11+0.28*regeneration;
+    const double size=random(config.seed,gx,gy,salt+Salt::LayerSize);
     if(young) {
      scale=0.55+size*1.45;
     } else if(size<0.26) {
@@ -232,7 +233,7 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
    } else if(type==1) {
     if(surface.slope>=0.7) continue;
     // Two spatial scales form dense colonies separated by leaf-litter pockets.
-    const double colony=smooth((0.5+0.5*noise(config.seed+311,px/11,py/11)-0.28)/0.40);
+    const double colony=smooth((0.5+0.5*noise(config.seed+Salt::Colony,px/11,py/11)-0.28)/0.40);
     const double habitatCover=surface.biome[0]+0.80*surface.biome[1]+0.30*surface.biome[2]+0.55*surface.biome[3];
     const double cover=(0.10+0.84*colony)*habitatCover;
     // Low plants preserve an open walking strip without emptying both banks.
@@ -240,34 +241,34 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
     if(choice>cover*routeCover) continue;
     const double fernChance=surface.moisture*(surface.biome[0]*(0.70+0.65*colony)+
                                                 0.04*surface.biome[1]+0.08*surface.biome[2]+0.15*surface.biome[3]);
-    kind=random(config.seed,gx,gy,salt+5)<fernChance?Kind::Fern:Kind::Grass;
+    kind=random(config.seed,gx,gy,salt+Salt::LayerFernChance)<fernChance?Kind::Fern:Kind::Grass;
     const double streamDist=std::abs(px-streamX(py));
-    if(streamDist>=streamHalfWidth(py)+0.6&&streamDist<=5.0&&routeDistance>2.2&&random(config.seed,gx,gy,salt+9)<0.22) {
+    if(streamDist>=streamHalfWidth(py)+0.6&&streamDist<=5.0&&routeDistance>2.2&&random(config.seed,gx,gy,salt+Salt::LayerRockChance)<0.22) {
      kind=Kind::Rock;
-     scale=0.55+random(config.seed,gx,gy,salt+3)*0.9;
+     scale=0.55+random(config.seed,gx,gy,salt+Salt::LayerSize)*0.9;
     } else {
-     scale=kind==Kind::Fern?(0.42+random(config.seed,gx,gy,salt+3)*1.65)*(1-0.25*surface.biome[3]):
-                           (0.48+random(config.seed,gx,gy,salt+3)*2.05)*(1-0.45*surface.biome[2]);
+     scale=kind==Kind::Fern?(0.42+random(config.seed,gx,gy,salt+Salt::LayerSize)*1.65)*(1-0.25*surface.biome[3]):
+                           (0.48+random(config.seed,gx,gy,salt+Salt::LayerSize)*2.05)*(1-0.45*surface.biome[2]);
     }
    } else {
     // Larger rock groups occur in patches, particularly on exposed highlands.
-    const double rocky=0.5+0.5*noise(config.seed+207,px/24,py/24);
+    const double rocky=0.5+0.5*noise(config.seed+Salt::Rocky,px/24,py/24);
     const double abundance=0.045*surface.biome[0]+0.07*surface.biome[1]+0.45*surface.biome[2]+0.08*surface.biome[3];
     const double streamDist=std::abs(px-streamX(py));
     const double halfW=streamHalfWidth(py);
-    const double riparian=(streamDist>=halfW*0.65&&streamDist<=6.0&&routeDistance>2.2)?0.38*(0.6+0.4*noise(config.seed+419,px/12,py/12)):0.0;
+    const double riparian=(streamDist>=halfW*0.65&&streamDist<=6.0&&routeDistance>2.2)?0.38*(0.6+0.4*noise(config.seed+Salt::Riparian,px/12,py/12)):0.0;
     const double totalAbundance=std::max(abundance*smooth((rocky-0.35)/0.35),riparian);
     if(routeDistance<2.5||choice>totalAbundance) continue;
     kind=Kind::Rock;
     const double highlandBoost=surface.biome[2]>0.35?(1.2+1.5*surface.biome[2]):1.0;
-    scale=((streamDist<=4.5)?(0.65+random(config.seed,gx,gy,salt+3)*1.5):(0.95+random(config.seed,gx,gy,salt+3)*2.6))*highlandBoost;
+    scale=((streamDist<=4.5)?(0.65+random(config.seed,gx,gy,salt+Salt::LayerSize)*1.5):(0.95+random(config.seed,gx,gy,salt+Salt::LayerSize)*2.6))*highlandBoost;
    }
-   chunk.features.push_back({kind,{px,py,terrainHeight(px,py)},random(config.seed,gx,gy,salt+4)*360,scale,young});
+   chunk.features.push_back({kind,{px,py,terrainHeight(px,py)},random(config.seed,gx,gy,salt+Salt::LayerYaw)*360,scale,young});
   }
  };
- layer(8.5,20,0);
- layer(1.5,40,1);
- layer(6,60,2);
+ layer(8.5,Salt::TreeLayer,0);
+ layer(1.5,Salt::GroundCoverLayer,1);
+ layer(6,Salt::RockLayer,2);
  for(const auto& piece:chunkPieces) {
   const Kind kind=(piece.mesh.find("Fern")!=std::string::npos||piece.name.find("fern")!=std::string::npos)?Kind::Fern:Kind::Rock;
   const double normYaw=std::fmod(std::fmod(piece.yaw,360.0)+360.0,360.0);

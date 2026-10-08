@@ -4,6 +4,12 @@
 #include "WoodDiscovery.h"
 #endif
 
+#if __has_include("Generation/WoodSalts.h")
+#include "Generation/WoodSalts.h"
+#elif __has_include("WoodSalts.h")
+#include "WoodSalts.h"
+#endif
+
 namespace wood {
 
 bool isInsideReservation(const DiscoveryReservation& reservation, double x, double y, bool innerOnly) {
@@ -68,7 +74,7 @@ static Gradient2D sampleGradient(const std::function<double(double, double)>& he
 std::uint32_t hashCell(std::uint32_t seed, int q, int r) {
     const std::uint32_t uq = static_cast<std::uint32_t>(q);
     const std::uint32_t ur = static_cast<std::uint32_t>(r);
-    std::uint32_t h = seed ^ 0xD15C07U;
+    std::uint32_t h = seed ^ Salt::DiscoveryCell;
     h ^= (uq * 374761393U + ur * 668265263U);
     h = (h ^ (h >> 13)) * 1274126177U;
     return h ^ (h >> 16);
@@ -80,7 +86,7 @@ DiscoveryPlan generateDryStoneShelter(
     const Surface& climate,
     const std::function<double(double, double)>& heightFn)
 {
-    DiscoveryRng rng(seed ^ 0x5D0EU);
+    DiscoveryRng rng(seed ^ Salt::DryStoneShelterRng);
     const double centerZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
     const Vec3 shelterOrigin{origin.x, origin.y, centerZ};
     DiscoveryPlan plan(DiscoveryType::DryStoneShelter, shelterOrigin, 0.0);
@@ -197,7 +203,7 @@ DiscoveryPlan generateCottageCorner(
     const std::function<double(double, double)>& heightFn)
 {
     (void)climate;
-    DiscoveryRng rng(seed ^ 0xC077U);
+    DiscoveryRng rng(seed ^ Salt::CottageCornerRng);
     const double centerZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
     const Vec3 cottageOrigin{origin.x, origin.y, centerZ};
     DiscoveryPlan plan(DiscoveryType::CottageCorner, cottageOrigin, 0.0);
@@ -318,7 +324,7 @@ DiscoveryPlan generateStreamFootbridge(
     const std::function<double(double)>& streamXFn,
     const std::function<double(double)>& streamHWFn)
 {
-    DiscoveryRng rng(seed ^ 0xB71DU);
+    DiscoveryRng rng(seed ^ Salt::StreamFootbridgeRng);
 
     const double yc = origin.y;
     const double xc = streamXFn ? streamXFn(yc) : origin.x;
@@ -399,7 +405,7 @@ DiscoveryPlan generateRidgeTor(
     const std::function<double(double, double)>& heightFn)
 {
     (void)climate;
-    DiscoveryRng rng(seed ^ 0x708U);
+    DiscoveryRng rng(seed ^ Salt::RidgeTorRng);
     const double centerZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
     const Vec3 torOrigin{origin.x, origin.y, centerZ};
     DiscoveryPlan plan(DiscoveryType::RidgeTor, torOrigin, 0.0);
