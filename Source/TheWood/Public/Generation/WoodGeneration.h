@@ -4,6 +4,7 @@
 #include <vector>
 #include <functional>
 #include <optional>
+#include "WoodHex.h"
 
 // Engine-independent generation coordinates are metres; the Unreal adapter converts to cm.
 namespace wood {
@@ -75,6 +76,8 @@ public:
  void setEpochs(std::function<std::uint32_t(int q,int r)> epochOf);
  // Seed for a region's identity, family, phase, flags and habitat: config.seed at epoch 0.
  std::uint32_t regionSeed(int q,int r) const;
+ // Hex lattice cell owning (x,y) metres. Depends on the seed only, never on epochs.
+ hex::Coord regionOwner(double x,double y) const;
 private:
  Settings config;
  std::function<std::uint32_t(int q,int r)> epochOf_=[](int,int){return std::uint32_t{0};};

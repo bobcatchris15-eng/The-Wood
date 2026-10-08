@@ -1,5 +1,8 @@
 #include "WoodWorld.h"
 #include "Generation/WoodStreaming.h"
+#include <algorithm>
+#include <map>
+#include <memory>
 #include "WoodRuntime.h"
 #include "WoodPalette.h"
 #include "ProceduralMeshComponent.h"
@@ -56,6 +59,33 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
  }
  Resident.Detailed=true;
 }
+// Retained chunks keep their regions observed; a region unobserved for the grace period gets a new epoch.
+void AWoodWorld::UpdateForgetting() {
+ namespace memory=wood::memory;
+ const double ChunkSize=Generator.settings().chunkSize;
+ const auto OwnerFn=[this](double X,double Y){const auto Cell=Generator.regionOwner(X,Y);return memory::RegionKey{Cell.q,Cell.r};};
+ const auto TouchedBy=[&](FIntPoint Chunk){return memory::regionsTouching(std::vector<wood::streaming::Coord>{{Chunk.X,Chunk.Y}},ChunkSize,OwnerFn);};
+ std::vector<wood::streaming::Coord> Retained;
+ for(const auto& Entry:Runtime->Chunks) Retained.push_back({Entry.Key.X,Entry.Key.Y});
+ const double Now=Clock.seconds;
+ Memory.observe(memory::regionsTouching(Retained,ChunkSize,OwnerFn),Now);
+ const std::vector<memory::RegionKey> Forgotten=Memory.forgetDue(Now,static_cast<double>(ForgetGraceSeconds));
+ if(Forgotten.empty()) return;
+ // Jobs copy the World, so the epoch source they capture must be immutable and must not reference Memory.
+ auto Snapshot=std::make_shared<std::map<memory::RegionKey,std::uint32_t>>();
+ for(const auto& Saved:Memory.epochs()) Snapshot->insert(Saved);
+ Generator.setEpochs([Snapshot](int q,int r){const auto It=Snapshot->find(memory::RegionKey{q,r});return It==Snapshot->end()?std::uint32_t{0}:It->second;});
+ const auto IsForgotten=[&Forgotten](const memory::RegionKey& Key){return std::binary_search(Forgotten.begin(),Forgotten.end(),Key);};
+ // In-flight jobs built with pre-forget epochs for a forgotten region are discarded, never realized.
+ TArray<FIntPoint> Stale;
+ for(const auto& Job:Runtime->Jobs) for(const auto& Key:TouchedBy(Job.Key)) if(IsForgotten(Key)) {Stale.Add(Job.Key);break;}
+ for(const auto& Key:Stale) Runtime->Jobs.Remove(Key);
+ // Invariant: no resident chunk may touch a forgotten region, since its regions were all observed this tick.
+ for(const auto& Entry:Runtime->Chunks) for(const auto& Key:TouchedBy(Entry.Key)) {
+  const bool Violated=IsForgotten(Key);
+  ensureMsgf(!Violated,TEXT("Resident chunk %d,%d touches forgotten region %d,%d"),Entry.Key.X,Entry.Key.Y,Key.q,Key.r);
+ }
+}
 void AWoodWorld::Stream(FVector Position) {
  EnsureTerrainAround(Position);
  const FIntPoint Center(FMath::FloorToInt(Position.X/12800),FMath::FloorToInt(Position.Y/12800));
@@ -68,6 +98,7 @@ void AWoodWorld::Stream(FVector Position) {
   }
   Terrain.Remove(C.Ground);C.Ground->DestroyComponent();if(C.Water) {Water.Remove(C.Water);C.Water->DestroyComponent();}Runtime->Chunks.Remove(Key);
  }
+ UpdateForgetting();
  std::vector<wood::streaming::Coord> Loaded,Pending;
  for(const auto& Entry:Runtime->Chunks) if(Entry.Value.Detailed) Loaded.push_back({Entry.Key.X,Entry.Key.Y});
  for(const auto& Entry:Runtime->Jobs) Pending.push_back({Entry.Key.X,Entry.Key.Y});

@@ -159,6 +159,22 @@ void AWoodWorld::Tick(float DeltaSeconds) {
 }
 double AWoodWorld::GroundAt(double X,double Y) const { return Generator.terrainHeight(X/100,Y/100)*100; }
 double AWoodWorld::DepthAt(double X,double Y) const { return Generator.sample(X/100,Y/100).depth; }
+uint32 AWoodWorld::RegionEpochAt(double Xcm,double Ycm) const {
+ const auto Cell=Generator.regionOwner(Xcm/100,Ycm/100);
+ return Memory.epoch(wood::memory::RegionKey{Cell.q,Cell.r});
+}
+uint64 AWoodWorld::ChunkFingerprint(FIntPoint Chunk) const {
+ const auto Built=Generator.generate(Chunk.X,Chunk.Y);
+ uint64 Hash=1469598103934665603ull;
+ auto Mix=[&Hash](uint64 Value){Hash^=Value;Hash*=1099511628211ull;};
+ for(const auto& F:Built.features) {
+  Mix(static_cast<uint64>(F.kind));
+  Mix(static_cast<uint64>(static_cast<int64>(F.position.x*1000)));
+  Mix(static_cast<uint64>(static_cast<int64>(F.position.y*1000)));
+  Mix(static_cast<uint64>(static_cast<int64>(F.scale*1000)));
+ }
+ return Hash;
+}
 void AWoodWorld::SetSeated(bool Value) {
  Clock.sit(Value); UGameplayStatics::SetGlobalTimeDilation(GetWorld(),static_cast<float>(Clock.rate()));
 }

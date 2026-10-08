@@ -168,6 +168,9 @@ std::uint32_t World::regionSeed(int q,int r) const {
  const std::uint32_t epoch=epochOf_(q,r);
  return epoch==0?config.seed:hash(config.seed,q,r,Salt::RegionEpoch+epoch);
 }
+hex::Coord World::regionOwner(double x,double y) const {
+ return hex::owner(hex::warp({x+180,y+180},config.seed));
+}
 double World::streamX(double y) const {
  return 24*std::sin(y/135.0+config.seed*0.01)+9*std::sin(y/52.0+config.seed*0.023)+3.5*std::sin(y/19.0+config.seed*0.047);
 }
