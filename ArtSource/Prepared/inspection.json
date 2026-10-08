@@ -840,7 +840,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 14844,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "pine_tree_01",
@@ -909,7 +913,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 66122,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_01",
@@ -924,7 +932,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 11000,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_01",
@@ -939,7 +951,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 10996,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_01",
@@ -954,7 +970,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 5000,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_01",
@@ -969,7 +989,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 10589,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_01",
@@ -984,7 +1008,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 16548,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_01",
@@ -999,7 +1027,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 8994,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_02",
@@ -1014,7 +1046,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 9826,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_02",
@@ -1029,7 +1065,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 8000,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_02",
@@ -1044,7 +1084,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 7894,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_02",
@@ -1059,7 +1103,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 8000,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_02",
@@ -1074,7 +1122,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 8000,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_02",
@@ -1089,7 +1141,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 7999,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "rock_moss_set_02",
@@ -1104,7 +1160,11 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 7928,
-    "wind_uv_version": 2
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "texture_res": "2k",
+    "needle_card_triangles": 0
   },
   {
     "asset": "prairie_clump",

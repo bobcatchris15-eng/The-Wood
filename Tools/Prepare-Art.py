@@ -15,6 +15,8 @@ root = Path(sys.argv[sys.argv.index('--') + 1]).resolve()
 output = root / 'ArtSource' / 'Prepared'
 output.mkdir(parents=True, exist_ok=True)
 reports = []
+# Rock sources come from the Poly Haven 2k glTF set (see Fetch-Art.ps1).
+ROCK_IDS = ('rock_07', 'boulder_01', 'rock_moss_set_01', 'rock_moss_set_02')
 
 
 def needle_canopy(obj, high, index):
@@ -210,7 +212,8 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
     previous = output / 'inspection.json'
     old = json.loads(previous.read_text(encoding='utf-8')) if previous.exists() else []
     cached = [record for record in old if record['asset'] == name]
-    if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==6 for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
+    rock_2k = name in ROCK_IDS
+    if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==6 for record in cached)) and (not rock_2k or all(record.get('texture_res')=='2k' for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
         for record in cached:
             if record.get('wind_uv_version') != 2:
                 wind_uv(output / record['file'], name.startswith('pine_'))
@@ -264,6 +267,7 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
                         'source_triangles': source_triangles, 'wind_uv_version': 2,
                         'canopy_version': 6 if name=='pine_tree_01' else 0,
                         'soil_faces_removed': soil_faces,
+                        'texture_res': '2k' if name in ROCK_IDS else '1k',
                         'needle_card_triangles': canopy_triangles})
         bpy.ops.export_scene.gltf(filepath=str(output / (variant + '.glb')),
                                   export_format='GLB', use_selection=True)

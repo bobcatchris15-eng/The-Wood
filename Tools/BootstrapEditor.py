@@ -306,7 +306,8 @@ return float3(sin(T*1.1+phase),cos(T*0.83+phase)*0.38,0)*A*W.x*gust*S;''',{'W':(
 
 def with_instancing(interface):
     """Compile local rock parents for HISM without changing plugin masters."""
-    dest='/Game/Wood/RockMaterials/'+interface.get_name()+'_'+VERSION
+    # _2K suffix: rock re-imports from the 2k source must not reuse 1k-era copies.
+    dest='/Game/Wood/RockMaterials/'+interface.get_name()+'_'+VERSION+'_2K'
     if LIB.does_asset_exist(dest):
         return LIB.load_asset(dest)
     copy=LIB.duplicate_asset(interface.get_path_name(),dest)
@@ -366,8 +367,8 @@ for record in records:
         continue
     destination='/Game/Art/PolyHaven/' + VERSION + '/' + record['variant']
     existing=LIB.list_assets(destination,recursive=True)
-    if not existing or record['asset'] in ('pine_tree_01','prairie_clump'):
-        # Pine and prairie clump meshes change with every Prepare-Art revision; re-import over the version.
+    if not existing or record['asset'] in ('pine_tree_01','prairie_clump','rock_07','boulder_01','rock_moss_set_01','rock_moss_set_02'):
+        # Pine, prairie clump and 2k rock meshes change with every Prepare-Art revision; re-import over the version.
         task=unreal.AssetImportTask()
         task.set_editor_property('filename',str(prepared/record['file']))
         task.set_editor_property('destination_path',destination)
@@ -405,6 +406,12 @@ for record in records:
                     mesh.set_material(i,with_instancing(interface))
         LIB.save_loaded_asset(mesh)
     groups[slot].extend(meshes)
+    if slot == 'rocks':
+        # Verification log: rock textures should report max dimension 2048 (2k source set).
+        for path in LIB.list_assets(destination,recursive=True):
+            asset=LIB.load_asset(path)
+            if isinstance(asset,unreal.Texture2D):
+                unreal.log('ROCK_TEX %s %dx%d' % (path,asset.blueprint_get_size_x(),asset.blueprint_get_size_y()))
 for slot,meshes in groups.items():
     if not meshes:
         raise RuntimeError('Empty required palette slot: '+slot)
