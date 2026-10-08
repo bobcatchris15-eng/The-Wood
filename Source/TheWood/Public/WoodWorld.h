@@ -3,6 +3,9 @@
 #include "GameFramework/Actor.h"
 #include "Generation/WoodGeneration.h"
 #include "Generation/WoodMemory.h"
+#include "Generation/WoodSave.h"
+#include "Async/Future.h"
+#include <string>
 #include "WoodWorld.generated.h"
 struct FWoodRuntime;
 struct FWoodPreparedChunk;
@@ -43,7 +46,31 @@ public:
  uint32 RegionEpochAt(double Xcm,double Ycm) const;
  // Hash of a chunk's generated features under the current region epochs.
  uint64 ChunkFingerprint(FIntPoint Chunk) const;
+ // Resume file: ResumePath (default ProjectSavedDir/Wood/resume.json). Disabled by -WoodFresh.
+ bool bResumeEnabled=true;
+ FString ResumePath;
+ virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+ // Synchronous atomic write, verified by read-back. False when disabled or on failure.
+ bool SaveResumeNow();
+ // Queues a background atomic write of the current state. No-op when disabled.
+ void RequestResumeSave();
+ // Returns and consumes the player transform restored from resume.json.
+ bool TakeResumedPlayer(FVector& Location,FRotator& Rotation);
 private:
+ bool bResumeReady=false;
+ bool bResumedPlayer=false;
+ FVector ResumedLocation=FVector::ZeroVector;
+ FRotator ResumedRotation=FRotator::ZeroRotator;
+ double LastAutosaveRealSeconds=0;
+ TFuture<bool> ResumeWrite;
+ std::string QueuedResume;
+ bool bResumeQueued=false;
+ bool LoadResume(wood::save::SaveState& Out) const;
+ void ApplyResume(const wood::save::SaveState& Saved);
+ void PrefetchResumedChunks(const wood::save::SaveState& Saved);
+ wood::save::SaveState CaptureResume() const;
+ void StartResumeWrite(std::string Bytes);
+ void PollResumeWrite();
  wood::World Generator{wood::Settings{}};
  wood::Observation Clock;
  wood::memory::RegionMemory Memory;

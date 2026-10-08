@@ -23,12 +23,38 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Misc/Paths.h"
+#include "Misc/FileHelper.h"
+#include "HAL/FileManager.h"
+#include "HAL/PlatformTime.h"
 #include "Kismet/GameplayStatics.h"
+#include <map>
+#include <memory>
+#include <utility>
+
+namespace {
+// Writes Json to Path via temp file + atomic move, then reads back and verifies it parses and matches.
+bool WriteResumeFile(const FString& Path,const std::string& Json) {
+ IFileManager& Files=IFileManager::Get();
+ Files.MakeDirectory(*FPaths::GetPath(Path),true);
+ const FString Temp=Path+TEXT(".tmp");
+ TArray<uint8> Bytes;
+ Bytes.Append(reinterpret_cast<const uint8*>(Json.data()),static_cast<int32>(Json.size()));
+ if(!FFileHelper::SaveArrayToFile(Bytes,*Temp)) { UE_LOG(LogTemp,Error,TEXT("Resume temp write failed: %s"),*Temp); return false; }
+ if(!Files.Move(*Path,*Temp,true,true)) { Files.Delete(*Temp); UE_LOG(LogTemp,Error,TEXT("Resume move failed: %s"),*Path); return false; }
+ TArray<uint8> Readback;
+ if(!FFileHelper::LoadFileToArray(Readback,*Path)) return false;
+ const std::string Text(reinterpret_cast<const char*>(Readback.GetData()),static_cast<std::size_t>(Readback.Num()));
+ return Text==Json && wood::save::fromJson(Text).has_value();
+}
+}
 
 AWoodWorld::~AWoodWorld() = default;
 AWoodWorld::AWoodWorld():Generator(wood::Settings{}),Runtime(MakeShared<FWoodRuntime>()) {
  PrimaryActorTick.bCanEverTick=true;
  RootComponent=CreateDefaultSubobject<USceneComponent>(TEXT("GeneratedWorld"));
+ bResumeEnabled=!FString(FCommandLine::Get()).Contains(TEXT("-WoodFresh"));
+ ResumePath=FPaths::Combine(FPaths::ProjectSavedDir(),TEXT("Wood"),TEXT("resume.json"));
 }
 void AWoodWorld::BeginPlay() {
  Super::BeginPlay();
@@ -36,8 +62,14 @@ void AWoodWorld::BeginPlay() {
  FParse::Value(FCommandLine::Get(),TEXT("WoodTime="),Clock.seconds);
  if(!FMath::IsFinite(Clock.seconds)||Clock.seconds<0) Clock.seconds=0;
  Generator=wood::World({static_cast<uint32>(Seed),128,64});
+ wood::save::SaveState Resume;
+ const bool Resuming=bResumeEnabled&&LoadResume(Resume);
+ if(Resuming) ApplyResume(Resume);
  if(!Palette) Palette=LoadObject<UWoodPalette>(nullptr,TEXT("/Game/Wood/DA_BenchmarkPalette.DA_BenchmarkPalette"));
  Generate();
+ if(Resuming) PrefetchResumedChunks(Resume);
+ LastAutosaveRealSeconds=FPlatformTime::Seconds();
+ bResumeReady=true;
  auto* Sky=NewObject<UStaticMeshComponent>(this);
  Sky->SetupAttachment(RootComponent);
  Sky->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere")));
@@ -126,6 +158,9 @@ void AWoodWorld::Generate() {
 }
 void AWoodWorld::Tick(float DeltaSeconds) {
  Super::Tick(DeltaSeconds);
+ PollResumeWrite();
+ // Autosave every 60 s of real time while walking (real time, not dilated shared clock).
+ if(bResumeReady&&!Clock.seated&&FPlatformTime::Seconds()-LastAutosaveRealSeconds>=60.0) RequestResumeSave();
  Clock.advance(DeltaSeconds/Clock.rate());
  const APawn* Viewer=GetWorld()->GetFirstPlayerController()?GetWorld()->GetFirstPlayerController()->GetPawn():nullptr;
  const FVector Position=Viewer?Viewer->GetActorLocation():FVector::ZeroVector;
@@ -176,9 +211,101 @@ uint64 AWoodWorld::ChunkFingerprint(FIntPoint Chunk) const {
  return Hash;
 }
 void AWoodWorld::SetSeated(bool Value) {
+ const bool Standing=Clock.seated&&!Value;
  Clock.sit(Value); UGameplayStatics::SetGlobalTimeDilation(GetWorld(),static_cast<float>(Clock.rate()));
+ if(Standing) RequestResumeSave();
 }
 void AWoodWorld::ToggleAcceleration() {
  Clock.accelerate(!Clock.accelerated); UGameplayStatics::SetGlobalTimeDilation(GetWorld(),static_cast<float>(Clock.rate()));
+}
+
+// ---------------------------------------------------------------- resume
+
+bool AWoodWorld::LoadResume(wood::save::SaveState& Out) const {
+ // First run has no save: check existence so a missing file is silent rather than a streaming warning.
+ if(!IFileManager::Get().FileExists(*ResumePath)) return false;
+ TArray<uint8> Bytes;
+ if(!FFileHelper::LoadFileToArray(Bytes,*ResumePath) || Bytes.Num()==0) return false;
+ const std::string Json(reinterpret_cast<const char*>(Bytes.GetData()),static_cast<std::size_t>(Bytes.Num()));
+ const auto Parsed=wood::save::fromJson(Json);
+ if(!Parsed) { UE_LOG(LogTemp,Warning,TEXT("Resume file rejected, starting fresh: %s"),*ResumePath); return false; }
+ if(Parsed->seed!=static_cast<uint32>(Seed)) { UE_LOG(LogTemp,Display,TEXT("Resume seed %u differs from world seed %d, starting fresh"),Parsed->seed,Seed); return false; }
+ Out=*Parsed;
+ return true;
+}
+void AWoodWorld::ApplyResume(const wood::save::SaveState& Saved) {
+ // Must run before Generate(): regenerated chunks take their epochs from the generator.
+ Clock.sit(Saved.seated);
+ Clock.accelerate(Saved.accelerated);
+ Clock.seconds=FMath::Max(0.0,Saved.clockSeconds);
+ UGameplayStatics::SetGlobalTimeDilation(GetWorld(),static_cast<float>(Clock.rate()));
+ Memory.restore(Saved.epochs);
+ auto Snapshot=std::make_shared<std::map<wood::memory::RegionKey,std::uint32_t>>();
+ for(const auto& Epoch:Saved.epochs) Snapshot->insert(Epoch);
+ Generator.setEpochs([Snapshot](int q,int r){const auto It=Snapshot->find(wood::memory::RegionKey{q,r});return It==Snapshot->end()?std::uint32_t{0}:It->second;});
+ bResumedPlayer=true;
+ ResumedLocation=FVector(Saved.playerX,Saved.playerY,Saved.playerZ);
+ ResumedRotation=FRotator(Saved.pitch,Saved.yaw,0);
+}
+void AWoodWorld::PrefetchResumedChunks(const wood::save::SaveState& Saved) {
+ for(const auto& Coordinate:Saved.retainedChunks) {
+  const FIntPoint Key(Coordinate.x,Coordinate.y);
+  if(Runtime->Chunks.Contains(Key)||Runtime->Jobs.Contains(Key)) continue;
+  const wood::World Snapshot=Generator;const auto Kinds=Runtime->Kinds;const auto Profiles=Runtime->Profiles;const auto Available=Runtime->Available;
+  Runtime->Jobs.Add(Key,Async(EAsyncExecution::ThreadPool,[Snapshot,Key,Kinds,Profiles,Available](){return WoodPrepareChunk(Snapshot,Key.X,Key.Y,Kinds,Profiles,Available);}));
+ }
+}
+wood::save::SaveState AWoodWorld::CaptureResume() const {
+ wood::save::SaveState State;
+ State.seed=static_cast<uint32>(Seed);
+ const APlayerController* PC=GetWorld()?GetWorld()->GetFirstPlayerController():nullptr;
+ if(const APawn* Pawn=PC?PC->GetPawn():nullptr) {
+  const FVector P=Pawn->GetActorLocation();
+  const FRotator R=PC->GetControlRotation();
+  State.playerX=P.X; State.playerY=P.Y; State.playerZ=P.Z;
+  State.yaw=R.Yaw; State.pitch=R.Pitch;
+ }
+ State.clockSeconds=Clock.seconds;
+ State.seated=Clock.seated;
+ State.accelerated=Clock.accelerated;
+ for(const auto& Entry:Runtime->Chunks) State.retainedChunks.push_back({Entry.Key.X,Entry.Key.Y});
+ State.epochs=Memory.epochs();
+ return State;
+}
+void AWoodWorld::RequestResumeSave() {
+ if(!bResumeEnabled) return;
+ LastAutosaveRealSeconds=FPlatformTime::Seconds();
+ StartResumeWrite(wood::save::toJson(CaptureResume()));
+}
+bool AWoodWorld::SaveResumeNow() {
+ if(!bResumeEnabled) return false;
+ if(ResumeWrite.IsValid()) { ResumeWrite.Wait(); ResumeWrite=TFuture<bool>(); }
+ bResumeQueued=false;
+ LastAutosaveRealSeconds=FPlatformTime::Seconds();
+ const bool Ok=WriteResumeFile(ResumePath,wood::save::toJson(CaptureResume()));
+ if(!Ok) UE_LOG(LogTemp,Error,TEXT("Resume save failed: %s"),*ResumePath);
+ return Ok;
+}
+void AWoodWorld::StartResumeWrite(std::string Bytes) {
+ if(ResumeWrite.IsValid()) { QueuedResume=std::move(Bytes); bResumeQueued=true; return; }
+ ResumeWrite=Async(EAsyncExecution::ThreadPool,[Path=ResumePath,Payload=std::move(Bytes)](){return WriteResumeFile(Path,Payload);});
+}
+void AWoodWorld::PollResumeWrite() {
+ if(!ResumeWrite.IsValid()||!ResumeWrite.IsReady()) return;
+ if(!ResumeWrite.Get()) UE_LOG(LogTemp,Error,TEXT("Resume save failed: %s"),*ResumePath);
+ ResumeWrite=TFuture<bool>();
+ if(bResumeQueued) { bResumeQueued=false; StartResumeWrite(std::move(QueuedResume)); }
+}
+bool AWoodWorld::TakeResumedPlayer(FVector& Location,FRotator& Rotation) {
+ if(!bResumedPlayer) return false;
+ bResumedPlayer=false;
+ Location=ResumedLocation;
+ Rotation=ResumedRotation;
+ return true;
+}
+void AWoodWorld::EndPlay(const EEndPlayReason::Type EndPlayReason) {
+ if(bResumeReady) SaveResumeNow();
+ bResumeReady=false;
+ Super::EndPlay(EndPlayReason);
 }
 

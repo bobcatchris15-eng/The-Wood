@@ -17,6 +17,14 @@ void AWoodGameMode::RestartPlayer(AController* NewPlayer) {
  for(TActorIterator<AWoodWorld> It(GetWorld());It;++It) { Environment=*It; break; }
  if(!Environment) Environment=GetWorld()->SpawnActor<AWoodWorld>();
  if(!Environment) { UE_LOG(LogTemp,Error,TEXT("Cannot spawn generated environment")); return; }
+ // A resume restores the saved transform; it is consumed by the first spawn only.
+ FVector Resumed;
+ FRotator ResumedView;
+ if(Environment->TakeResumedPlayer(Resumed,ResumedView)) {
+  RestartPlayerAtTransform(NewPlayer,FTransform(FRotator(0,ResumedView.Yaw,0),Resumed));
+  NewPlayer->SetControlRotation(ResumedView);
+  return;
+ }
  FVector Position=Environment->ExplorerStart();
  Position.Z=Environment->GroundAt(Position.X,Position.Y)+100;
  RestartPlayerAtTransform(NewPlayer,FTransform(FRotator(0,40,0),Position));

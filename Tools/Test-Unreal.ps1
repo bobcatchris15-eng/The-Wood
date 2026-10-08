@@ -5,7 +5,7 @@ $editor=Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor-Cmd.exe'
 $output=Join-Path $taskRoot '.cache/unreal-tests.log'
 $report=Join-Path $taskRoot 'Saved/Automation'
 New-Item -ItemType Directory -Force -Path (Join-Path $taskRoot '.cache') | Out-Null
-& $editor (Join-Path $taskRoot 'TheWood.uproject') -unattended -nosplash -nullrhi '-ExecCmds=Automation RunTests Wood.Runtime' '-TestExit=Automation Test Queue Empty' "-ReportExportPath=$report" *> $output
+& $editor (Join-Path $taskRoot 'TheWood.uproject') -unattended -nosplash -nullrhi -WoodFresh '-ExecCmds=Automation RunTests Wood.Runtime' '-TestExit=Automation Test Queue Empty' "-ReportExportPath=$report" *> $output
 if ($LASTEXITCODE -ne 0) { throw "Unreal test process failed; see $output" }
 $results=Get-Content (Join-Path $report 'index.json') -Raw | ConvertFrom-Json
 if ($results.failed -gt 0 -or $results.succeeded -lt 1) {

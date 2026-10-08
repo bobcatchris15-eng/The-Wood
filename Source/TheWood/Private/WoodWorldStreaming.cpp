@@ -85,6 +85,7 @@ void AWoodWorld::UpdateForgetting() {
   const bool Violated=IsForgotten(Key);
   ensureMsgf(!Violated,TEXT("Resident chunk %d,%d touches forgotten region %d,%d"),Entry.Key.X,Entry.Key.Y,Key.q,Key.r);
  }
+ RequestResumeSave();
 }
 void AWoodWorld::Stream(FVector Position) {
  EnsureTerrainAround(Position);
