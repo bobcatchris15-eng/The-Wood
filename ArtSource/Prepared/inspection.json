@@ -383,12 +383,13 @@
       8.314447402954102,
       20.374792098999023
     ],
-    "triangles": 129502,
+    "triangles": 120856,
     "materials": 5,
     "pivot": "trunk_ground_center",
     "source_triangles": 6951524,
     "wind_uv_version": 2,
-    "canopy_version": 3,
+    "canopy_version": 6,
+    "soil_faces_removed": 8646,
     "needle_card_triangles": 16800
   },
   {
@@ -400,12 +401,13 @@
       7.5970258712768555,
       14.88125991821289
     ],
-    "triangles": 114282,
+    "triangles": 107967,
     "materials": 5,
     "pivot": "trunk_ground_center",
     "source_triangles": 4234432,
     "wind_uv_version": 2,
-    "canopy_version": 3,
+    "canopy_version": 6,
+    "soil_faces_removed": 6315,
     "needle_card_triangles": 16800
   },
   {
@@ -417,12 +419,13 @@
       7.855485916137695,
       17.544002532958984
     ],
-    "triangles": 88166,
+    "triangles": 86279,
     "materials": 5,
     "pivot": "trunk_ground_center",
     "source_triangles": 5996296,
     "wind_uv_version": 2,
-    "canopy_version": 3,
+    "canopy_version": 6,
+    "soil_faces_removed": 1887,
     "needle_card_triangles": 16800
   },
   {

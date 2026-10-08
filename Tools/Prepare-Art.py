@@ -8,6 +8,7 @@ import math
 from array import array
 from pathlib import Path
 from mathutils import Vector
+import bmesh
 
 root = Path(sys.argv[sys.argv.index('--') + 1]).resolve()
 output = root / 'ArtSource' / 'Prepared'
@@ -98,6 +99,46 @@ def needle_canopy(obj, high, index):
     return len(sites)*4
 
 
+def remove_soil(obj):
+    """Delete scanned-soil ground plates around a pine trunk base. Returns face count removed."""
+    mesh = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bm.faces.ensure_lookup_table()
+    base = min(v.co.z for v in bm.verts)
+    trunk = [v.co for v in bm.verts if base + 0.5 <= v.co.z <= base + 1.0]
+    if trunk:
+        axis_x = sum(p.x for p in trunk) / len(trunk)
+        axis_y = sum(p.y for p in trunk) / len(trunk)
+    else:
+        axis_x = axis_y = 0.0
+    # Flare radius: 75th percentile of radial distance in the 0.15-0.4 m band, local frame.
+    band = sorted(math.hypot(v.co.x - axis_x, v.co.y - axis_y) for v in bm.verts if base + 0.15 <= v.co.z <= base + 0.4)
+    flare_r = band[int(len(band) * 0.75)] if band else 0.25
+    limit = flare_r * 1.15
+    names = [m.name.lower() if m else '' for m in mesh.materials]
+    doomed = []
+    for face in bm.faces:
+        material = names[face.material_index] if face.material_index < len(names) else ''
+        if any(term in material for term in ('soil', 'ground', 'dirt')):
+            doomed.append(face)
+            continue
+        center = face.calc_center_median()
+        if center.z - base <= 0.4 and math.hypot(center.x - axis_x, center.y - axis_y) > limit:
+            doomed.append(face)
+    print(f'flare_r={flare_r:.3f} limit={limit:.3f} axis=({axis_x:.3f},{axis_y:.3f})')
+    count = len(doomed)
+    if doomed:
+        bmesh.ops.delete(bm, geom=doomed, context='FACES')
+    loose = [v for v in bm.verts if not v.link_faces]
+    if loose:
+        bmesh.ops.delete(bm, geom=loose, context='VERTS')
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+    return count
+
+
 def wind_uv(path, tree):
     """Write a dedicated UV1 root mask. Vertex colors would tint glTF shading."""
     data = path.read_bytes()
@@ -168,7 +209,7 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'rock_07', 'pin
     previous = output / 'inspection.json'
     old = json.loads(previous.read_text(encoding='utf-8')) if previous.exists() else []
     cached = [record for record in old if record['asset'] == name]
-    if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==3 for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
+    if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==6 for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
         for record in cached:
             if record.get('wind_uv_version') != 2:
                 wind_uv(output / record['file'], name.startswith('pine_'))
@@ -208,8 +249,11 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'rock_07', 'pin
         # source texture/material assignments and silhouette with collapse reduction.
         obj.data.calc_loop_triangles()
         source_triangles = len(obj.data.loop_triangles)
-        canopy_triangles=needle_canopy(obj,high.z-low.z,index) if name=='pine_tree_01' else 0
         variant = f'{name}_{index:02d}'
+        soil_faces = remove_soil(obj) if name == 'pine_tree_01' else 0
+        if name == 'pine_tree_01':
+            print(f'{variant}: removed {soil_faces} soil ground faces')
+        canopy_triangles=needle_canopy(obj,high.z-low.z,index) if name=='pine_tree_01' else 0
         obj.name = variant
         obj.data.calc_loop_triangles()
         reports.append({'asset': name, 'variant': variant, 'file': variant + '.glb',
@@ -217,7 +261,8 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'rock_07', 'pin
                         'triangles': len(obj.data.loop_triangles),
                         'materials': len(obj.data.materials), 'pivot': 'trunk_ground_center' if name.startswith('pine_') else 'ground_center',
                         'source_triangles': source_triangles, 'wind_uv_version': 2,
-                        'canopy_version': 3 if name=='pine_tree_01' else 0,
+                        'canopy_version': 6 if name=='pine_tree_01' else 0,
+                        'soil_faces_removed': soil_faces,
                         'needle_card_triangles': canopy_triangles})
         bpy.ops.export_scene.gltf(filepath=str(output / (variant + '.glb')),
                                   export_format='GLB', use_selection=True)

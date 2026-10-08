@@ -11,7 +11,7 @@ TOOLS = unreal.AssetToolsHelpers.get_asset_tools()
 MEL = unreal.MaterialEditingLibrary
 SMES = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = 'CanopyV3'
+VERSION = 'CanopyV4'
 
 
 def expr(mat, cls, **properties):
@@ -363,12 +363,14 @@ for record in records:
         continue
     destination='/Game/Art/PolyHaven/' + VERSION + '/' + record['variant']
     existing=LIB.list_assets(destination,recursive=True)
-    if not existing:
+    if not existing or record['asset']=='pine_tree_01':
+        # Pine prepared meshes change with every Prepare-Art soil/flare revision; re-import over the version.
         task=unreal.AssetImportTask()
         task.set_editor_property('filename',str(prepared/record['file']))
         task.set_editor_property('destination_path',destination)
         task.set_editor_property('automated',True)
         task.set_editor_property('save',True)
+        task.set_editor_property('replace_existing',True)
         TOOLS.import_asset_tasks([task])
         existing=LIB.list_assets(destination,recursive=True)
     meshes=[LIB.load_asset(path) for path in existing]
