@@ -1,6 +1,9 @@
 #include "Generation/WoodGeneration.h"
 #include "Generation/WoodDiscovery.h"
 #include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -11,6 +14,33 @@
 int failures=0;
 void check(bool ok,const char* message) { if(!ok) { ++failures; std::cerr<<"FAIL: "<<message<<'\n'; } }
 bool near(double a,double b) { return std::abs(a-b)<1e-9; }
+// 64-bit FNV-1a over raw bit patterns; any output change alters the fingerprint.
+struct Fnv1a {
+ std::uint64_t h=1469598103934665603ULL;
+ void byte(unsigned char b) { h^=b; h*=1099511628211ULL; }
+ void u64(std::uint64_t v) { for(int i=0;i<8;++i) byte(static_cast<unsigned char>(v>>(8*i))); }
+ void real(double d) { std::uint64_t u; std::memcpy(&u,&d,sizeof u); u64(u); }
+ void integer(std::int64_t v) { u64(static_cast<std::uint64_t>(v)); }
+};
+void hashSurface(Fnv1a& f,const wood::Surface& s) {
+ f.real(s.height); f.real(s.forest); f.real(s.moisture); f.real(s.slope); f.real(s.waterHeight); f.real(s.depth);
+ for(double b:s.biome) f.real(b);
+ f.real(s.temperature); f.real(s.exposure); f.real(s.shelter); f.real(s.roughness);
+}
+std::uint64_t fingerprintChunk(const wood::World& world,const wood::Chunk& c) {
+ Fnv1a f;
+ f.integer(c.x); f.integer(c.y); f.integer(c.cells);
+ f.integer(static_cast<std::int64_t>(c.vertices.size()));
+ for(const auto& v:c.vertices) { f.real(v.x); f.real(v.y); f.real(v.z); hashSurface(f,world.sample(v.x,v.y)); }
+ f.integer(static_cast<std::int64_t>(c.triangles.size()));
+ for(auto t:c.triangles) f.u64(t);
+ f.integer(static_cast<std::int64_t>(c.features.size()));
+ for(const auto& p:c.features) {
+  f.integer(static_cast<std::int64_t>(p.kind)); f.real(p.position.x); f.real(p.position.y); f.real(p.position.z);
+  f.real(p.yaw); f.real(p.scale); f.u64(p.young?1:0); f.u64(p.prairie?1:0);
+ }
+ return f.h;
+}
 int main() {
  using namespace wood;
  World world({42,128,32});
@@ -310,6 +340,21 @@ int main() {
  }
  bool badTime=false; try { o.advance(-1); } catch(const std::invalid_argument&) { badTime=true; }
  check(badTime,"negative elapsed time rejected");
+ // Golden output as of 8446d11. Update ONLY for intentional generation changes.
+ {
+  struct GoldenCase { unsigned seed; int x,y; bool features; std::uint64_t expected; };
+  const GoldenCase cases[]={
+   {0,0,0,true,0x67757b2508650af7ULL},{0,3,-2,true,0xc76a569e534166adULL},{0,-5,7,true,0xcecd8eb66220e387ULL},{0,12,12,true,0xf99ce6e5d4eae079ULL},{0,0,0,false,0x5999df15b6cbaef8ULL},
+   {42,0,0,true,0xc08cf1e2f1ae1fa5ULL},{42,3,-2,true,0xfd2f56462206480fULL},{42,-5,7,true,0xd422751e936420a5ULL},{42,12,12,true,0xb792a76f92d87c37ULL},{42,0,0,false,0xbc40aa921da47d78ULL},
+   {98765,0,0,true,0xfa7069009a2c2693ULL},{98765,3,-2,true,0xbafe0e19a917ee5dULL},{98765,-5,7,true,0xeaa24c98d7486d7bULL},{98765,12,12,true,0x4458cc110da81ba0ULL},{98765,0,0,false,0x893f568f384c0dbfULL},
+  };
+  for(const auto& gc:cases) {
+   World w({gc.seed,128,32});
+   const std::uint64_t h=fingerprintChunk(w,w.generate(gc.x,gc.y,gc.features));
+   std::printf("golden seed=%u chunk=(%d,%d) features=%d hash=0x%016llx\n",gc.seed,gc.x,gc.y,gc.features?1:0,static_cast<unsigned long long>(h));
+   check(h==gc.expected,"generation output matches golden fingerprint");
+  }
+ }
  if(failures) return 1;
  std::cout<<"PASS: generation, hydrology, placement, lighting and observation contracts\n";
 }
