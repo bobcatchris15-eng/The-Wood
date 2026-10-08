@@ -191,8 +191,13 @@ def wind_uv(path, tree):
                 del attributes[key]
         values = array('f')
         for height in heights:
-            weight = max(0.0, min(1.0, (height - low - 0.08) / max(span - 0.08, 0.01)))
-            values.extend((weight * weight if tree else weight, 0.0))
+            if tree:
+                # Smoothstep root blend: 0 at lowest vertex, 1 at 0.6 m above it (post soil removal).
+                t = max(0.0, min(1.0, (height - low) / 0.6))
+                weight = t * t * (3.0 - 2.0 * t)
+            else:
+                weight = max(0.0, min(1.0, (height - low - 0.08) / max(span - 0.08, 0.01)))
+            values.extend((weight, 0.0))
         while len(binary) % 4:
             binary.append(0)
         view_index = len(doc['bufferViews'])
@@ -213,7 +218,7 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
     old = json.loads(previous.read_text(encoding='utf-8')) if previous.exists() else []
     cached = [record for record in old if record['asset'] == name]
     rock_2k = name in ROCK_IDS
-    if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==6 for record in cached)) and (not rock_2k or all(record.get('texture_res')=='2k' for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
+    if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==7 for record in cached)) and (not rock_2k or all(record.get('texture_res')=='2k' for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
         for record in cached:
             if record.get('wind_uv_version') != 2:
                 wind_uv(output / record['file'], name.startswith('pine_'))
@@ -265,7 +270,7 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
                         'triangles': len(obj.data.loop_triangles),
                         'materials': len(obj.data.materials), 'pivot': 'trunk_ground_center' if name.startswith('pine_') else 'ground_center',
                         'source_triangles': source_triangles, 'wind_uv_version': 2,
-                        'canopy_version': 6 if name=='pine_tree_01' else 0,
+                        'canopy_version': 7 if name=='pine_tree_01' else 0,
                         'soil_faces_removed': soil_faces,
                         'texture_res': '2k' if name in ROCK_IDS else '1k',
                         'needle_card_triangles': canopy_triangles})

@@ -860,8 +860,9 @@
     "pivot": "trunk_ground_center",
     "source_triangles": 6951524,
     "wind_uv_version": 2,
-    "canopy_version": 6,
+    "canopy_version": 7,
     "soil_faces_removed": 8646,
+    "texture_res": "1k",
     "needle_card_triangles": 16800
   },
   {
@@ -878,8 +879,9 @@
     "pivot": "trunk_ground_center",
     "source_triangles": 4234432,
     "wind_uv_version": 2,
-    "canopy_version": 6,
+    "canopy_version": 7,
     "soil_faces_removed": 6315,
+    "texture_res": "1k",
     "needle_card_triangles": 16800
   },
   {
@@ -896,8 +898,9 @@
     "pivot": "trunk_ground_center",
     "source_triangles": 5996296,
     "wind_uv_version": 2,
-    "canopy_version": 6,
+    "canopy_version": 7,
     "soil_faces_removed": 1887,
+    "texture_res": "1k",
     "needle_card_triangles": 16800
   },
   {
