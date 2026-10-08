@@ -7,3 +7,25 @@ ts	task_id	clanker	model	n_targets	wall_s	turns	attempts	outcome	returned_bytes
 2026-10-08	P1.A2	impl-worker	haiku	2	147	18	1	PASS(visual flake)	~1500
 2026-10-08	P1.A2-fa	failure-analyst	haiku	-	97	13	1	CONF:LOW	~800
 2026-10-08	P1.A2b	impl-worker	haiku	1	217	12	1	PASS(no change)	~900
+2026-10-08	P1.B1	impl-worker	haiku	2	1930	65	2	PASS	~1500
+2026-10-08	P1.B2	impl-worker	haiku	2	581	24	1	PASS(visual weak)	~1800
+2026-10-08	P1.B2b	impl-worker	haiku	8	838	66	3	BREAKER(scope)	~4000
+2026-10-08	P1.B2c	impl-worker	haiku	4	308	26	1	PASS(orch visual)	~1500
+2026-10-08	P1.B3	impl-worker	haiku	4	?	?	1	PASS	~1500
+2026-10-08	P1.C	impl-worker	haiku	4	269	16	1	FAIL(spec threshold)->orch fix	~1500
+2026-10-08	M1.1	impl-worker	haiku	2	435	22	1	FAIL(wrong hypothesis)	~1200
+2026-10-08	M1.2	impl-worker	haiku	5	367	48	1	PASS(orch visual)	~1500
+2026-10-08	M1.3	impl-worker	haiku	6	953	43	2	FAIL	~2500
+2026-10-08	M1.3-fa	failure-analyst	haiku	-	65	14	1	CONF:LOW	~900
+2026-10-08	M1.3a	impl-worker	haiku	5	?	?	1	PASS	~1600
+2026-10-08	M1.3b	impl-worker	haiku	4	398	25	1	FAIL(visual)->partial	~1600
+2026-10-08	G1	impl-worker	haiku	7	?	?	1	PASS	~1400
+2026-10-08	G2	impl-worker	haiku	4	?	?	1	PASS	~1500
+2026-10-08	G3a	impl-worker	haiku	1	?	?	1	PASS	~500
+2026-10-08	G3b	impl-worker	haiku	2	?	?	1	PASS	~1200
+2026-10-08	G5a	impl-worker	haiku	5	?	?	1	PASS	~900
+2026-10-08	G5b	impl-worker	haiku	4	4574	52	2	PASS(packet fix)	~1500
+2026-10-08	G6	impl-worker	haiku	6	?	?	2	PASS	~1500
+2026-10-08	G7	impl-worker	haiku	5	?	?	1	PASS	~1500
+2026-10-08	G8	impl-worker	haiku	7	?	?	1	PASS	~1500
+2026-10-08	G9	impl-worker	haiku	3	152	35	1	PASS	~1200
