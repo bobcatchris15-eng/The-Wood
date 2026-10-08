@@ -16,3 +16,4 @@ __pycache__/
 .claude/
 graphify-out/*
 !graphify-out/graph.json
+**/graphify-out/

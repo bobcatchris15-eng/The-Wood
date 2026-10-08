@@ -79,6 +79,11 @@ double ground(const Settings& c,double x,double y,double stream,const Surface* c
  const double effectiveDist=std::max(0.0,distance+bankContour*smooth((distance-bedHalfWidth*0.8)/2.0));
  double bank=channel+(water+0.75-channel)*smooth((effectiveDist-bedHalfWidth)/bankWidth);
  if(distance<=bedHalfWidth*0.85) bank=std::min(bank,water-0.01);
+ // Smooth channel: bed sloping up to the waterline at u=1.05, then a dry bank rising to the original terrain at u=2.
+ const double halfW=channelHalfWidth(c,y);
+ const double u=distance/halfW;
+ if(u<=1.05) bank=water-0.55*World::bankProfile(u/1.05);
+ else if(u<2.0) bank=water+(std::max(bank,water+0.04)-water)*smooth((u-1.05)/0.95);
  // Hydrology owns the continuous low terrace; no climatic query is needed here.
  if(distance<=10) return bank;
  const auto regionClimate=cachedClimate?*cachedClimate:climate(c,x,y);
@@ -112,6 +117,12 @@ double World::streamX(double y) const {
 }
 double World::streamHalfWidth(double y) const {
  validatePoint(0,y); return channelHalfWidth(config,y);
+}
+double World::bankProfile(double d01) { return 1-smooth(d01); }
+double World::streamDepth(double x,double y) const {
+ validatePoint(x,y);
+ if(std::abs(x-streamX(y))>=2.0*streamHalfWidth(y)) return 0;
+ return std::max(0.0,waterLevel(y)-ground(config,x,y,streamX(y)));
 }
 Surface World::sample(double x,double y) const {
  validatePoint(x,y);

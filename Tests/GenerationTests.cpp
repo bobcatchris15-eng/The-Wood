@@ -190,6 +190,45 @@ int main() {
   }
  }
 
+ // Smooth stream bank profile: monotone non-increasing from bed centre to waterline.
+ {
+  bool monotone=near(World::bankProfile(0),1);
+  double previous=World::bankProfile(0);
+  for(int i=1;i<=100;++i) {
+   const double value=World::bankProfile(i/100.0);
+   monotone=monotone&&value<=previous+1e-12;
+   previous=value;
+  }
+  check(monotone&&near(World::bankProfile(1),0)&&near(World::bankProfile(1.5),0),"bank profile is monotone from 1 to 0");
+ }
+ // Stream depth: bed centre near 0.55 m, dry at two half-widths.
+ {
+  World bankWorld({42,128,32});
+  bool centreOk=true, dryOk=true;
+  for(int y=-200;y<=200;y+=4) {
+   const double sx=bankWorld.streamX(y), hw=bankWorld.streamHalfWidth(y);
+   const double centre=bankWorld.streamDepth(sx,y);
+   centreOk=centreOk&&centre>=0.5&&centre<=0.6;
+   dryOk=dryOk&&near(bankWorld.streamDepth(sx+2.0*hw,y),0);
+  }
+  check(centreOk,"stream centre depth is within 0.5-0.6 m");
+  check(dryOk,"stream depth is zero at two half-widths");
+ }
+ // Seams: terrain is continuous across chunk boundaries near the stream.
+ {
+  World seam({42,128,32});
+  bool continuous=true;
+  for(int k=-2;k<=2;++k) {
+   const double bx=k*128.0, by=k*128.0;
+   for(int i=-40;i<=40;++i) {
+    const double px=seam.streamX(by)+i*0.37;
+    continuous=continuous&&std::abs(seam.terrainHeight(px,by-1e-4)-seam.terrainHeight(px,by+1e-4))<1e-3;
+    const double py=i*4.1;
+    continuous=continuous&&std::abs(seam.terrainHeight(bx-1e-4,py)-seam.terrainHeight(bx+1e-4,py))<1e-3;
+   }
+  }
+  check(continuous,"terrain is continuous across chunk seams near the stream");
+ }
  bool badTime=false; try { o.advance(-1); } catch(const std::invalid_argument&) { badTime=true; }
  check(badTime,"negative elapsed time rejected");
  if(failures) return 1;

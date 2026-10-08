@@ -37,6 +37,10 @@ public:
  double streamX(double y) const;
  // Logical water half-width; runtime ribbon uses 0.92 of this value.
  double streamHalfWidth(double y) const;
+ // Smooth bank weight: 1 at the bed centre, 0 at and beyond the waterline.
+ static double bankProfile(double d01);
+ // Water depth below the surface at (x,y); zero where dry.
+ double streamDepth(double x,double y) const;
  // Terrain-only generation skips ecological work but produces identical geometry.
  Chunk generate(int x, int y, bool includeFeatures=true) const;
  Lighting lighting(double x, double y, double seconds) const;
