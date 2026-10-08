@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <utility>
+#include <vector>
 int failures=0;
 void check(bool ok,const char* text) { if(!ok) { ++failures; if(failures<25) std::cerr<<"FAIL: "<<text<<'\n'; } }
 int main() {
@@ -140,6 +142,37 @@ int main() {
   std::cout<<"Grassland core grass per 100 m2: "<<grassPer100<<" (raw "<<grass<<")\n";
   check(world.sample(g.origin.x,g.origin.y).biome[1]>0.65,"grassland core origin is grassland-dominant");
   check(grassPer100>=3.5*grassBaseline,"grassland core grass density is at least 3.5x the pre-change baseline");
+ }
+ {
+  // Spec lighting continuity: 3 km straight walk (y=0, x=-1500..1500) sampled every 1 m at two fixed times.
+  wood::World world({42,128,64});
+  const int samples=3001;
+  const double x0=-1500.0,y0=0.0;
+  auto regionKey=[&](double x,double y) {
+   std::vector<std::pair<double,double>> key;
+   for(const auto& r:world.regions(x,y)) key.emplace_back(r.origin.x,r.origin.y);
+   std::sort(key.begin(),key.end());
+   return key;
+  };
+  std::size_t boundaries=0;
+  for(int i=1;i<samples;++i) boundaries+=regionKey(x0+i,y0)!=regionKey(x0+i-1,y0);
+  double maxEV=0,maxKelvin=0;
+  for(const double seconds:{200.0,1650.0}) {
+   std::vector<double> ev(samples),kelvin(samples);
+   for(int i=0;i<samples;++i) {
+    const auto l=world.lighting(x0+i,y0,seconds);
+    ev[i]=std::log2(l.brightness); kelvin[i]=l.kelvin;
+   }
+   for(int i=0;i+10<samples;++i) {
+    maxEV=std::max(maxEV,std::abs(ev[i+10]-ev[i]));
+    maxKelvin=std::max(maxKelvin,std::abs(kelvin[i+10]-kelvin[i]));
+   }
+  }
+  std::cout<<"Lighting walk: region boundaries "<<boundaries<<", max dEV/10m "<<maxEV<<", max dKelvin/10m "<<maxKelvin<<'\n';
+  check(boundaries>=2,"lighting walk crosses at least two region boundaries");
+  // 0.25 EV per 10 m = ~0.1 EV/s at the 420 cm/s walk speed: a gradual drift auto-exposure absorbs, not a visible jump.
+  check(maxEV<=0.25,"exposure drifts at most 0.25 EV per 10 m walking (~0.1 EV/s), no exposure jumps");
+  check(maxKelvin<=150,"colour temperature changes at most 150 K per 10 m walking");
  }
  if(!failures) std::cout<<"PASS: regional planning, ecology, climate blends, lighting, routes and triangulated grounding\n";
  return failures?1:0;

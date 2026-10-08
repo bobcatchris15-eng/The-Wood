@@ -3,6 +3,7 @@
 #include "Tests/AutomationCommon.h"
 #include "WoodWorld.h"
 #include "WoodCharacter.h"
+#include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -63,6 +64,38 @@ bool FWoodRuntimeTest::RunTest(const FString& Parameters) {
    Character->GetActorLocation().Y-WalkStart.Y,Character->GetCharacterMovement()->MaxWalkSpeed,
    Character->GetCharacterMovement()->IsMovingOnGround(),*Character->GetVelocity().ToString(),Character->IsLocallyControlled()));
  }
+ Fixture.EndPlayInTestWorld(); Fixture.ForwardErrorMessages(this);
+ return !HasAnyErrors();
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWoodSpecMovementTest,"Wood.Runtime.SpecMovement",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)
+bool FWoodSpecMovementTest::RunTest(const FString& Parameters) {
+ (void)Parameters;
+ FTestWorldWrapper Fixture;
+ if(!Fixture.CreateTestWorld(EWorldType::Game)) { Fixture.ForwardErrorMessages(this);return false; }
+ auto* World=Fixture.GetTestWorld();
+ auto* Environment=World->SpawnActor<AWoodWorld>();
+ if(!TestNotNull(TEXT("Generated environment spawned"),Environment)) return false;
+ if(!Fixture.BeginPlayInTestWorld()) { Fixture.ForwardErrorMessages(this);return false; }
+ Fixture.TickTestWorld();
+ const wood::World RouteWorld(wood::Settings{});
+ const double StreamY=-16000;
+ const double StreamX=RouteWorld.streamX(StreamY/100)*100;
+ const double DryX=StreamX-700;
+ auto* Character=World->SpawnActor<AWoodCharacter>(FVector(DryX,StreamY,Environment->GroundAt(DryX,StreamY)+100),FRotator::ZeroRotator);
+ if(!TestNotNull(TEXT("Spec character spawned"),Character)) { Fixture.EndPlayInTestWorld(); Fixture.ForwardErrorMessages(this); return false; }
+ auto* Movement=Character->GetCharacterMovement();
+ const auto* Camera=Character->FindComponentByClass<UCameraComponent>();
+ if(TestNotNull(TEXT("Character has eye camera"),Camera)) TestTrue(TEXT("Camera FOV is 80"),FMath::Abs(Camera->FieldOfView-80.0f)<=0.01f);
+ TestTrue(TEXT("MaxStepHeight is 40"),FMath::Abs(Movement->MaxStepHeight-40.0f)<=0.01f);
+ TestTrue(TEXT("Walkable floor angle is 38"),FMath::Abs(Movement->GetWalkableFloorAngle()-38.0f)<=0.01f);
+ for(int Frame=0;Frame<100;++Frame) Fixture.TickTestWorld(0.01f);
+ TestTrue(TEXT("Dry land walk speed is 420"),FMath::Abs(Movement->MaxWalkSpeed-420.0f)<=0.01f);
+ // Wading: centreline of the stream, same DepthAt expression the character Tick evaluates.
+ Character->SetActorLocation(FVector(StreamX,StreamY,Environment->GroundAt(StreamX,StreamY)+100));
+ for(int Frame=0;Frame<100;++Frame) Fixture.TickTestWorld(0.01f);
+ const double Depth=Environment->DepthAt(StreamX,StreamY);
+ TestTrue(TEXT("Stream centreline depth exceeds 0.05 wading threshold"),Depth>0.05);
+ TestTrue(TEXT("Wading walk speed is 280 over stream"),FMath::Abs(Movement->MaxWalkSpeed-280.0f)<=0.01f);
  Fixture.EndPlayInTestWorld(); Fixture.ForwardErrorMessages(this);
  return !HasAnyErrors();
 }
