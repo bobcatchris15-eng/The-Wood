@@ -73,12 +73,13 @@ void AWoodWorld::Generate() {
  TArray<TSoftObjectPtr<UStaticMesh>> Meshes;
  TArray<wood::Kind> Kinds;
  TArray<bool> Young;
+ TArray<bool> PrairieMesh;
  if(Palette) {
-  auto Add=[&](const TArray<TSoftObjectPtr<UStaticMesh>>& Source,wood::Kind Kind,bool IsYoung=false) {
-   for(const auto& Mesh:Source) { Meshes.Add(Mesh); Kinds.Add(Kind);Young.Add(IsYoung); }
+  auto Add=[&](const TArray<TSoftObjectPtr<UStaticMesh>>& Source,wood::Kind Kind,bool IsYoung=false,bool IsPrairie=false) {
+   for(const auto& Mesh:Source) { Meshes.Add(Mesh); Kinds.Add(Kind);Young.Add(IsYoung);PrairieMesh.Add(IsPrairie); }
   };
   Add(Palette->Trees,wood::Kind::Tree); Add(Palette->Saplings,wood::Kind::Tree,true); Add(Palette->Ferns,wood::Kind::Fern);
-  Add(Palette->Grasses,wood::Kind::Grass); Add(Palette->Rocks,wood::Kind::Rock);
+  Add(Palette->Grasses,wood::Kind::Grass); Add(Palette->Rocks,wood::Kind::Rock); Add(Palette->Prairie,wood::Kind::Grass,false,true);
  }
  for(int32 Index=0;Index<Meshes.Num();++Index) {
   auto* Instances=NewObject<UInstancedStaticMeshComponent>(this);
@@ -115,7 +116,7 @@ void AWoodWorld::Generate() {
   Vegetation.Add(Instances);
   Runtime->Available.Add(Asset!=nullptr);
   Runtime->Kinds.Add(Kinds[Index]);
-  auto Profile=Asset?WoodPlacementProfile(*Asset):FWoodPlacementProfile{};Profile.Young=Young[Index];
+  auto Profile=Asset?WoodPlacementProfile(*Asset):FWoodPlacementProfile{};Profile.Young=Young[Index];Profile.Prairie=PrairieMesh[Index];
   Runtime->Profiles.Add(Profile);
  }
  const FVector Start=ExplorerStart();

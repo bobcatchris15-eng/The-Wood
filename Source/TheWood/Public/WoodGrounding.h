@@ -9,6 +9,7 @@ struct FWoodPlacementProfile {
  TArray<FVector> Roots;
  FBox Bounds{ForceInit};
  bool Young=false;
+ bool Prairie=false;
 };
 THEWOOD_API FWoodPlacementProfile WoodPlacementProfile(const UStaticMesh& Asset);
 

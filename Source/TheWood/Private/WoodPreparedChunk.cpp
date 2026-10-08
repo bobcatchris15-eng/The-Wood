@@ -34,10 +34,12 @@ FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
  };
  // Candidate tables are immutable within the job, avoiding allocation per plant.
  TArray<TArray<int32>> Candidates;
- Candidates.SetNum(5);
- for(int32 I=0;I<Kinds.Num();++I) if(Available[I]) Candidates[Profiles[I].Young?4:static_cast<int32>(Kinds[I])].Add(I);
+ Candidates.SetNum(6);
+ for(int32 I=0;I<Kinds.Num();++I) if(Available[I]) Candidates[Profiles[I].Prairie?5:Profiles[I].Young?4:static_cast<int32>(Kinds[I])].Add(I);
  for(const auto& Feature:Chunk.features) {
-  const auto& Matches=Candidates[Feature.young?4:static_cast<int32>(Feature.kind)];
+  int32 Bucket=Feature.young?4:static_cast<int32>(Feature.kind);
+  if(Feature.prairie && !Candidates[5].IsEmpty()) Bucket=5;
+  const auto& Matches=Candidates[Bucket];
   if(Matches.IsEmpty()) continue;
   const int32 NumMatches=Matches.Num();
   const int32 RawVariant=static_cast<int32>(Feature.yaw*19)%NumMatches;
