@@ -13,12 +13,12 @@ Exploration only; no combat/survival/maps/compass, no tree growth, no visible su
 
 ## Tasks and contracts
 
-- [ ] Root-contact regression: inspect prepared/imported roots, demonstrate old transform gaps against actual triangulated terrain, add WoodGroundedTransform and actual-mesh tests. Enable tree CPU access for contact extraction.
-- [ ] Regional generation: four initial families (temperate forest, dry grassland, rocky highlands, taiga), jittered region origins with continuous weights, environmental character, independent cycles and differing habitats. Preserve drainage and a connected traversable corridor. World::terrainHeight provides exact rendered triangle height. Test multiple seeds, remote coordinates, negative boundaries, biome differences and order independence.
-- [ ] Biome art: add licensed/checksummed grassland and rocky ground sets. Ground vertexRGBA are biome weights; UV0=(moisture,slope). Preserve explicit leaf masks, rooted wind and conventional LODs. Reuse pine art coherently for first conifer/temperate iteration.
-- [ ] Runtime streaming: replace fixed generate-all/clamp with near-first asynchronous chunk generation, bounded per-frame integration, collidable terrain ready ahead, retained backtracking margin and unloading. Keep global HISM components and per-chunk stable IDs; water patches share boundary inputs. Only UObject work runs on the game thread. Runtime state has explicit pending/loaded chunks and cancellation-safe task lifetime.
-- [ ] Lighting/visibility: stable world-anchored local area-light grid follows streamed coverage, with smooth field queries and no source jumps near the player. Atmosphere hides unloaded distance without conspicuous edges. Generate sufficient horizon terrain ahead of player view.
-- [ ] Verify: core tests, root regression red/green, Unreal walking/streaming/instance removal tests, biome/transition/root-close renders across seeds and remote positions, then independent review. Update current status/spec implementation notes.
+- [x] Root-contact regression: inspect prepared/imported roots, demonstrate old transform gaps against actual triangulated terrain, add WoodGroundedTransform and actual-mesh tests. Enable tree CPU access for contact extraction.
+- [x] Regional generation: four initial families (temperate forest, dry grassland, rocky highlands, taiga), jittered region origins with continuous weights, environmental character, independent cycles and differing habitats. Preserve drainage and a connected traversable corridor. World::terrainHeight provides exact rendered triangle height. Test multiple seeds, remote coordinates, negative boundaries, biome differences and order independence.
+- [x] Biome art: add licensed/checksummed grassland and rocky ground sets. Ground vertexRGBA are biome weights; UV0=(moisture,slope). Preserve explicit leaf masks, rooted wind and conventional LODs. Reuse pine art coherently for first conifer/temperate iteration.
+- [x] Runtime streaming: replace fixed generate-all/clamp with near-first asynchronous chunk generation, bounded per-frame integration, collidable terrain ready ahead, retained backtracking margin and unloading. Keep global HISM components and per-chunk stable IDs; water patches share boundary inputs. Only UObject work runs on the game thread. Runtime state has explicit pending/loaded chunks and cancellation-safe task lifetime.
+- [x] Lighting/visibility: stable world-anchored local area-light grid follows streamed coverage, with smooth field queries and no source jumps near the player. Atmosphere hides unloaded distance without conspicuous edges. Generate sufficient horizon terrain ahead of player view.
+- [x] Verify: core tests, root regression red/green, Unreal walking/streaming/instance removal tests, biome/transition/root-close renders across seeds and remote positions, then independent review. Update current status/spec implementation notes.
 
 ## Deliberate scope
 
@@ -31,4 +31,4 @@ Rendered terrain queries + imported root geometry -> grounding helper -> feature
 Biome weights/moisture/slope -> ground shader; regional light/environment -> world-anchored lights/sky/fog/wind.
 Runtime retained coverage -> safe player traversal and future persistence/forgetting.
 
-No Git repository is present; preserve prior assets and checkpoint source/evidence in place.
+Git-tracked repository; preserve prior assets and checkpoint source/evidence in place.

@@ -15,7 +15,7 @@
 - Must compile cleanly with zero warnings under `-Wall -Wextra -Werror` / `/W4 /WX`.
 - Zero file I/O or global state mutations in generation loops; 100% deterministic and chunk-order independent.
 - Every individual piece must evaluate ground contact at its specific $(x, y)$ coordinate against `terrainHeight(x, y)`.
-- No Git repository present; all modifications and verifications happen in-place.
+- Git-tracked repository; all modifications and verifications happen in-place.
 
 ---
 
@@ -53,7 +53,7 @@
   }
   ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 Create `Tests/DiscoveryTests.cpp` testing `DiscoveryReservation` point inclusion and reservation bounds.
 ```cpp
 #include "Generation/WoodDiscovery.h"
@@ -74,14 +74,14 @@ int main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Compile with `Tools/Test-Discovery.cmd`.
 Expected: FAIL due to missing `WoodDiscovery.h`.
 
-- [ ] **Step 3: Implement minimal headers and reservation math**
+- [x] **Step 3: Implement minimal headers and reservation math**
 Write `Source/TheWood/Public/Generation/WoodDiscovery.h` and `Source/TheWood/Private/Generation/WoodDiscovery.cpp` implementing the structures and `isInsideReservation`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Compile and run `Tools/Test-Discovery.cmd`.
 Expected: PASS.
 
@@ -110,7 +110,7 @@ Expected: PASS.
   }
   ```
 
-- [ ] **Step 1: Write tests for procedural generation grammars**
+- [x] **Step 1: Write tests for procedural generation grammars**
 In `Tests/DiscoveryTests.cpp`:
 ```cpp
 // Assert deterministic planning for guaranteed cells
@@ -124,17 +124,17 @@ for(const auto& p : plan0.pieces) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Expected: Compilation failure (planDiscovery not declared).
 
-- [ ] **Step 3: Implement the 4 procedural generative grammars**
+- [x] **Step 3: Implement the 4 procedural generative grammars**
 In `WoodDiscovery.cpp`:
 1. `generateDryStoneShelter`: elliptical contour-tracing, entrance opening on leeward side, wall stones placed at exact terrain height, downhill rubble fall vectors.
 2. `generateCottageCorner`: stepped rectangular foundation, intact corner pier, collapsed roof/rubble fan inside, mossy ferns around wet edges.
 3. `generateStreamFootbridge`: stream tangent vector calculation, bank placement at $\pm (\text{streamHW} + 1.2\,\text{m})$, matching abutments and bed stepping stones.
 4. `generateRidgeTor`: summit monolith cluster with distance-decaying talus rock rings.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run `Tools/Test-Discovery.cmd`.
 Expected: PASS with 100% ground height adherence on every piece.
 
@@ -151,7 +151,7 @@ Expected: PASS with 100% ground height adherence on every piece.
 - Consumes: `planDiscovery`, `isInsideReservation` from `WoodDiscovery.h`
 - Produces: `World::generate(int x, int y)` outputs features with zero tree collisions inside reservations and seamless cross-chunk discovery pieces.
 
-- [ ] **Step 1: Write test for tree exclusion and cross-chunk seams**
+- [x] **Step 1: Write test for tree exclusion and cross-chunk seams**
 In `Tests/GenerationTests.cpp`:
 ```cpp
 // Test that no trees spawn within any discovery inner clearance
@@ -164,10 +164,10 @@ for (int cy = -2; cy <= 2; ++cy) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 Expected: Fails or prototype altar still has hardcoded features.
 
-- [ ] **Step 3: Integrate discovery queries into `World::generate`**
+- [x] **Step 3: Integrate discovery queries into `World::generate`**
 In `WoodGeneration.cpp`:
 1. Remove old hardcoded lines 242–289.
 2. At the start of `World::generate(x, y)`, query discovery plans for nearby candidate cells whose outer radius intersects chunk `[minX - 50, maxX + 50] x [minY - 50, maxY + 50]`.
@@ -177,7 +177,7 @@ In `WoodGeneration.cpp`:
    - Allow ferns/grass around outer transition bounds.
 4. For each active discovery plan, clip its generated pieces to `[minX, maxX) x [minY, maxY)` and append to `chunk.features` with exact `terrainHeight`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run `Tools/Test-Core.ps1` and `Tools/Test-Discovery.cmd`.
 Expected: PASS.
 
@@ -189,10 +189,10 @@ Expected: PASS.
 - Modify: `Tools/Test-Core.ps1` to include `WoodDiscovery.cpp`
 - Run: `Tools/Test-Core.ps1`, `Tools/Test-Biomes.cmd`, `Tools/Test-Discovery.cmd`
 
-- [ ] **Step 1: Update Test-Core.ps1**
+- [x] **Step 1: Update Test-Core.ps1**
 Add `Source/TheWood/Private/Generation/WoodDiscovery.cpp` to the compile command.
 
-- [ ] **Step 2: Run all standalone test suites**
+- [x] **Step 2: Run all standalone test suites**
 Run:
 - `powershell -ExecutionPolicy Bypass -File Tools/Test-Core.ps1`
 - `cmd /c Tools\Test-Biomes.cmd`
@@ -200,5 +200,5 @@ Run:
 - `cmd /c Tools\Test-Hex.cmd`
 Expected: All suites PASS with 0 warnings.
 
-- [ ] **Step 3: Document Status & Artifact Updates**
+- [x] **Step 3: Document Status & Artifact Updates**
 Update `Docs/Status.md` and `.clanker/CURRENT_WORK.md` with verification results.

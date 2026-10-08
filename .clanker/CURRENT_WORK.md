@@ -10,7 +10,7 @@ Current increment review-ready. Fresh editor build and all four engine-independe
 
 Photographic quality and packaged 1080p60 remain open gates. Integrated Radeon 860M is a development reference, not a certified mainstream gaming baseline. Open visual work includes ground/contact shading, streambanks/bed/depth, species variety, overlook composition and temporal inspection. Rain, natural audio, album browsing and finished settings are unfinished.
 
-Pointers: Docs/Specification.md; Docs/Status.md; README.md; .clanker/HUMAN_HANDOFF.md; .clanker/REVIEW.md; Saved/Review. Detailed spec preserves the full accepted journey and distinguishes current defaults from deferred requirements. Not a Git repository.
+Pointers: Docs/Specification.md; Docs/Status.md; README.md; .clanker/HUMAN_HANDOFF.md; .clanker/REVIEW.md; Saved/Review. Detailed spec preserves the full accepted journey and distinguishes current defaults from deferred requirements. Git-tracked repository.
 
 Follow-up verified: motion blur disabled at renderer default and camera override; young sapling cohort separated from established tree variants; wider size/maturity distribution and understory sizes. Fresh generation/biome tests, editor/content build and four runtime tests pass. Forest screenshot inspected after update.
 
