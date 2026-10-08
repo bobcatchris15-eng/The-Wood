@@ -11,6 +11,7 @@ Unreal Engine 5.8.3 C++ project (`TheWood.uproject`), pinned to UE 5.8.
 
 ## VALIDATE
 Fast: `powershell -NoProfile -File Tools\Test-Core.ps1` (run from repo root). PASS, exit 0, about 26 s wall. Requires `.cache/toolchain/ziglang` (see Seed).
+      Test-Core only covers GenerationTests. Also run every suite: `for t in Hex Biomes Discovery Streaming Atmosphere Soundscape; do cmd //c "Tools\Test-$t.cmd"; done` (all PASS 2026-10-08). New suites add a Tools/Test-<X>.cmd.
 Full: `powershell -NoProfile -File Tools\Build-Unreal.ps1 -EngineRoot 'C:/Program Files/Epic Games/UE_5.8'` then `powershell -NoProfile -File Tools\Test-Unreal.ps1`. Build: Succeeded, about 5 s wall (incremental). Test: `PASS: 4 Unreal runtime test, 0 failures`, about 30 s wall. `Test-Unreal.ps1` defaults `-EngineRoot` to `C:/Program Files/Epic Games/UE_5.8`. `Build-Unreal.ps1` requires `-EngineRoot`. Add `-InitializeContent` to Build-Unreal only when rebuilding Content (runs BootstrapEditor.py).
 Probe: `Tools\Render-Review.ps1 [-Seed <int>] [-View Forest|Stream|Ridge|Grassland|Taiga|Highlands|Roots|Ruins] [-Time <double>]` (human review). Not run during this measurement. Produces renders for a person to inspect; no automated pass/fail.
 Seed: `.cache/toolchain/ziglang` (zig 0.13.0, 323 MB; install with `python -m pip install --target .cache/toolchain ziglang==0.13.0`). `Content/` is 704 MB and is required for Unreal Full. Measured with `du -sh`.
