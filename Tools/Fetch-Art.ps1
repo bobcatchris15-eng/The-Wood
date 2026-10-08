@@ -5,7 +5,7 @@ New-Item -ItemType Directory -Force -Path $taskArtRoot | Out-Null
 $taskHeaders = @{'User-Agent'='TheWoodDevelopment/0.1 (local asset preparation)'}
 $taskRecords = @()
 # Mature canopy and boulders complement the original undergrowth.
-foreach ($taskId in @('pine_sapling_small','fern_02','grass_medium_01','rock_07','pine_tree_01','boulder_01','rock_moss_set_01','rock_moss_set_02')) {
+foreach ($taskId in @('pine_sapling_small','fern_02','grass_medium_01','grass_bermuda_01','grass_medium_02','rock_07','pine_tree_01','boulder_01','rock_moss_set_01','rock_moss_set_02')) {
  $taskFiles = Invoke-RestMethod -Uri "https://api.polyhaven.com/files/$taskId" -Headers $taskHeaders
  $taskModel = $taskFiles.gltf.'1k'.gltf
  if (!$taskModel) { throw "No 1k glTF for $taskId" }

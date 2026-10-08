@@ -23,7 +23,7 @@ struct Surface {
  double temperature=0, exposure=0, shelter=0, roughness=0;
 };
 enum class Kind { Tree, Fern, Grass, Rock };
-struct Feature { Kind kind; Vec3 position; double yaw=0, scale=1; bool young=false; };
+struct Feature { Kind kind; Vec3 position; double yaw=0, scale=1; bool young=false; bool prairie=false; };
 struct Chunk { int x=0, y=0, cells=0; std::vector<Vec3> vertices; std::vector<std::uint32_t> triangles; std::vector<Feature> features; };
 struct Lighting { double brightness=0, kelvin=0; };
 class World {

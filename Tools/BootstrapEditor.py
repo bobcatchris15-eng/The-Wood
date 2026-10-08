@@ -128,7 +128,7 @@ if build:
     color_inputs.update({name:(samples[index][0],'RGB') for index,name in enumerate(('A','B','C','D'))})
     color=custom(ground,weight_code+'''
     float3 temperate=A*float3(0.60,0.70,0.49);
-    float3 grassland=B*float3(0.85,0.80,0.64);
+    float3 grassland=B*float3(0.66,0.74,0.40);
     float mineral=dot(C,float3(0.2126,0.7152,0.0722));
     float3 highlands=lerp(C,float3(mineral,mineral,mineral),0.65)*float3(0.78,0.82,0.86);
     float3 taiga=D*float3(0.48,0.62,0.54);
@@ -355,16 +355,19 @@ palette.set_editor_property('ground_material',ground)
 palette.set_editor_property('water_material',water)
 prepared=ROOT/'ArtSource/Prepared'
 records=json.loads((prepared/'inspection.json').read_text(encoding='utf-8'))
-groups={'trees':[],'saplings':[],'ferns':[],'grasses':[],'rocks':[]}
-slots={'pine_tree_01':'trees','pine_sapling_small':'saplings','fern_02':'ferns','grass_medium_01':'grasses','boulder_01':'rocks','rock_moss_set_01':'rocks','rock_moss_set_02':'rocks','rock_07':'rocks'}
+groups={'trees':[],'saplings':[],'ferns':[],'grasses':[],'rocks':[],'prairie':[]}
+slots={'pine_tree_01':'trees','pine_sapling_small':'saplings','fern_02':'ferns','grass_medium_01':'grasses','boulder_01':'rocks','rock_moss_set_01':'rocks','rock_moss_set_02':'rocks','rock_07':'rocks','prairie_clump':'prairie'}
 for record in records:
     # Versioned destinations migrate old imports with wind masks.
     if record['asset']=='grass_medium_01' and record['triangles']<60:
         continue
+    # Source grasses feed prairie clumps only; they are not palette slots.
+    if record['asset'] in ('grass_bermuda_01','grass_medium_02'):
+        continue
     destination='/Game/Art/PolyHaven/' + VERSION + '/' + record['variant']
     existing=LIB.list_assets(destination,recursive=True)
-    if not existing or record['asset']=='pine_tree_01':
-        # Pine prepared meshes change with every Prepare-Art soil/flare revision; re-import over the version.
+    if not existing or record['asset'] in ('pine_tree_01','prairie_clump'):
+        # Pine and prairie clump meshes change with every Prepare-Art revision; re-import over the version.
         task=unreal.AssetImportTask()
         task.set_editor_property('filename',str(prepared/record['file']))
         task.set_editor_property('destination_path',destination)

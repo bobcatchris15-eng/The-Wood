@@ -281,7 +281,7 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
     const double highlandBoost=surface.biome[2]>0.35?(1.2+1.5*surface.biome[2]):1.0;
     scale=((streamDist<=4.5)?(0.65+random(config.seed,gx,gy,salt+Salt::LayerSize)*1.5):(0.95+random(config.seed,gx,gy,salt+Salt::LayerSize)*2.6))*highlandBoost;
    }
-   chunk.features.push_back({kind,{px,py,terrainHeight(px,py)},random(config.seed,gx,gy,salt+Salt::LayerYaw)*360,scale,young});
+   chunk.features.push_back({kind,{px,py,terrainHeight(px,py)},random(config.seed,gx,gy,salt+Salt::LayerYaw)*360,scale,young,type==3});
   }
  };
  layer(8.5,Salt::TreeLayer,0);

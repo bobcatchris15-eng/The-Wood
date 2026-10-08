@@ -360,6 +360,474 @@
     "wind_uv_version": 2
   },
   {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_00",
+    "file": "grass_bermuda_01_00.glb",
+    "dimensions_m": [
+      0.06773799657821655,
+      0.0843101441860199,
+      0.02474112994968891
+    ],
+    "triangles": 12,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 12,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_01",
+    "file": "grass_bermuda_01_01.glb",
+    "dimensions_m": [
+      0.07010030746459961,
+      0.05502614378929138,
+      0.04334356635808945
+    ],
+    "triangles": 12,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 12,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_02",
+    "file": "grass_bermuda_01_02.glb",
+    "dimensions_m": [
+      0.0439380407333374,
+      0.06925326585769653,
+      0.043633755296468735
+    ],
+    "triangles": 19,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 19,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_03",
+    "file": "grass_bermuda_01_03.glb",
+    "dimensions_m": [
+      0.038512229919433594,
+      0.02856733277440071,
+      0.09775002300739288
+    ],
+    "triangles": 17,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 17,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_04",
+    "file": "grass_bermuda_01_04.glb",
+    "dimensions_m": [
+      0.05116373300552368,
+      0.021864349022507668,
+      0.0745726078748703
+    ],
+    "triangles": 8,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 8,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_05",
+    "file": "grass_bermuda_01_05.glb",
+    "dimensions_m": [
+      0.05698142200708389,
+      0.09161889553070068,
+      0.06667335331439972
+    ],
+    "triangles": 20,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 20,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_06",
+    "file": "grass_bermuda_01_06.glb",
+    "dimensions_m": [
+      0.054973602294921875,
+      0.016299284994602203,
+      0.10206569731235504
+    ],
+    "triangles": 14,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 14,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_07",
+    "file": "grass_bermuda_01_07.glb",
+    "dimensions_m": [
+      0.06603643298149109,
+      0.03687525913119316,
+      0.0826614648103714
+    ],
+    "triangles": 24,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 24,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_08",
+    "file": "grass_bermuda_01_08.glb",
+    "dimensions_m": [
+      0.04070085287094116,
+      0.02610260248184204,
+      0.11300424486398697
+    ],
+    "triangles": 30,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 30,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_09",
+    "file": "grass_bermuda_01_09.glb",
+    "dimensions_m": [
+      0.06783503293991089,
+      0.04558120667934418,
+      0.1508864462375641
+    ],
+    "triangles": 147,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 147,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_10",
+    "file": "grass_bermuda_01_10.glb",
+    "dimensions_m": [
+      0.0765952467918396,
+      0.049266546964645386,
+      0.127205029129982
+    ],
+    "triangles": 140,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 140,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_11",
+    "file": "grass_bermuda_01_11.glb",
+    "dimensions_m": [
+      0.03716224431991577,
+      0.04451197385787964,
+      0.09225825220346451
+    ],
+    "triangles": 128,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 128,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_12",
+    "file": "grass_bermuda_01_12.glb",
+    "dimensions_m": [
+      0.06964707374572754,
+      0.08313377946615219,
+      0.15218901634216309
+    ],
+    "triangles": 268,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 268,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_13",
+    "file": "grass_bermuda_01_13.glb",
+    "dimensions_m": [
+      0.0035752058029174805,
+      0.013696600683033466,
+      0.14941485226154327
+    ],
+    "triangles": 15,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 15,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_14",
+    "file": "grass_bermuda_01_14.glb",
+    "dimensions_m": [
+      0.0035752058029174805,
+      0.013696596957743168,
+      0.14941483736038208
+    ],
+    "triangles": 15,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 15,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_15",
+    "file": "grass_bermuda_01_15.glb",
+    "dimensions_m": [
+      0.07986542582511902,
+      0.02775387465953827,
+      0.03223959356546402
+    ],
+    "triangles": 12,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 12,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_16",
+    "file": "grass_bermuda_01_16.glb",
+    "dimensions_m": [
+      0.08268746733665466,
+      0.03603371977806091,
+      0.04585026204586029
+    ],
+    "triangles": 12,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 12,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_17",
+    "file": "grass_bermuda_01_17.glb",
+    "dimensions_m": [
+      0.05399961769580841,
+      0.041465919464826584,
+      0.055165212601423264
+    ],
+    "triangles": 18,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 18,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_18",
+    "file": "grass_bermuda_01_18.glb",
+    "dimensions_m": [
+      0.05821169912815094,
+      0.03346908837556839,
+      0.05464456230401993
+    ],
+    "triangles": 10,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 10,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_19",
+    "file": "grass_bermuda_01_19.glb",
+    "dimensions_m": [
+      0.028711915016174316,
+      0.017662715166807175,
+      0.09073731303215027
+    ],
+    "triangles": 10,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 10,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_bermuda_01",
+    "variant": "grass_bermuda_01_20",
+    "file": "grass_bermuda_01_20.glb",
+    "dimensions_m": [
+      0.0355377197265625,
+      0.02461286261677742,
+      0.06905271857976913
+    ],
+    "triangles": 10,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 10,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_medium_02",
+    "variant": "grass_medium_02_00",
+    "file": "grass_medium_02_00.glb",
+    "dimensions_m": [
+      0.11912186443805695,
+      0.11976241320371628,
+      0.1569303721189499
+    ],
+    "triangles": 714,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 714,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_medium_02",
+    "variant": "grass_medium_02_01",
+    "file": "grass_medium_02_01.glb",
+    "dimensions_m": [
+      0.1791270226240158,
+      0.1992683708667755,
+      0.17956401407718658
+    ],
+    "triangles": 1760,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 1760,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_medium_02",
+    "variant": "grass_medium_02_02",
+    "file": "grass_medium_02_02.glb",
+    "dimensions_m": [
+      0.2616771459579468,
+      0.24951034784317017,
+      0.23166149854660034
+    ],
+    "triangles": 1215,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 1215,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_medium_02",
+    "variant": "grass_medium_02_03",
+    "file": "grass_medium_02_03.glb",
+    "dimensions_m": [
+      0.3173760771751404,
+      0.36192572116851807,
+      0.260376513004303
+    ],
+    "triangles": 2489,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 2489,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
+    "asset": "grass_medium_02",
+    "variant": "grass_medium_02_04",
+    "file": "grass_medium_02_04.glb",
+    "dimensions_m": [
+      0.3555693030357361,
+      0.43324655294418335,
+      0.40323612093925476
+    ],
+    "triangles": 1664,
+    "materials": 1,
+    "pivot": "ground_center",
+    "source_triangles": 1664,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 0,
+    "needle_card_triangles": 0
+  },
+  {
     "asset": "rock_07",
     "variant": "rock_07_00",
     "file": "rock_07_00.glb",
@@ -636,6 +1104,78 @@
     "materials": 1,
     "pivot": "ground_center",
     "source_triangles": 7928,
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "prairie_clump",
+    "variant": "prairie_clump_00",
+    "file": "prairie_clump_00.glb",
+    "dimensions_m": [
+      1.475547194480896,
+      1.6173573732376099,
+      0.7697843313217163
+    ],
+    "triangles": 7628,
+    "materials": 7,
+    "pivot": "ground_center",
+    "seed": 4100,
+    "sources": [
+      "grass_medium_01_11",
+      "grass_medium_02_02",
+      "grass_medium_02_04",
+      "grass_medium_01_05",
+      "grass_medium_01_15",
+      "grass_medium_02_03",
+      "grass_medium_01_07"
+    ],
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "prairie_clump",
+    "variant": "prairie_clump_01",
+    "file": "prairie_clump_01.glb",
+    "dimensions_m": [
+      1.7550805807113647,
+      1.4246922731399536,
+      0.6567061543464661
+    ],
+    "triangles": 8732,
+    "materials": 7,
+    "pivot": "ground_center",
+    "seed": 4101,
+    "sources": [
+      "grass_medium_01_07",
+      "grass_medium_01_06",
+      "grass_medium_01_08",
+      "grass_medium_01_03",
+      "grass_medium_01_05",
+      "grass_medium_02_00",
+      "grass_medium_02_03"
+    ],
+    "wind_uv_version": 2
+  },
+  {
+    "asset": "prairie_clump",
+    "variant": "prairie_clump_02",
+    "file": "prairie_clump_02.glb",
+    "dimensions_m": [
+      1.1319899559020996,
+      1.226848840713501,
+      0.5843711495399475
+    ],
+    "triangles": 8052,
+    "materials": 7,
+    "pivot": "ground_center",
+    "seed": 4102,
+    "sources": [
+      "grass_medium_01_07",
+      "grass_medium_02_02",
+      "grass_medium_02_04",
+      "grass_medium_01_16",
+      "grass_medium_02_03",
+      "grass_medium_02_00",
+      "grass_medium_01_04"
+    ],
     "wind_uv_version": 2
   }
 ]

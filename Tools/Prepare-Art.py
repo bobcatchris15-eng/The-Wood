@@ -5,6 +5,7 @@ import sys
 import struct
 import numpy as np
 import math
+import random
 from array import array
 from pathlib import Path
 from mathutils import Vector
@@ -204,7 +205,7 @@ def wind_uv(path, tree):
     binary.extend(b'\0' * (-len(binary) % 4))
     path.write_bytes(struct.pack('<III', 0x46546c67, 2, 28 + len(encoded) + len(binary)) + struct.pack('<II', len(encoded), 0x4e4f534a) + encoded + struct.pack('<II', len(binary), 0x004e4942) + binary)
 
-for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'rock_07', 'pine_tree_01', 'boulder_01', 'rock_moss_set_01', 'rock_moss_set_02'):
+for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_01', 'grass_medium_02', 'rock_07', 'pine_tree_01', 'boulder_01', 'rock_moss_set_01', 'rock_moss_set_02'):
     # Keep the original grounded undergrowth; only rebuild newly requested sources.
     previous = output / 'inspection.json'
     old = json.loads(previous.read_text(encoding='utf-8')) if previous.exists() else []
@@ -267,5 +268,76 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'rock_07', 'pin
         bpy.ops.export_scene.gltf(filepath=str(output / (variant + '.glb')),
                                   export_format='GLB', use_selection=True)
         wind_uv(output / (variant + '.glb'), name.startswith('pine_'))
+def build_prairie_clumps():
+    """Assemble three seeded prairie clumps from prepared grass variants, each >=0.6m across, 0.5-0.9m tall."""
+    pool = [r for r in reports if r['asset'] in ('grass_medium_01', 'grass_medium_02') and 60 <= r['triangles'] <= 2500]
+    if len(pool) < 7:
+        raise RuntimeError('Prairie clump pool too small: %d' % len(pool))
+    for clump in range(3):
+        seed = 4100 + clump
+        rng = random.Random(seed)
+        picks = rng.sample(pool, rng.randint(5, 7))
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        parts = []
+        for index, record in enumerate(picks):
+            before = set(bpy.context.scene.objects.keys())
+            bpy.ops.import_scene.gltf(filepath=str(output / record['file']))
+            new = [obj for obj in bpy.context.scene.objects if obj.name not in before and obj.type == 'MESH']
+            if not new:
+                raise RuntimeError('Prairie import produced no mesh: ' + record['variant'])
+            for obj in new:
+                angle = rng.uniform(0.0, 2.0 * math.pi)
+                radius = 0.35 * math.sqrt(rng.random())
+                offset = rng.uniform(0.0, 2.0 * math.pi)
+                obj.rotation_euler = (0.0, 0.0, angle)
+                obj.location = (radius * math.cos(offset), radius * math.sin(offset), 0.0)
+                bpy.ops.object.select_all(action='DESELECT')
+                obj.select_set(True)
+                bpy.context.view_layer.objects.active = obj
+                bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+                parts.append(obj)
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in parts:
+            obj.select_set(True)
+        bpy.context.view_layer.objects.active = parts[0]
+        bpy.ops.object.join()
+        obj = bpy.context.view_layer.objects.active
+        # Ground-contact pivot: lowest vertex at z=0 and XY centred on the footprint.
+        points = [obj.matrix_world @ Vector(p) for p in obj.bound_box]
+        low = Vector(tuple(min(p[i] for p in points) for i in range(3)))
+        high = Vector(tuple(max(p[i] for p in points) for i in range(3)))
+        height = high.z - low.z
+        target = rng.uniform(0.5, 0.9)
+        factor = target / height
+        obj.location = (0.0, 0.0, 0.0)
+        for vertex in obj.data.vertices:
+            vertex.co -= Vector(((low.x + high.x) / 2, (low.y + high.y) / 2, low.z))
+        obj.location = (0.0, 0.0, 0.0)
+        obj.scale = (factor, factor, factor)
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        points = [obj.matrix_world @ Vector(p) for p in obj.bound_box]
+        low = Vector(tuple(min(p[i] for p in points) for i in range(3)))
+        high = Vector(tuple(max(p[i] for p in points) for i in range(3)))
+        footprint = max(high.x - low.x, high.y - low.y)
+        if footprint < 0.6:
+            raise RuntimeError('Prairie clump %d footprint %.2fm below 0.6m' % (clump, footprint))
+        variant = f'prairie_clump_{clump:02d}'
+        obj.name = variant
+        obj.data.calc_loop_triangles()
+        path = output / (variant + '.glb')
+        bpy.ops.export_scene.gltf(filepath=str(path), export_format='GLB', use_selection=True)
+        wind_uv(path, False)
+        reports.append({'asset': 'prairie_clump', 'variant': variant, 'file': variant + '.glb',
+                        'dimensions_m': [high.x - low.x, high.y - low.y, high.z - low.z],
+                        'triangles': len(obj.data.loop_triangles),
+                        'materials': len(obj.data.materials), 'pivot': 'ground_center',
+                        'seed': seed, 'sources': [r['variant'] for r in picks],
+                        'wind_uv_version': 2})
+
+
+build_prairie_clumps()
 (output / 'inspection.json').write_text(json.dumps(reports, indent=2), encoding='utf-8')
 print(f'Prepared {len(reports)} grounded variants. See ArtSource/Prepared/inspection.json')
