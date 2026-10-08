@@ -8,6 +8,8 @@
 // Engine-independent generation coordinates are metres; the Unreal adapter converts to cm.
 namespace wood {
 struct DiscoveryPlan;
+struct DiscoveryReservation;
+struct DiscoveryPiece;
 struct Vec3 { double x=0, y=0, z=0; };
 struct Settings { std::uint32_t seed=12345; double chunkSize=128; int cells=64; };
 enum class Biome { TemperateForest, DryGrassland, RockyHighlands, Taiga };
@@ -33,6 +35,19 @@ enum class Kind { Tree, Fern, Grass, Rock };
 struct Feature { Kind kind; Vec3 position; double yaw=0, scale=1; bool young=false; bool prairie=false; };
 struct Chunk { int x=0, y=0, cells=0; std::vector<Vec3> vertices; std::vector<std::uint32_t> triangles; std::vector<Feature> features; };
 struct Lighting { double brightness=0, kelvin=0; };
+// Outputs of the generate() pipeline stages; each stage reads Settings and earlier stage outputs only.
+namespace stage {
+// Chunk bounds (metres) and the hex owner cell of the chunk midpoint.
+struct RegionStage { double minX=0,minY=0,maxX=0,maxY=0; int ownerQ=0,ownerR=0; };
+// Discovery reservations and chunk-local discovery pieces around the owner cell.
+struct StructureStage { std::vector<DiscoveryReservation> reservations; std::vector<DiscoveryPiece> pieces; };
+// Vertex grid heights and triangle indices.
+struct TerrainStage { std::vector<Vec3> vertices; std::vector<std::uint32_t> triangles; };
+// Stream centre and half-width sampled at each terrain vertex row.
+struct HydrologyStage { std::vector<double> rowStreamX, rowHalfWidth; };
+// Ecological feature layers, before discovery pieces are appended.
+struct HabitatStage { std::vector<Feature> features; };
+}
 class World {
 public:
  explicit World(Settings settings);
@@ -58,6 +73,13 @@ public:
  const Settings& settings() const { return config; }
 private:
  Settings config;
+ // Pipeline stages, called in this order by generate().
+ stage::RegionStage regionStage(int x,int y) const;
+ stage::TerrainStage terrainStage(int x,int y) const;
+ stage::HydrologyStage hydrologyStage(const stage::TerrainStage& terrain) const;
+ stage::StructureStage structureStage(const stage::RegionStage& region) const;
+ // Habitat samples stream fields directly at off-grid y values; the hydrology argument is not read.
+ stage::HabitatStage habitatStage(const stage::RegionStage& region,const stage::StructureStage& structure,const stage::HydrologyStage& hydrology) const;
  // Visits every valid discovery plan of the cells within two lattice steps of the owner cell.
  void forEachDiscoveryNear(int ownerQ, int ownerR, const std::function<void(const DiscoveryPlan&)>& fn) const;
 };

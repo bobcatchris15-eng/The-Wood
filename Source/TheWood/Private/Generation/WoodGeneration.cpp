@@ -270,39 +270,56 @@ std::optional<Vec3> World::nearestBiomeCore(Biome family,double x,double y,doubl
  }
  return best;
 }
-Chunk World::generate(int x,int y,bool includeFeatures) const {
-
- if(std::abs(static_cast<double>(x)*config.chunkSize)>999000||std::abs(static_cast<double>(y)*config.chunkSize)>999000)
-  throw std::invalid_argument("Chunk outside supported milestone coordinates");
- Chunk chunk; chunk.x=x;chunk.y=y;chunk.cells=config.cells;
+stage::RegionStage World::regionStage(int x,int y) const {
+ stage::RegionStage s;
+ s.minX=x*config.chunkSize; s.minY=y*config.chunkSize;
+ s.maxX=(x+1)*config.chunkSize; s.maxY=(y+1)*config.chunkSize;
+ const double midX=(s.minX+s.maxX)*0.5,midY=(s.minY+s.maxY)*0.5;
+ const auto owner=hex::owner(hex::warp({midX+180,midY+180},config.seed));
+ s.ownerQ=owner.q; s.ownerR=owner.r;
+ return s;
+}
+stage::TerrainStage World::terrainStage(int x,int y) const {
+ stage::TerrainStage s;
  const int n=config.cells;
  for(int row=0;row<=n;++row) for(int col=0;col<=n;++col) {
   const double px=(x+static_cast<double>(col)/n)*config.chunkSize, py=(y+static_cast<double>(row)/n)*config.chunkSize;
-  chunk.vertices.push_back({px,py,ground(config,px,py,streamX(py))});
+  s.vertices.push_back({px,py,ground(config,px,py,streamX(py))});
  }
  for(int row=0;row<n;++row) for(int col=0;col<n;++col) {
   const auto i=static_cast<std::uint32_t>(row*(n+1)+col), stride=static_cast<std::uint32_t>(n+1);
-  chunk.triangles.insert(chunk.triangles.end(),{i,i+stride,i+1,i+1,i+stride,i+stride+1});
+  s.triangles.insert(s.triangles.end(),{i,i+stride,i+1,i+1,i+stride,i+stride+1});
  }
- if(!includeFeatures) return chunk;
- const double minX=x*config.chunkSize,minY=y*config.chunkSize;
- const double maxX=(x+1)*config.chunkSize,maxY=(y+1)*config.chunkSize;
- const double midX=(minX+maxX)*0.5,midY=(minY+maxY)*0.5;
- const auto owner=hex::owner(hex::warp({midX+180,midY+180},config.seed));
- std::vector<DiscoveryReservation> reservations;
- std::vector<DiscoveryPiece> chunkPieces;
-
- forEachDiscoveryNear(owner.q,owner.r,[&](const DiscoveryPlan& plan) {
+ return s;
+}
+stage::HydrologyStage World::hydrologyStage(const stage::TerrainStage& terrain) const {
+ stage::HydrologyStage s;
+ const std::size_t columns=static_cast<std::size_t>(config.cells)+1;
+ for(std::size_t row=0;row<columns;++row) {
+  const double py=terrain.vertices[row*columns].y;
+  s.rowStreamX.push_back(streamX(py));
+  s.rowHalfWidth.push_back(streamHalfWidth(py));
+ }
+ return s;
+}
+stage::StructureStage World::structureStage(const stage::RegionStage& region) const {
+ stage::StructureStage s;
+ forEachDiscoveryNear(region.ownerQ,region.ownerR,[&](const DiscoveryPlan& plan) {
   if(plan.reservation.innerRadius>0.0||plan.reservation.outerRadius>0.0) {
-   reservations.push_back(plan.reservation);
+   s.reservations.push_back(plan.reservation);
   }
   for(const auto& piece:plan.pieces) {
-   if(piece.position.x>=minX&&piece.position.x<maxX&&piece.position.y>=minY&&piece.position.y<maxY) {
-    chunkPieces.push_back(piece);
+   if(piece.position.x>=region.minX&&piece.position.x<region.maxX&&piece.position.y>=region.minY&&piece.position.y<region.maxY) {
+    s.pieces.push_back(piece);
    }
   }
  });
-
+ return s;
+}
+stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const stage::StructureStage& structure,const stage::HydrologyStage&) const {
+ stage::HabitatStage habitat;
+ const double minX=region.minX,minY=region.minY,maxX=region.maxX,maxY=region.maxY;
+ const auto& reservations=structure.reservations;
  // Independent global lattices keep layers dense and chunk ownership unambiguous.
  // Full-cell jitter and broad habitat patches conceal the underlying lattice.
  auto layer=[&](double spacing,std::uint32_t salt,int type) {
@@ -389,7 +406,7 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
     const double highlandBoost=surface.biome[2]>0.35?(1.2+1.5*surface.biome[2]):1.0;
     scale=((streamDist<=4.5)?(0.65+random(config.seed,gx,gy,salt+Salt::LayerSize)*1.5):(0.95+random(config.seed,gx,gy,salt+Salt::LayerSize)*2.6))*highlandBoost;
    }
-   chunk.features.push_back({kind,{px,py,terrainHeight(px,py)},random(config.seed,gx,gy,salt+Salt::LayerYaw)*360,scale,young,type==3});
+   habitat.features.push_back({kind,{px,py,terrainHeight(px,py)},random(config.seed,gx,gy,salt+Salt::LayerYaw)*360,scale,young,type==3});
   }
  };
  layer(8.5,Salt::TreeLayer,0);
@@ -397,7 +414,28 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
  layer(6,Salt::RockLayer,2);
  layer(1.0,Salt::PrairieLayer,3);
  layer(1.5,Salt::TaigaMossLayer,4);
- for(const auto& piece:chunkPieces) {
+ return habitat;
+}
+// Generation pipeline, in order: region -> structure -> terrain -> hydrology -> habitat -> presentation.
+// region: chunk bounds, hex owner of midpoint (Settings, x, y).
+// structure: discovery reservations and pieces (region).
+// terrain: vertex heights and triangles (Settings, x, y); needed even when features are skipped.
+// hydrology: stream fields per terrain row (terrain).
+// habitat: feature layers (region, structure, hydrology).
+// presentation: assembles Chunk from terrain, habitat and structure pieces.
+Chunk World::generate(int x,int y,bool includeFeatures) const {
+ if(std::abs(static_cast<double>(x)*config.chunkSize)>999000||std::abs(static_cast<double>(y)*config.chunkSize)>999000)
+  throw std::invalid_argument("Chunk outside supported milestone coordinates");
+ const auto terrain=terrainStage(x,y);
+ Chunk chunk; chunk.x=x;chunk.y=y;chunk.cells=config.cells;
+ chunk.vertices=terrain.vertices; chunk.triangles=terrain.triangles;
+ if(!includeFeatures) return chunk;
+ const auto region=regionStage(x,y);
+ const auto structure=structureStage(region);
+ const auto hydrology=hydrologyStage(terrain);
+ const auto habitat=habitatStage(region,structure,hydrology);
+ chunk.features=habitat.features;
+ for(const auto& piece:structure.pieces) {
   const Kind kind=(piece.mesh.find("Fern")!=std::string::npos||piece.name.find("fern")!=std::string::npos)?Kind::Fern:Kind::Rock;
   const double normYaw=std::fmod(std::fmod(piece.yaw,360.0)+360.0,360.0);
   chunk.features.push_back({kind,piece.position,normYaw,piece.scale,false});
