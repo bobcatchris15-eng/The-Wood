@@ -62,11 +62,14 @@ void AWoodWorld::BeginPlay() {
  FParse::Value(FCommandLine::Get(),TEXT("WoodTime="),Clock.seconds);
  if(!FMath::IsFinite(Clock.seconds)||Clock.seconds<0) Clock.seconds=0;
  Generator=wood::World({static_cast<uint32>(Seed),128,64});
+ const bool Entrance=FString(FCommandLine::Get()).Contains(TEXT("-WoodEntrance"));
+ if(Entrance) Generator.setEntered(false);
  wood::save::SaveState Resume;
  const bool Resuming=bResumeEnabled&&LoadResume(Resume);
  if(Resuming) ApplyResume(Resume);
  if(!Palette) Palette=LoadObject<UWoodPalette>(nullptr,TEXT("/Game/Wood/DA_BenchmarkPalette.DA_BenchmarkPalette"));
  Generate();
+ if(Entrance) SpawnTrailheadLot();
  if(Resuming) PrefetchResumedChunks(Resume);
  LastAutosaveRealSeconds=FPlatformTime::Seconds();
  bResumeReady=true;
@@ -160,6 +163,46 @@ void AWoodWorld::Generate() {
  const int32 CX=FMath::FloorToInt(Start.X/12800),CY=FMath::FloorToInt(Start.Y/12800);
  for(int32 Y=CY-1;Y<=CY+1;++Y) for(int32 X=CX-1;X<=CX+1;++X) Realize(WoodPrepareChunk(Generator,X,Y,Runtime->Kinds,Runtime->Profiles,Runtime->Available));
  Stream(Start);
+}
+void AWoodWorld::SetEntered(bool Value) {
+ Generator.setEntered(Value);
+ if(Value&&TrailheadLot) { TrailheadLot->DestroyComponent(); TrailheadLot=nullptr; }
+}
+void AWoodWorld::SpawnTrailheadLot() {
+ if(TrailheadLot) return;
+ // Lot pad 44x28 m centred (0,-560) m, 6 m skirt fading vertex alpha to 0. Units: cm.
+ constexpr double PadMinX=-2200,PadMaxX=2200,PadMinY=-57400,PadMaxY=-54600;
+ constexpr double Skirt=600,Cell=100;
+ constexpr int32 NX=static_cast<int32>((PadMaxX-PadMinX+2*Skirt)/Cell);
+ constexpr int32 NY=static_cast<int32>((PadMaxY-PadMinY+2*Skirt)/Cell);
+ const double X0=PadMinX-Skirt,Y0=PadMinY-Skirt;
+ TArray<FVector> Verts,Normals;
+ TArray<FVector2D> UVs;
+ TArray<FColor> Colors;
+ TArray<int32> Tris;
+ Verts.Reserve((NX+1)*(NY+1));
+ for(int32 J=0;J<=NY;++J) for(int32 I=0;I<=NX;++I) {
+  const double X=X0+I*Cell,Y=Y0+J*Cell;
+  const double Z=GroundAt(X,Y)+3.0;
+  const double Gx=GroundAt(X+Cell,Y)-GroundAt(X-Cell,Y),Gy=GroundAt(X,Y+Cell)-GroundAt(X,Y-Cell);
+  Verts.Add(FVector(X,Y,Z));
+  Normals.Add(FVector(-Gx,-Gy,2*Cell).GetSafeNormal());
+  UVs.Add(FVector2D(X/200.0,Y/200.0));
+  const double Dx=FMath::Max3(PadMinX-X,0.0,X-PadMaxX),Dy=FMath::Max3(PadMinY-Y,0.0,Y-PadMaxY);
+  const double Alpha=FMath::Clamp(1.0-FMath::Sqrt(Dx*Dx+Dy*Dy)/Skirt,0.0,1.0);
+  Colors.Add(FColor(255,255,255,static_cast<uint8>(FMath::RoundToInt(Alpha*255.0))));
+ }
+ for(int32 J=0;J<NY;++J) for(int32 I=0;I<NX;++I) {
+  const int32 V00=J*(NX+1)+I,V10=V00+1,V01=V00+(NX+1),V11=V01+1;
+  Tris.Append({V00,V01,V10,V10,V01,V11});
+ }
+ TrailheadLot=NewObject<UProceduralMeshComponent>(this,TEXT("TrailheadLot"));
+ TrailheadLot->SetupAttachment(RootComponent);
+ TrailheadLot->CreateMeshSection(0,Verts,Tris,Normals,UVs,Colors,TArray<FProcMeshTangent>(),false);
+ if(Palette) if(auto* Material=Palette->LotMaterial.LoadSynchronous()) TrailheadLot->SetMaterial(0,Material);
+ TrailheadLot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+ TrailheadLot->SetCastShadow(false);
+ TrailheadLot->RegisterComponent();
 }
 void AWoodWorld::Tick(float DeltaSeconds) {
  Super::Tick(DeltaSeconds);

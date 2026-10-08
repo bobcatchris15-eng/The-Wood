@@ -38,6 +38,8 @@ public:
  double DepthAt(double Xcm,double Ycm) const;
  void SetSeated(bool Value);
  void ToggleAcceleration();
+ // Entrance gate: Value=false keeps the trailhead lot up; true clears it.
+ void SetEntered(bool Value);
  bool IsSeated() const { return Clock.seated; }
  bool IsAccelerated() const { return Clock.accelerated; }
  double ObservationSeconds() const { return Clock.seconds; }
@@ -88,5 +90,7 @@ private:
  void Stream(FVector Position);
  void UpdateForgetting();
  void Realize(const FWoodPreparedChunk& Prepared, bool Detailed=true);
+ void SpawnTrailheadLot();
+ UPROPERTY() TObjectPtr<UProceduralMeshComponent> TrailheadLot;
 };
 

@@ -346,6 +346,50 @@ def author_lods(mesh, slot):
     LIB.set_metadata_tag(mesh,'WoodLODVersion',lod_version)
 
 
+def gravel_texture(map_name, file_name, normal=False, srgb=False):
+    """Gravel022 1K source textures; normal map is OpenGL (green-up) and flipped in-material."""
+    path = '/Game/Art/Ground/Gravel022_' + map_name + '_1k'
+    if not LIB.does_asset_exist(path):
+        task = unreal.AssetImportTask()
+        task.set_editor_property('filename', str(ROOT / 'ArtSource/Textures/Gravel022' / file_name))
+        task.set_editor_property('destination_path', '/Game/Art/Ground')
+        task.set_editor_property('destination_name', 'Gravel022_' + map_name + '_1k')
+        task.set_editor_property('automated', True)
+        task.set_editor_property('save', True)
+        TOOLS.import_asset_tasks([task])
+    tex = LIB.load_asset(path)
+    if tex is None:
+        raise RuntimeError('Gravel texture import failed: ' + path)
+    tex.set_editor_property('srgb', srgb)
+    if normal:
+        compression = unreal.TextureCompressionSettings.TC_NORMALMAP
+    elif srgb:
+        compression = unreal.TextureCompressionSettings.TC_DEFAULT
+    else:
+        compression = unreal.TextureCompressionSettings.TC_GRAYSCALE
+    tex.set_editor_property('compression_settings', compression)
+    LIB.save_loaded_asset(tex)
+    return tex
+
+
+# Trailhead lot gravel: world-aligned 2 m tiling; vertex alpha (1 pad, 0 skirt edge) is the opacity.
+lot, build = fresh('M_Gravel_Lot')
+if build:
+    lot.set_editor_property('blend_mode', unreal.BlendMode.BLEND_TRANSLUCENT)
+    lot.set_editor_property('two_sided', True)
+    lot_pos = expr(lot, unreal.MaterialExpressionWorldPosition)
+    lot_uv = custom(lot, 'return P.xy/200.0;', {'P': (lot_pos, '')}, unreal.CustomMaterialOutputType.CMOT_FLOAT2)
+    lot_color = sample(lot, gravel_texture('Color', 'Gravel022_1K-JPG_Color.jpg', srgb=True), lot_uv)
+    lot_normal = sample(lot, gravel_texture('NormalGL', 'Gravel022_1K-JPG_NormalGL.jpg', normal=True), lot_uv, True)
+    lot_rough = sample(lot, gravel_texture('Roughness', 'Gravel022_1K-JPG_Roughness.jpg'), lot_uv)
+    lot_flipped = custom(lot, 'return float3(N.x,-N.y,N.z);', {'N': (lot_normal, 'RGB')})
+    prop(lot_color, 'RGB', unreal.MaterialProperty.MP_BASE_COLOR)
+    prop(lot_flipped, '', unreal.MaterialProperty.MP_NORMAL)
+    prop(lot_rough, 'R', unreal.MaterialProperty.MP_ROUGHNESS)
+    lot_vertex = expr(lot, unreal.MaterialExpressionVertexColor)
+    prop(lot_vertex, 'A', unreal.MaterialProperty.MP_OPACITY)
+    finish(lot)
+
 palette_path='/Game/Wood/DA_BenchmarkPalette'
 if not LIB.does_asset_exist(palette_path):
     factory=unreal.DataAssetFactory()
@@ -354,6 +398,7 @@ if not LIB.does_asset_exist(palette_path):
 palette=LIB.load_asset(palette_path)
 palette.set_editor_property('ground_material',ground)
 palette.set_editor_property('water_material',water)
+palette.set_editor_property('lot_material',lot)
 prepared=ROOT/'ArtSource/Prepared'
 records=json.loads((prepared/'inspection.json').read_text(encoding='utf-8'))
 groups={'trees':[],'saplings':[],'ferns':[],'grasses':[],'rocks':[],'prairie':[]}

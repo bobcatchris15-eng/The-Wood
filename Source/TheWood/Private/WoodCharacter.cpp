@@ -42,6 +42,14 @@ void AWoodCharacter::Tick(float DeltaSeconds) {
  Super::Tick(DeltaSeconds);
  if(!Environment) return;
  const bool Seated=Environment->IsSeated();
+ // -WoodEntrance: first tick places the explorer at the trailhead, eye height, facing north (+Y).
+ static bool bEntrancePlaced=false;
+ if(!bEntrancePlaced && FString(FCommandLine::Get()).Contains(TEXT("-WoodEntrance"))) {
+  bEntrancePlaced=true;
+  SetActorLocation(FVector(0,-57500,Environment->GroundAt(0,-57500)+100));
+  if(Controller) Controller->SetControlRotation(FRotator(0,90,0));
+  GetCharacterMovement()->StopMovementImmediately();
+ }
  const FVector P=GetActorLocation();
  Environment->EnsureTerrainAround(P);
  GetCharacterMovement()->MaxWalkSpeed=Seated?0:(Environment->DepthAt(P.X,P.Y)>0.05?280:420);
@@ -117,6 +125,9 @@ void AWoodCharacter::WoodView(const FString& View) {
    }
   }
   Facing=FRotator(-12,180,0);
+ } else if(View.Equals(TEXT("Trailhead"),ESearchCase::IgnoreCase)) {
+  // Trailhead lot, 1 m south of its pad edge, facing north up the lot. Requires -WoodEntrance.
+  Position=FVector(0,-57500,0);Facing=FRotator(-4,90,0);
  }
  if(!FrameBiome.IsEmpty()) {
   wood::Biome Family=wood::Biome::DryGrassland;
