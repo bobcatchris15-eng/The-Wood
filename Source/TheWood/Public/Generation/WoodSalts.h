@@ -48,6 +48,8 @@ inline constexpr std::uint32_t Rocky=207;
 inline constexpr std::uint32_t Riparian=419;
 // Tallgrass prairie clump noise (chunk layers).
 inline constexpr std::uint32_t PrairieClump=577;
+// Taiga moss carpet patch noise (chunk layers).
+inline constexpr std::uint32_t TaigaMoss=613;
 
 // Discovery cell allocation hash (hashCell()).
 inline constexpr std::uint32_t DiscoveryCell=0xD15C07U;
@@ -69,6 +71,8 @@ inline constexpr std::uint32_t GroundCoverLayer=40;
 inline constexpr std::uint32_t RockLayer=60;
 // Tallgrass prairie layer base (layer spacing 1.0, grassland cores only).
 inline constexpr std::uint32_t PrairieLayer=80;
+// Taiga moss carpet layer base (layer spacing 1.5, taiga cores only).
+inline constexpr std::uint32_t TaigaMossLayer=120;
 
 // Layer offsets, added to a layer base salt.
 // Y position jitter (+1).

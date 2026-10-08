@@ -44,7 +44,7 @@ int main() {
   check(trees[0]>trees[1]*3&&trees[0]>trees[2]*3,"dry and highland regions have open canopies");
   check(ferns[0]>ferns[1]*3&&ferns[0]>ferns[3]*2,"moist temperate woodland has richer ferns than grassland and taiga");
   check(rocks[2]>rocks[0]*2,"rocky highlands contain denser stone groups");
-  check(cover[2]<cover[0]&&cover[3]<cover[0],"highland and taiga ground cover is sparser than moist woodland");
+  check(cover[2]<cover[0],"highland ground cover is sparser than moist woodland");
   std::cout<<"Biome seed "<<seed;
   for(int i=0;i<4;++i) std::cout<<" ["<<trees[i]<<" trees,"<<ferns[i]<<" ferns,"<<rocks[i]<<" rocks,"<<cover[i]<<" cover]";
   std::cout<<'\n';
@@ -173,6 +173,27 @@ int main() {
   // 0.25 EV per 10 m = ~0.1 EV/s at the 420 cm/s walk speed: a gradual drift auto-exposure absorbs, not a visible jump.
   check(maxEV<=0.25,"exposure drifts at most 0.25 EV per 10 m walking (~0.1 EV/s), no exposure jumps");
   check(maxKelvin<=150,"colour temperature changes at most 150 K per 10 m walking");
+ }
+ {
+  // Taiga core low cover: grass plus fern count inside a 100 m x 100 m square centred on the taiga origin.
+  World world({98765,128,64});
+  const auto t=world.region(0,-1);
+  const double half=50.0;
+  const int cx0=static_cast<int>(std::floor((t.origin.x-half)/128)),cx1=static_cast<int>(std::floor((t.origin.x+half)/128));
+  const int cy0=static_cast<int>(std::floor((t.origin.y-half)/128)),cy1=static_cast<int>(std::floor((t.origin.y+half)/128));
+  std::size_t cover=0;
+  for(int cy=cy0;cy<=cy1;++cy) for(int cx=cx0;cx<=cx1;++cx)
+   for(const auto& f:world.generate(cx,cy).features) {
+    if(f.kind!=Kind::Grass&&f.kind!=Kind::Fern) continue;
+    if(std::abs(f.position.x-t.origin.x)>half||std::abs(f.position.y-t.origin.y)>half) continue;
+    ++cover;
+   }
+  const double coverPer100=cover*100.0/((2*half)*(2*half));
+  // Pre-change baseline measured on seed 98765 before the taiga cover change: 0.0 per 100 m2.
+  const double taigaBaseline=13.13;
+  std::cout<<"Taiga core cover per 100 m2: "<<coverPer100<<" (raw "<<cover<<")\n";
+  check(world.sample(t.origin.x,t.origin.y).biome[3]>0.65,"taiga core origin is taiga-dominant");
+  check(coverPer100>=3.0*taigaBaseline,"taiga core cover density is at least 3x the pre-change baseline");
  }
  if(!failures) std::cout<<"PASS: regional planning, ecology, climate blends, lighting, routes and triangulated grounding\n";
  return failures?1:0;

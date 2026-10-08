@@ -325,6 +325,13 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
     if(core<=0||routeDistance<2.2||choice>core*(0.25+0.5*clump)) continue;
     kind=Kind::Grass;
     scale=0.7+random(config.seed,gx,gy,salt+Salt::LayerSize)*0.9;
+   } else if(type==4) {
+    // Taiga moss and low shrub carpet: dense small cover confined to taiga cores.
+    const double carpet=smooth((surface.biome[3]-0.5)/0.4);
+    const double mossPatch=0.5+0.5*noise(config.seed+Salt::TaigaMoss,px/15,py/15);
+    if(carpet<=0||routeDistance<1.2||choice>carpet*(0.55+0.45*mossPatch)) continue;
+    kind=random(config.seed,gx,gy,salt+Salt::LayerFernChance)<0.10?Kind::Fern:Kind::Grass;
+    scale=0.30+random(config.seed,gx,gy,salt+Salt::LayerSize)*0.45;
    } else {
     // Larger rock groups occur in patches, particularly on exposed highlands.
     const double rocky=0.5+0.5*noise(config.seed+Salt::Rocky,px/24,py/24);
@@ -345,6 +352,7 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
  layer(1.5,Salt::GroundCoverLayer,1);
  layer(6,Salt::RockLayer,2);
  layer(1.0,Salt::PrairieLayer,3);
+ layer(1.5,Salt::TaigaMossLayer,4);
  for(const auto& piece:chunkPieces) {
   const Kind kind=(piece.mesh.find("Fern")!=std::string::npos||piece.name.find("fern")!=std::string::npos)?Kind::Fern:Kind::Rock;
   const double normYaw=std::fmod(std::fmod(piece.yaw,360.0)+360.0,360.0);
