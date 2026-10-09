@@ -621,6 +621,110 @@ static void test_cottage_foundation_butt_joints() {
     }
 }
 
+// Finds a natural plan of the wanted type within 400 seeds, then checks grounding,
+// reservation containment (no piece outside the tree-exclusion radius), and water clearance.
+static void check_natural_type(
+    const char* label,
+    wood::DiscoveryType want,
+    const wood::Surface& climate,
+    const std::function<double(double, double)>& heightFn,
+    const std::function<double(double)>& streamXFn,
+    const std::function<double(double)>& streamHWFn,
+    const wood::Vec3& center)
+{
+    std::cout << "[TEST] " << label << "...\n";
+    bool found = false;
+    for (std::uint32_t seed = 1; seed <= 400 && !found; ++seed) {
+        const wood::DiscoveryPlan plan = wood::planDiscovery(seed, 3, 2, center, climate, heightFn, streamXFn, streamHWFn, false);
+        if (!plan.valid || plan.type != want) continue;
+        found = true;
+        EXPECT_FALSE(plan.pieces.empty());
+        EXPECT_TRUE(plan.reservation.type == want);
+        EXPECT_TRUE(plan.reservation.innerRadius > 0.0);
+        EXPECT_TRUE(plan.reservation.outerRadius > plan.reservation.innerRadius);
+        for (const auto& p : plan.pieces) {
+            EXPECT_GROUNDED(p, heightFn);
+            EXPECT_TRUE(wood::isInsideReservation(plan.reservation, p.position.x, p.position.y, false));
+            EXPECT_TRUE(std::abs(p.position.x - streamXFn(p.position.y)) >= streamHWFn(p.position.y) + 1.5 - 1e-9);
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+static void test_natural_discoveries_generated() {
+    auto slopeFn = [](double x, double) -> double { return 10.0 + 0.3 * x; };
+    auto ridgeFn = [](double x, double y) -> double {
+        return 20.0 + 8.0 * std::exp(-(x * x + y * y) / 450.0);
+    };
+    auto flatFn = [](double, double) -> double { return 10.0; };
+    auto farStreamX = [](double) -> double { return 5000.0; };
+    auto farStreamHW = [](double) -> double { return 5.0; };
+
+    wood::Surface plainClimate;
+    wood::Surface forestClimate;
+    forestClimate.forest = 0.8;
+    forestClimate.biome[0] = 0.8;
+
+    check_natural_type("test_spring_seep_generated", wood::DiscoveryType::SpringSeep,
+        plainClimate, slopeFn, farStreamX, farStreamHW, {20.0, 20.0, 16.0});
+    check_natural_type("test_mossy_rock_hollow_generated", wood::DiscoveryType::MossyRockHollow,
+        plainClimate, slopeFn, farStreamX, farStreamHW, {20.0, 20.0, 16.0});
+    check_natural_type("test_ridge_overlook_generated", wood::DiscoveryType::RidgeOverlook,
+        plainClimate, ridgeFn, farStreamX, farStreamHW, {0.0, 0.0, 28.0});
+    check_natural_type("test_windthrow_clearing_generated", wood::DiscoveryType::WindthrowClearing,
+        forestClimate, flatFn, farStreamX, farStreamHW, {20.0, 20.0, 10.0});
+    check_natural_type("test_fallen_log_colony_generated", wood::DiscoveryType::FallenLogColony,
+        forestClimate, flatFn, farStreamX, farStreamHW, {20.0, 20.0, 10.0});
+}
+
+static void test_natural_terrain_gates() {
+    std::cout << "[TEST] test_natural_terrain_gates...\n";
+    auto flatFn = [](double, double) -> double { return 10.0; };
+    auto farStreamX = [](double) -> double { return 5000.0; };
+    auto farStreamHW = [](double) -> double { return 5.0; };
+
+    // Flat, non-forest, far from water: no natural type may be allocated on any seed.
+    wood::Surface plainClimate;
+    for (std::uint32_t seed = 1; seed <= 200; ++seed) {
+        const auto plan = wood::planDiscovery(seed, 3, 2, {500, 500, 10}, plainClimate, flatFn, farStreamX, farStreamHW, false);
+        EXPECT_FALSE(plan.valid);
+    }
+
+    // Flat forest: only the forest pair may appear, never a slope or crest type.
+    wood::Surface forestClimate;
+    forestClimate.forest = 0.8;
+    forestClimate.biome[0] = 0.8;
+    for (std::uint32_t seed = 1; seed <= 200; ++seed) {
+        const auto plan = wood::planDiscovery(seed, 3, 2, {500, 500, 10}, forestClimate, flatFn, farStreamX, farStreamHW, false);
+        if (!plan.valid) continue;
+        EXPECT_TRUE(plan.type == wood::DiscoveryType::WindthrowClearing || plan.type == wood::DiscoveryType::FallenLogColony);
+    }
+}
+
+static void test_natural_water_clearance() {
+    std::cout << "[TEST] test_natural_water_clearance...\n";
+    auto slopeFn = [](double x, double) -> double { return 10.0 + 0.3 * x; };
+    auto streamXFn = [](double) -> double { return 0.0; };
+    auto streamHWFn = [](double) -> double { return 4.0; };
+
+    // Centre 12 m from the channel: stream-proximity qualifies, and the 5 m mossy rim clears the
+    // 5.5 m water band on every seed, so validCount > 0 holds. Spring ferns running downslope
+    // toward the water are the placements that get dropped.
+    const wood::Vec3 center{12.0, 20.0, 16.4};
+    wood::Surface climate;
+    int validCount = 0;
+    for (std::uint32_t seed = 1; seed <= 300; ++seed) {
+        const auto plan = wood::planDiscovery(seed, 3, 2, center, climate, slopeFn, streamXFn, streamHWFn, false);
+        if (!plan.valid) continue;
+        ++validCount;
+        for (const auto& p : plan.pieces) {
+            EXPECT_GROUNDED(p, slopeFn);
+            EXPECT_TRUE(std::abs(p.position.x - streamXFn(p.position.y)) >= streamHWFn(p.position.y) + 1.5 - 1e-9);
+        }
+    }
+    EXPECT_TRUE(validCount > 0);
+}
+
 int main() {
     std::cout << "Running DiscoveryTests...\n";
 
@@ -642,6 +746,10 @@ int main() {
     test_shelter_walls_contiguous();
     test_discovery_deterministic();
     test_cottage_foundation_butt_joints();
+
+    test_natural_discoveries_generated();
+    test_natural_terrain_gates();
+    test_natural_water_clearance();
 
     std::cout << "\nTest Summary: " << (gTestCount - gFailures) << "/" << gTestCount << " passed.\n";
 

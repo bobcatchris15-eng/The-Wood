@@ -11,6 +11,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
 
 namespace wood {
@@ -565,6 +566,347 @@ DiscoveryPlan generateRidgeTor(
     return plan;
 }
 
+// Natural discoveries (non-ruin cells). One roll gates the cell; the roll then picks among the
+// types whose terrain predicate passes. A chosen plan that breaches water clearance is dropped,
+// never rerolled into another type.
+static constexpr double kNaturalChance = 0.35;
+static constexpr double kSlopeMin = 0.08;    // gradient magnitude (rise per metre)
+static constexpr double kStreamNear = 12.0;  // metres beyond stream half-width
+static constexpr double kWaterClear = 1.5;   // metres beyond stream half-width, every piece
+static constexpr double kReliefMin = 1.5;    // metres above mean of an 8-point ring at 25 m
+
+static void addGroundedPiece(
+    DiscoveryPlan& plan,
+    DiscoveryRng& rng,
+    const std::function<double(double, double)>& heightFn,
+    const char* name,
+    const char* mesh,
+    double x,
+    double y,
+    double yaw,
+    double scale)
+{
+    const double bed = rng.nextDouble(kBedMin, kBedMax);
+    const double z = (heightFn ? heightFn(x, y) : 0.0) - bed;
+    plan.pieces.emplace_back(name, mesh, Vec3{x, y, z}, yaw, 0.0, 0.0, scale);
+}
+
+static double localRelief(const std::function<double(double, double)>& heightFn, double x, double y) {
+    if (!heightFn) return 0.0;
+    const int kRing = 8;
+    const double kRingR = 25.0;
+    double sum = 0.0;
+    for (int i = 0; i < kRing; ++i) {
+        const double a = 2.0 * kPi * static_cast<double>(i) / static_cast<double>(kRing);
+        sum += heightFn(x + kRingR * std::cos(a), y + kRingR * std::sin(a));
+    }
+    return heightFn(x, y) - sum / static_cast<double>(kRing);
+}
+
+// Trickle runs downslope from a spring head: rocks at the source, ferns along the seep.
+DiscoveryPlan generateSpringSeep(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::SpringSeepRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::SpringSeep, Vec3{origin.x, origin.y, originZ}, 0.0);
+
+    const Gradient2D grad = sampleGradient(heightFn, origin.x, origin.y, 1.0);
+    double downX = 0.0;
+    double downY = 0.0;
+    if (grad.len > 0.01) {
+        downX = -grad.dx / grad.len;
+        downY = -grad.dy / grad.len;
+    } else {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        downX = std::cos(a);
+        downY = std::sin(a);
+    }
+    plan.yaw = std::atan2(downY, downX) * (180.0 / kPi);
+
+    const double runLen = rng.nextDouble(5.0, 9.0);
+
+    const int headCount = rng.nextInt(2, 3);
+    for (int h = 0; h < headCount; ++h) {
+        const double dist = rng.nextDouble(0.5, 2.0);
+        const double jit = rng.nextDouble(-1.0, 1.0);
+        const double x = origin.x + downX * dist - downY * jit;
+        const double y = origin.y + downY * dist + downX * jit;
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.35, 0.6);
+        addGroundedPiece(plan, rng, heightFn, "seep_head_rock", "SM_TalusRock", x, y, yaw, scale);
+    }
+
+    const int fernCount = rng.nextInt(4, 6);
+    for (int f = 0; f < fernCount; ++f) {
+        const double dist = rng.nextDouble(1.5, runLen);
+        const double jit = rng.nextDouble(-1.2, 1.2);
+        const double x = origin.x + downX * dist - downY * jit;
+        const double y = origin.y + downY * dist + downX * jit;
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.6, 1.0);
+        addGroundedPiece(plan, rng, heightFn, "seep_trickle_fern", "SM_FernPatch", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::SpringSeep, plan.position, 3.0, runLen + 2.0);
+    plan.valid = true;
+    return plan;
+}
+
+// Rock rim around a sheltered hollow, moss-and-fern carpet inside.
+DiscoveryPlan generateMossyRockHollow(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::MossyRockHollowRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::MossyRockHollow, Vec3{origin.x, origin.y, originZ}, 0.0);
+    plan.yaw = rng.nextDouble(0.0, 360.0);
+
+    const int rimCount = rng.nextInt(5, 7);
+    const double rimStart = rng.nextDouble(0.0, 2.0 * kPi);
+    for (int k = 0; k < rimCount; ++k) {
+        const double base = rimStart + 2.0 * kPi * static_cast<double>(k) / static_cast<double>(rimCount);
+        const double a = base + rng.nextDouble(-0.25, 0.25);
+        const double dist = rng.nextDouble(3.5, 5.0);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.6, 1.1);
+        addGroundedPiece(plan, rng, heightFn, "mossy_rim_rock", "SM_TalusRock", x, y, yaw, scale);
+    }
+
+    const int carpetCount = rng.nextInt(2, 3);
+    for (int f = 0; f < carpetCount; ++f) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = rng.nextDouble(0.0, 2.0);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.6, 0.9);
+        addGroundedPiece(plan, rng, heightFn, "mossy_hollow_fern", "SM_FernPatch", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::MossyRockHollow, plan.position, 4.0, 7.5);
+    plan.valid = true;
+    return plan;
+}
+
+// Root plates along one shared fall direction, understory ferns across the opening.
+DiscoveryPlan generateWindthrowClearing(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::WindthrowClearingRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::WindthrowClearing, Vec3{origin.x, origin.y, originZ}, 0.0);
+
+    const double theta = rng.nextDouble(0.0, 2.0 * kPi);
+    plan.yaw = theta * (180.0 / kPi);
+    const double ux = std::cos(theta);
+    const double uy = std::sin(theta);
+    const double vx = -uy;
+    const double vy = ux;
+
+    const int plateCount = rng.nextInt(3, 4);
+    for (int p = 0; p < plateCount; ++p) {
+        const double along = rng.nextDouble(-7.0, 7.0);
+        const double lateral = 2.5 + rng.nextDouble(-0.5, 0.5);
+        const double x = origin.x + ux * along + vx * lateral;
+        const double y = origin.y + uy * along + vy * lateral;
+        const double yaw = plan.yaw + rng.nextDouble(-15.0, 15.0);
+        const double scale = rng.nextDouble(0.8, 1.3);
+        addGroundedPiece(plan, rng, heightFn, "windthrow_root_plate", "SM_TalusRock", x, y, yaw, scale);
+    }
+
+    const int fernCount = rng.nextInt(5, 8);
+    for (int f = 0; f < fernCount; ++f) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = rng.nextDouble(2.0, 9.0);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.7, 1.1);
+        addGroundedPiece(plan, rng, heightFn, "windthrow_understory_fern", "SM_FernPatch", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::WindthrowClearing, plan.position, 9.0, 14.0);
+    plan.valid = true;
+    return plan;
+}
+
+// Host-line footprint with fern colonies along it and rock anchors at each end.
+// The kit has no log mesh, so the host itself is not drawn.
+DiscoveryPlan generateFallenLogColony(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::FallenLogColonyRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::FallenLogColony, Vec3{origin.x, origin.y, originZ}, 0.0);
+
+    const double theta = rng.nextDouble(0.0, 2.0 * kPi);
+    plan.yaw = theta * (180.0 / kPi);
+    const double ux = std::cos(theta);
+    const double uy = std::sin(theta);
+    const double vx = -uy;
+    const double vy = ux;
+    const double logLen = rng.nextDouble(6.0, 10.0);
+
+    for (int e = 0; e < 2; ++e) {
+        const double along = (e == 0 ? -0.5 : 0.5) * logLen;
+        const double x = origin.x + ux * along;
+        const double y = origin.y + uy * along;
+        const double scale = rng.nextDouble(0.4, 0.6);
+        addGroundedPiece(plan, rng, heightFn, "log_end_anchor", "SM_TalusRock", x, y, plan.yaw, scale);
+    }
+
+    const int colonyCount = rng.nextInt(4, 6);
+    for (int f = 0; f < colonyCount; ++f) {
+        const double along = rng.nextDouble(-0.45, 0.45) * logLen;
+        const double lateral = rng.nextDouble(-0.6, 0.6);
+        const double x = origin.x + ux * along + vx * lateral;
+        const double y = origin.y + uy * along + vy * lateral;
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.5, 0.8);
+        addGroundedPiece(plan, rng, heightFn, "log_colony_fern", "SM_FernPatch", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::FallenLogColony, plan.position, 5.0, 9.0);
+    plan.valid = true;
+    return plan;
+}
+
+// Crest outcrop with a resting bench on the view side, facing downhill.
+DiscoveryPlan generateRidgeOverlook(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::RidgeOverlookRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::RidgeOverlook, Vec3{origin.x, origin.y, originZ}, 0.0);
+
+    const Gradient2D grad = sampleGradient(heightFn, origin.x, origin.y, 1.0);
+    double viewX = 0.0;
+    double viewY = 0.0;
+    if (grad.len > 0.01) {
+        viewX = -grad.dx / grad.len;
+        viewY = -grad.dy / grad.len;
+    } else {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        viewX = std::cos(a);
+        viewY = std::sin(a);
+    }
+    plan.yaw = std::atan2(viewY, viewX) * (180.0 / kPi);
+
+    const int crestCount = 3;
+    for (int c = 0; c < crestCount; ++c) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = (c == 0) ? 0.0 : rng.nextDouble(1.0, 3.0);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = (c == 0) ? 1.4 : rng.nextDouble(0.8, 1.2);
+        addGroundedPiece(plan, rng, heightFn, "overlook_crest_rock", "SM_TalusRock", x, y, yaw, scale);
+    }
+
+    const double benchDist = rng.nextDouble(3.0, 4.0);
+    const double benchX = origin.x + viewX * benchDist;
+    const double benchY = origin.y + viewY * benchDist;
+    const double benchScale = rng.nextDouble(0.5, 0.7);
+    addGroundedPiece(plan, rng, heightFn, "overlook_bench_rock", "SM_TalusRock", benchX, benchY, plan.yaw, benchScale);
+
+    const int fernCount = rng.nextInt(2, 3);
+    for (int f = 0; f < fernCount; ++f) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = rng.nextDouble(4.0, 6.0);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.6, 0.9);
+        addGroundedPiece(plan, rng, heightFn, "overlook_approach_fern", "SM_FernPatch", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::RidgeOverlook, plan.position, 6.0, 12.0);
+    plan.valid = true;
+    return plan;
+}
+
+static DiscoveryPlan planNaturalDiscovery(
+    std::uint32_t seed,
+    int cellQ,
+    int cellR,
+    const Vec3& cellCenter,
+    const Surface& cellClimate,
+    const std::function<double(double, double)>& heightFn,
+    const std::function<double(double)>& streamXFn,
+    const std::function<double(double)>& streamHWFn)
+{
+    DiscoveryRng roll(hashCell(seed, cellQ, cellR) ^ Salt::NaturalCell);
+    if (roll.nextDouble(0.0, 1.0) >= kNaturalChance) {
+        return DiscoveryPlan{};
+    }
+
+    const bool hasStream = (streamXFn && streamHWFn);
+    const double sx = hasStream ? streamXFn(cellCenter.y) : cellCenter.x;
+    const double hw = hasStream ? streamHWFn(cellCenter.y) : 0.0;
+    const bool nearWater = hasStream && (std::abs(cellCenter.x - sx) <= hw + kStreamNear);
+
+    const Gradient2D grad = sampleGradient(heightFn, cellCenter.x, cellCenter.y, 1.0);
+    const bool sloped = grad.len >= kSlopeMin;
+    const bool crest = localRelief(heightFn, cellCenter.x, cellCenter.y) >= kReliefMin;
+    const bool forest = cellClimate.forest >= 0.4 || cellClimate.biome[0] >= 0.4 || cellClimate.biome[3] >= 0.4;
+
+    std::vector<DiscoveryType> eligible;
+    if (sloped || nearWater) {
+        eligible.push_back(DiscoveryType::SpringSeep);
+        eligible.push_back(DiscoveryType::MossyRockHollow);
+    }
+    if (crest) {
+        eligible.push_back(DiscoveryType::RidgeOverlook);
+    }
+    if (forest) {
+        eligible.push_back(DiscoveryType::WindthrowClearing);
+        eligible.push_back(DiscoveryType::FallenLogColony);
+    }
+    if (eligible.empty()) {
+        return DiscoveryPlan{};
+    }
+
+    const DiscoveryType pick = eligible[static_cast<std::size_t>(roll.nextInt(0, static_cast<int>(eligible.size()) - 1))];
+
+    DiscoveryPlan plan;
+    if (pick == DiscoveryType::SpringSeep) {
+        plan = generateSpringSeep(seed, cellCenter, heightFn);
+    } else if (pick == DiscoveryType::MossyRockHollow) {
+        plan = generateMossyRockHollow(seed, cellCenter, heightFn);
+    } else if (pick == DiscoveryType::RidgeOverlook) {
+        plan = generateRidgeOverlook(seed, cellCenter, heightFn);
+    } else if (pick == DiscoveryType::WindthrowClearing) {
+        plan = generateWindthrowClearing(seed, cellCenter, heightFn);
+    } else {
+        plan = generateFallenLogColony(seed, cellCenter, heightFn);
+    }
+
+    if (!plan.valid || !hasStream) {
+        return plan;
+    }
+    for (const auto& p : plan.pieces) {
+        const double pSx = streamXFn(p.position.y);
+        const double pHw = streamHWFn(p.position.y);
+        if (std::abs(p.position.x - pSx) < pHw + kWaterClear) {
+            return DiscoveryPlan{};
+        }
+    }
+    return plan;
+}
+
 DiscoveryPlan planDiscovery(
     std::uint32_t seed,
     int cellQ,
@@ -606,7 +948,7 @@ DiscoveryPlan planDiscovery(
 
     // Constructed Discovery Allocation: owning region's independent ruins flag (p=1/3)
     if (!ruins) {
-        return DiscoveryPlan{};
+        return planNaturalDiscovery(seed, cellQ, cellR, cellCenter, cellClimate, heightFn, streamXFn, streamHWFn);
     }
 
     // Grammar suitability qualification for allocated cells

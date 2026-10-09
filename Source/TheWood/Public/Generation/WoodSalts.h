@@ -75,6 +75,18 @@ inline constexpr std::uint32_t CottageCornerRng=0xC077U;
 inline constexpr std::uint32_t StreamFootbridgeRng=0xB71DU;
 // RidgeTor RNG seed mix (generateRidgeTor()).
 inline constexpr std::uint32_t RidgeTorRng=0x708U;
+// Natural discovery allocation roll, non-ruin cells (planDiscovery()).
+inline constexpr std::uint32_t NaturalCell=0x9A7C1U;
+// SpringSeep RNG seed mix (generateSpringSeep()).
+inline constexpr std::uint32_t SpringSeepRng=0x5EE9U;
+// MossyRockHollow RNG seed mix (generateMossyRockHollow()).
+inline constexpr std::uint32_t MossyRockHollowRng=0x3055U;
+// WindthrowClearing RNG seed mix (generateWindthrowClearing()).
+inline constexpr std::uint32_t WindthrowClearingRng=0x71A0U;
+// FallenLogColony RNG seed mix (generateFallenLogColony()).
+inline constexpr std::uint32_t FallenLogColonyRng=0xF0C1U;
+// RidgeOverlook RNG seed mix (generateRidgeOverlook()).
+inline constexpr std::uint32_t RidgeOverlookRng=0x0BE7U;
 
 // Chunk placement layer base salts. Each layer adds the offsets below.
 // Tree layer base (layer spacing 8.5).

@@ -28,7 +28,12 @@ enum class DiscoveryType {
     DryStoneShelter,
     CottageCorner,
     StreamFootbridge,
-    RidgeTor
+    RidgeTor,
+    SpringSeep,
+    MossyRockHollow,
+    WindthrowClearing,
+    FallenLogColony,
+    RidgeOverlook
 };
 
 struct DiscoveryReservation {
@@ -124,6 +129,31 @@ DiscoveryPlan generateRidgeTor(
     std::uint32_t seed,
     const Vec3& origin,
     const Surface& climate,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateSpringSeep(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateMossyRockHollow(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateWindthrowClearing(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateFallenLogColony(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateRidgeOverlook(
+    std::uint32_t seed,
+    const Vec3& origin,
     const std::function<double(double, double)>& heightFn);
 
 } // namespace wood
