@@ -18,3 +18,4 @@ graphify-out/*
 !graphify-out/graph.json
 Source/graphify-out/
 Tests/graphify-out/
+ArtSource/AmbientCG/
