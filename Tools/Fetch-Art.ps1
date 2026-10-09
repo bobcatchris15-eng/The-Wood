@@ -81,6 +81,25 @@ foreach ($taskId in @('standing_chalkboard_01','wooden_picnic_table','metal_tras
  }
  Write-Output "Verified $taskId"
 }
+# Masonry kit materials for Prepare-Art.py build_stone_kit: 2k CC0 stone wall sets (diffuse, GL normal, roughness).
+# rustic_stone_wall -> natural rock pieces; stacked_stone_wall -> dry-stone and masonry pieces.
+foreach ($taskId in @('rustic_stone_wall','stacked_stone_wall')) {
+ $taskFiles = Invoke-RestMethod -Uri "https://api.polyhaven.com/files/$taskId" -Headers $taskHeaders
+ $taskDir = Join-Path $taskArtRoot $taskId
+ New-Item -ItemType Directory -Force -Path $taskDir | Out-Null
+ foreach ($taskMap in @('Diffuse','nor_gl','Rough')) {
+  $taskFile = $taskFiles.$taskMap.'2k'.jpg
+  $taskRelative = "$taskId-$taskMap.jpg"
+  $taskDestination = Join-Path $taskDir $taskRelative
+  if (!(Test-Path -LiteralPath $taskDestination) -or (Get-FileHash -LiteralPath $taskDestination -Algorithm MD5).Hash -ne $taskFile.md5) {
+   Invoke-WebRequest -Uri $taskFile.url -OutFile ($taskDestination+'.partial') -Headers $taskHeaders
+   if ((Get-FileHash -LiteralPath ($taskDestination+'.partial') -Algorithm MD5).Hash -ne $taskFile.md5) { throw "Texture checksum failed: $taskDestination" }
+   Move-Item -LiteralPath ($taskDestination+'.partial') -Destination $taskDestination -Force
+  }
+  $taskRecords += [PSCustomObject]@{Asset=$taskId;Source="https://polyhaven.com/a/$taskId";License='CC0-1.0';RelativePath="PolyHaven/$taskId/$taskRelative";MD5=$taskFile.md5}
+ }
+ Write-Output "Verified textures $taskId"
+}
 $taskRecords | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $taskRoot 'ArtSource/manifest.json')
 Write-Output 'Powered by Poly Haven — https://polyhaven.com'
 

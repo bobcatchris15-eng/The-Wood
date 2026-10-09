@@ -1312,5 +1312,248 @@
     "target_axis": "horizontal",
     "target_m": 4.0,
     "licence": "CC0-1.0"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_DryStone_Wall",
+    "file": "kit_sm_drystone_wall.glb",
+    "dimensions_m": [
+      0.643323540687561,
+      2.005394458770752,
+      0.9983943700790405
+    ],
+    "triangles": 480,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "2.0 L x 0.6 T x 1.0 H (Y, X, Z); 2 courses of 0.5",
+    "grammar": "WoodDiscovery shelter ring (generateDryStoneShelter) base seg scale 0.9-1.15, top 0.88x; ring spacing ~2-11 m",
+    "sources": [
+      "stacked_stone_wall",
+      "procedural"
+    ],
+    "seed": 7300,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_DryStone_Rubble",
+    "file": "kit_sm_drystone_rubble.glb",
+    "dimensions_m": [
+      1.8384349346160889,
+      1.1989107131958008,
+      0.25439760088920593
+    ],
+    "triangles": 624,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "2.0 x 2.0 footprint, 0.35 H; 6-12 blocks within 0.9 m radius",
+    "grammar": "shelter ruined wall base 0.77-0.98 (0.85x seg); shelter_rubble scale 0.45-0.75",
+    "sources": [
+      "stacked_stone_wall",
+      "procedural"
+    ],
+    "seed": 7301,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_StonePier",
+    "file": "kit_sm_stonepier.glb",
+    "dimensions_m": [
+      0.8311715722084045,
+      0.8304811716079712,
+      1.5924103260040283
+    ],
+    "triangles": 240,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "0.8 x 0.8 x 1.6 (4 courses of 0.4)",
+    "grammar": "cottage corner pier base 1.2, mid 1.05, top 0.9",
+    "sources": [
+      "stacked_stone_wall",
+      "procedural"
+    ],
+    "seed": 7302,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_StonePier_Ruined",
+    "file": "kit_sm_stonepier_ruined.glb",
+    "dimensions_m": [
+      1.4374279379844666,
+      0.9634263515472412,
+      0.8006221055984497
+    ],
+    "triangles": 180,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "0.8 x 0.8 x 0.8 + displaced block to 0.26 H at 0.75 m",
+    "grammar": "cottage corner pier ruined scale 0.95",
+    "sources": [
+      "stacked_stone_wall",
+      "procedural"
+    ],
+    "seed": 7303,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_FoundationCourse",
+    "file": "kit_sm_foundationcourse.glb",
+    "dimensions_m": [
+      0.6134511232376099,
+      1.5988478660583496,
+      0.4669936001300812
+    ],
+    "triangles": 120,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "1.6 L x 0.6 T x 0.45 H (two blocks 0.88 + 0.68 L)",
+    "grammar": "cottage foundation course stepped every wallLen/stepCount (~1.6 m); scale 0.9-1.1; upper wall 0.85x",
+    "sources": [
+      "stacked_stone_wall",
+      "procedural"
+    ],
+    "seed": 7304,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_MasonryDebris",
+    "file": "kit_sm_masonrydebris.glb",
+    "dimensions_m": [
+      0.6919123530387878,
+      0.7407548427581787,
+      0.15696151554584503
+    ],
+    "triangles": 444,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "0.7 x 0.7 x 0.2 pile (5-8 chunks 0.12-0.25 m)",
+    "grammar": "cottage internal rubble scale 0.5-0.9",
+    "sources": [
+      "stacked_stone_wall",
+      "procedural"
+    ],
+    "seed": 7305,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_FernPatch",
+    "file": "kit_sm_fernpatch.glb",
+    "dimensions_m": [
+      1.0126264095306396,
+      0.9648680686950684,
+      0.427694708108902
+    ],
+    "triangles": 5416,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "~1.2 x 1.1 x 0.45 (fern_02 00+01+02 merged)",
+    "grammar": "cottage internal fern scale 0.7-1.1",
+    "sources": [
+      "fern_02_00",
+      "fern_02_01",
+      "fern_02_02"
+    ],
+    "seed": 7306,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_BridgeAbutment",
+    "file": "kit_sm_bridgeabutment.glb",
+    "dimensions_m": [
+      1.7217249870300293,
+      1.1279702186584473,
+      1.3149884939193726
+    ],
+    "triangles": 420,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "1.7 L x 1.1 T x 1.32 H incl. cap (Y across span, X along bank)",
+    "grammar": "stream footbridge abutments scale 1.35 (base) and 1.1 (inward); yaw = span normal",
+    "sources": [
+      "stacked_stone_wall",
+      "procedural"
+    ],
+    "seed": 7307,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_RiverSteppingStone",
+    "file": "kit_sm_riversteppingstone.glb",
+    "dimensions_m": [
+      0.6765264272689819,
+      0.7463526725769043,
+      0.30349695682525635
+    ],
+    "triangles": 60,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "0.6 x 0.7 x 0.28 slab",
+    "grammar": "footbridge stepping stones scale 0.75-0.95",
+    "sources": [
+      "stacked_stone_wall",
+      "procedural"
+    ],
+    "seed": 7308,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_GraniteMonolith",
+    "file": "kit_sm_granitemonolith.glb",
+    "dimensions_m": [
+      0.6912269592285156,
+      0.44053810834884644,
+      1.0312292575836182
+    ],
+    "triangles": 60,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "0.7 x 0.45 x 1.0 tapered top (1.0 H = 1 m unit)",
+    "grammar": "ridge tor monolith scale 2.4-3.8 (2.4-3.8 m tall)",
+    "sources": [
+      "rustic_stone_wall",
+      "procedural"
+    ],
+    "seed": 7309,
+    "uv": "box projection, 1.0 m per tile"
+  },
+  {
+    "asset": "stone_kit",
+    "variant": "SM_TalusRock",
+    "file": "kit_sm_talusrock.glb",
+    "dimensions_m": [
+      0.9681066274642944,
+      0.8858582973480225,
+      0.5084297060966492
+    ],
+    "triangles": 80,
+    "materials": 1,
+    "pivot": "base_center",
+    "licence": "CC0-1.0",
+    "nominal_m": "1.0 x 0.85 x 0.6 boulder, flat base",
+    "grammar": "ridge tor talus scale 2*exp(-r/7.5)*(0.85-1.15): ~0.96 at r 5.5, 0.52 at r 9.5, 0.31 at r 14",
+    "sources": [
+      "rustic_stone_wall",
+      "procedural"
+    ],
+    "seed": 7310,
+    "uv": "box projection, 1.0 m per tile"
   }
 ]
