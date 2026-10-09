@@ -139,3 +139,123 @@ Initial targets for placement tuning. Treat as ceilings to tune against the rend
 - Species per biome family (from the weight codes above): TemperateForest 15, DryGrassland 14, RockyHighlands 15, Taiga 14, OldGrowthForest 15, ColdRainforest 14, IcyHills 10, Savannah 9, Swamp 15, Marsh 15, WarmRainforest 10, Prairie 9. Every family is within 8–15.
 - Species total: 65 biome flora plus 4 unreal-only = 69.
 - Biomes differ: no species appears in all 12 families; the broadest (meadow_flower_mix) is in 5.
+
+## CC0 model mapping
+
+Source: Poly Haven glTF in `ArtSource/PolyHaven/`, previewed by `Tools/Preview-CC0.py`. Renders and `summary.csv` (id, dim_x/y/z in m, tris) are in `ArtSource/Previews/CC0/`. 103 models rendered OK, 0 failed. Heights are z (m) as imported; glTF is metres, so no unit conversion. Previews are Workbench: dark or black silhouettes (searsia_burchellii, wild_rooibos_bush, shrub_01, flower_stinkkruid, moss_01) are a shading artifact until checked in Unreal.
+
+Triangle counts are raw and too high for placement: pine_tree_01 17.2M, fir_tree_01 7.0M, pine_sapling_medium 6.0M, jacaranda_tree 3.9M, most rocks and cliffs 0.5–1.5M. Decimate to roughly 60k per tree and 20k per rock before wiring.
+
+Rejected-species coverage: pine_open, spruce_conifer, sagebrush_grey filled. larch_sparse, krummholz_pine, thorn_scrub, juniper_low partial. Still open: willow_shrub, bilberry_low, alder_thicket, prickly_pear, baldcypress, lady_fern, alpine_tussock, shade_grass, horsetail.
+
+### Mapped (84)
+
+| CC0 id | maps to | biomes | h (m) | notes |
+|---|---|---|---|---|
+| pine_tree_01 | pine_open (replaces rejected) | RH TF DG | 20.4 | Good tall bare-trunk silhouette. Footprint is three trees, extract one. Decimate (17M). |
+| fir_tree_01 | spruce_conifer (replaces rejected) | TG OG CR | 18.9 | Narrow dense spire, best conifer in the set. 7M tris, decimate. |
+| fir_sapling_medium | larch_sparse (replaces rejected) | TG IH | 8.9 | Airy thin conifer. Extract one stem, scale about 1.2x. Partial. |
+| pine_sapling_medium | larch_sparse alternate | TG RH | 11.5 | Airy, but 6M tris. Decimate. Partial. |
+| pine_sapling_small | krummholz_pine fallback | RH IH TG | 1.3 | Upright, not flattened. Scale about 0.6 for windswept context. Partial. |
+| fir_sapling | krummholz_pine fallback 2 | RH IH TG | 1.3 | Upright sapling, 433k tris. Partial. |
+| tree_small_02 | acacia_flat alternate | SV | 4.6 | Open flat crown on one trunk. Does not match evergreen_broad dome, so drop that UNVERIFIED mapping. Scale about 2x for 6–12 m. |
+| island_tree_01 | oak_broadleaf Savannah variant | SV DG | 5.0 | Dense round olive crown. 1.6M tris. |
+| island_tree_02 | oak_broadleaf Savannah variant | SV | 3.4 | Dense low round crown. 1.1M tris. |
+| dead_tree_trunk | deadwood_snag (fallen log) | TF TG | 0.29 | Approved snag source; this is the fallen-log variant. |
+| dead_tree_trunk_02 | deadwood_snag (short log) | TF TG | 1.06 | Short broken log, ground deadwood. |
+| dead_quiver_trunk | deadwood_snag Savannah variant | SV DG | 2.0 | Grey forked dead snag. Good arid snag. |
+| dead_quiver_branch_01 | debris dressing (dry wood) | SV DG | 0.44 | Small curved dead branch. |
+| dead_quiver_branch_02 | debris dressing (dry wood) | SV DG | 0.53 | Second shape of _01. |
+| dry_branches_medium_01 | debris dressing (dry twigs) | DG SV RH | 0.34 | Loose dead twigs, 17k tris. |
+| dry_quiver_leaf | debris dressing (dry leaves) | SV DG | 0.43 | Dry leaf litter piece. |
+| quiver_tree_01 | NEW quiver_tree | SV DG RH | 2.7 | Branched tall arid tree, strongest arid tree in the set. Scale about 1.5x for 3–5 m. |
+| quiver_tree_02 | NEW quiver_tree (low rosette) | SV DG | 1.5 | Tufted rosette crown, 82k tris. Second variant. |
+| searsia_lucida | thorn_scrub replacement (rejected) | SV DG | 2.3 | Leafy rounded shrub, no visible thorns. Partial. 377k tris. |
+| searsia_burchellii | NEW searsia_scrub | SV DG | 3.2 | Big dense shrub, 616k tris. Renders dark, check material. |
+| didelta_spinosa | thorn_scrub alternate | SV DG | 2.1 | Leafy spreading shrub. Spines not visible at preview, so partial. 416k tris. |
+| wild_rooibos_bush | sagebrush_grey replacement (rejected) and NEW rooibos_scrub | DG RH SV | 0.54 | Fine grey-green needle mass, fits sagebrush height. Renders dark. |
+| shrub_01 | juniper_low replacement (rejected) | RH DG TG | 0.40 | Dense flat sprawl, 2.6 m spread. Scale about 1.5x for height. Partial. Renders dark. |
+| othonna_cerarioides | NEW caudiciform_succulent | SV DG RH | 2.0 | Thick caudex with leafy head, arid accent. 118k tris. |
+| crystalline_iceplant | NEW succulent_mat (ground cover) | DG RH SV | 0.08 | Flat icy mat, 13k tris. Ground cover only. |
+| cheiridopsis_succulent | succulent_mat clump | DG SV RH | 0.27 | Rosette clumps, 82k tris. |
+| leipoldtia_schultzei | succulent_mat (flowering) | DG SV | 0.32 | Purple flowering mat, 386k tris. Decimate. |
+| shrub_sorrel_01 | ground flower dressing | DG SV | 0.06 | Low pink herb, 3k tris. Scatter only. |
+| flower_gazania | savanna_sunflower alternate | SV DG | 0.40 | Orange daisy rosettes, good colour. |
+| flower_ursinia | savanna_sunflower alternate | SV DG | 0.17 | Orange daisy rosettes, low. |
+| flower_heliophila | meadow_flower_mix member | PR SV | 0.40 | Blue-white flowers, 102k tris. Lupine alternate if a spire is not needed. |
+| dandelion_01 | meadow_flower_mix member | PR DG TF | 0.17 | Yellow flower scatter, 54k tris. |
+| celandine_01 | forest ground flower (weak) | TF OG | 0.19 | Small yellow-green flower, 9k tris. Scatter only. |
+| periwinkle_plant | forest ground flower dressing | TF OG | 0.41 | Purple low flowers, 34k tris. |
+| nettle_plant | ground weed dressing | TF OG | 0.22 | Low broadleaf weed, 31k tris. Not a catalogue species. |
+| weed_plant_02 | ground weed dressing | DG SV TF | 0.08 | Flat weed scatter, 11k tris. |
+| grass_medium_02 | alpine_tussock alternate (weak) | RH IH | 0.41 | Fine upright tuft, not dense. Same sparse failure as rejected tussock. |
+| coastal_cliff_01 | cliff face dressing | RH | 11.0 | 92 m footprint, use as cut module. 462k tris. |
+| coastal_cliff_02 | cliff face dressing | RH | 10.1 | 943k tris. Decimate. |
+| coastal_cliff_04 | cliff face dressing | RH | 11.0 | Largest, 1.5M tris. Decimate hard. |
+| namaqualand_cliff_01 | cliff dressing, warm arid | RH DG | 5.0 | Orange-brown outcrop, 94k tris. |
+| namaqualand_cliff_02 | cliff dressing, warm arid | RH | 7.2 | 194k tris. |
+| mountainside | outcrop dressing | RH TG | 10.5 | Large face, 153k tris. |
+| rock_face_01 | cliff piece | RH TG | 3.6 | Thin face piece, 20k tris. |
+| rock_face_02 | cliff piece | RH TG | 2.5 | 30k tris. |
+| coast_rocks_01 | ledge/outcrop (large) | RH IH | 3.3 | 40–60 m footprint, 680k tris. Decimate. |
+| coast_rocks_02 | ledge/outcrop (large) | RH IH | 3.2 | 1.3M tris. |
+| coast_rocks_03 | ledge/outcrop (large) | RH IH | 3.2 | 813k tris. |
+| coast_rocks_05 | boulder dressing | RH DG | 1.3 | 772k tris. |
+| coast_land_rocks_02 | flat slab outcrop | RH IH | 1.4 | 1.3M tris. |
+| coast_land_rocks_03 | flat slab outcrop | RH IH | 1.5 | 1.1M tris. |
+| coast_land_rocks_04 | flat slab outcrop | RH IH | 0.85 | 1.1M tris. |
+| coast_line_01 | shore ledge, lakeshore only | MA SW | 2.6 | 40–55 m footprint, 540k tris. Too big for generic placement. |
+| coast_line_02 | shore ledge, lakeshore only | MA SW | 2.3 | 23–46 m footprint, 757k tris. |
+| sand_rocks_small_01 | flat slab debris | DG PR SV | 0.54 | 4 m footprint, 739k tris. Decimate. |
+| namaqualand_boulder_02 | boulder dressing | RH DG SV | 0.88 | Warm stone, 98k tris. |
+| namaqualand_boulder_03 | boulder dressing | RH | 1.5 | 65k tris. |
+| namaqualand_boulder_04 | boulder dressing | RH | 1.9 | 59k tris. |
+| namaqualand_boulder_05 | boulder dressing (small) | RH DG | 0.54 | 90k tris. |
+| namaqualand_boulder_06 | boulder dressing (small) | RH DG | 0.65 | 109k tris. |
+| namaqualand_boulders_01 | debris pair | RH DG | 0.25 | 41k tris. |
+| namaqualand_rocks_01 | pebble debris | DG RH | 0.15 | 86k tris. |
+| namaqualand_stones_01 | pebble debris | DG RH | 0.08 | 70k tris. Scale up about 2x. |
+| stone_01 | pebble debris | any | 0.07 | 54k tris. Scale up about 2x. |
+| moon_rock_01 | pebble debris (smooth grey) | RH DG PR | 0.08 | Generic grey, 19k tris. Scale 3–5x. |
+| moon_rock_02 | stone debris | RH DG PR | 0.20 | 3k tris. Scale about 2x. |
+| moon_rock_03 | pebble debris | RH DG PR | 0.06 | 6k tris. Scale 3–5x. |
+| moon_rock_04 | pebble debris | RH DG PR | 0.05 | 8k tris. Scale 3–5x. |
+| moon_rock_05 | pebble debris | RH DG PR | 0.07 | 10k tris. Scale 3–5x. |
+| moon_rock_06 | pebble debris | RH DG PR | 0.06 | 7k tris. Scale 3–5x. |
+| moon_rock_07 | pebble debris | RH DG PR | 0.06 | 7k tris. Scale 3–5x. |
+| rock_09 | flat slate debris | RH TG | 0.03 | 12k tris, 14 cm across. Scale 5x+. |
+| pine_roots | root dressing | TF TG OG | 0.16 | Flat root mat, 163k tris. |
+| root_cluster_01 | root dressing (tall knot) | TF OG | 1.5 | 225k tris. Decimate. |
+| root_cluster_02 | root dressing (flat) | TF OG | 0.20 | 340k tris. Decimate. |
+| single_root | root dressing | TF OG | 0.18 | 61k tris. |
+| tree_stump_01 | stump dressing | TF OG TG | 0.57 | Rounded stump, 41k tris. |
+| tree_stump_02 | stump dressing (mossy) | CR OG TG | 0.52 | Moss on top, 62k tris. Pairs with rock_moss_patch. |
+| bark_debris_01 | forest floor debris | TF OG | 0.11 | Bark pieces, 193k tris. |
+| rock_moss_set_01 | rock_moss_patch (existing) | RH CR | 1.8 | Already approved; prop context only. |
+| rock_moss_set_02 | rock_moss_patch (existing) | RH CR | 1.4 | Already approved; prop context only. |
+| fern_02 | fern_02 (existing) | TF OG CR WR | 0.43 | Already in use. |
+| grass_medium_01 | grass_medium_01 (existing) | TF OG DG PR | 0.34 | Already in use. |
+| grass_bermuda_01 | grass_bermuda_01 (existing) | SV DG PR | 0.16 | Already in use. |
+
+Not mapped (19): anthurium_botany_01, bananas, calathea_orbifolia_01, pachira_aquatica_01, potted_plant_01, potted_plant_02, potted_plant_04 (houseplants, no catalogue role); sweet_potato (food-like); boulder_01, rock_01, rock_07 (catalogue lists these as non-flora, do not map); island_tree_03 (sparse); jacaranda_tree (19 m ornamental, 3.9M tris, no role); shrub_02, shrub_03, shrub_04 (sparse twig frames, the failure mode of rejected alder_thicket and bilberry_low); moss_01 (204 tris, unusable); flower_empodium (dried, low); flower_stinkkruid (dark render, recheck before any role).
+
+Texture-only, no glTF (not previewed): forest_floor, forest_ground_04, gravel_ground_01, withered_grass (ground materials); rustic_stone_wall, stacked_stone_wall (wall materials).
+
+Skipped by spec (15): food_* (8), garden_hose_wall_mounted_01, standing_chalkboard_01, metal_trash_can, modular_chainlink_fence, lambis_shell, street_rat, wooden_picnic_table.
+
+### Still open after CC0 pass
+
+- willow_shrub, bilberry_low, alder_thicket: no CC0 match. Only sparse twig frames exist.
+- prickly_pear: no pad cactus in the set. Keep author fallback.
+- baldcypress: no feathery deciduous match. Keep Vegetation bald_cypress_01.
+- lady_fern, horsetail, shade_grass: no match in the set.
+- alpine_tussock: only sparse grass_medium_02.
+
+### New species worth adding to the catalogue
+
+- quiver_tree (SV DG RH): quiver_tree_01 tall, quiver_tree_02 low rosette. Arid accent Savannah lacks.
+- searsia_scrub (SV DG): searsia_burchellii, searsia_lucida. Dense Karoo-style shrub; thorn-scrub cover for Savannah.
+- rooibos_scrub (SV DG): wild_rooibos_bush. Grey-green needle shrub.
+- succulent_mat (DG SV RH): crystalline_iceplant, cheiridopsis_succulent, leipoldtia_schultzei. Ground cover for arid cells.
+- caudiciform_succulent (SV DG RH): othonna_cerarioides. Thick-stemmed arid accent.
+- New ground roles: cliff_face, boulder, pebble_debris, root, stump, log_debris (rows above).
