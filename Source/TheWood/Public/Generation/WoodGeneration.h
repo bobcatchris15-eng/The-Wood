@@ -32,9 +32,10 @@ struct Surface {
  std::array<double,4> biome{};
  double temperature=0, exposure=0, shelter=0, roughness=0;
 };
-enum class Kind { Tree, Fern, Grass, Rock, Prop };
+enum class Kind { Tree, Fern, Grass, Rock, Prop, Kit };
 // Prop features carry propId (0 signboard, 1 picnic table, 2 bin, 3 fence segment); -1 otherwise.
-struct Feature { Kind kind; Vec3 position; double yaw=0, scale=1; bool young=false; bool prairie=false; int propId=-1; };
+// Kit features carry kitId (WoodKit.h table index); pitch/roll copied from the piece (same units); -1/0 otherwise.
+struct Feature { Kind kind; Vec3 position; double yaw=0, scale=1; bool young=false; bool prairie=false; int propId=-1; int kitId=-1; double pitch=0, roll=0; };
 struct Chunk { int x=0, y=0, cells=0; std::vector<Vec3> vertices; std::vector<std::uint32_t> triangles; std::vector<Feature> features; };
 struct Lighting { double brightness=0, kelvin=0; };
 // Outputs of the generate() pipeline stages; each stage reads Settings and earlier stage outputs only.

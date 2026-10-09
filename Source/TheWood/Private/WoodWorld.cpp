@@ -117,15 +117,20 @@ void AWoodWorld::Generate() {
  TArray<bool> Young;
  TArray<bool> PrairieMesh;
  TArray<int32> PropIds;
+ TArray<int32> KitIds;
  if(Palette) {
   auto Add=[&](const TArray<TSoftObjectPtr<UStaticMesh>>& Source,wood::Kind Kind,bool IsYoung=false,bool IsPrairie=false) {
-   for(const auto& Mesh:Source) { Meshes.Add(Mesh); Kinds.Add(Kind);Young.Add(IsYoung);PrairieMesh.Add(IsPrairie);PropIds.Add(-1); }
+   for(const auto& Mesh:Source) { Meshes.Add(Mesh); Kinds.Add(Kind);Young.Add(IsYoung);PrairieMesh.Add(IsPrairie);PropIds.Add(-1);KitIds.Add(-1); }
   };
   Add(Palette->Trees,wood::Kind::Tree); Add(Palette->Saplings,wood::Kind::Tree,true); Add(Palette->Ferns,wood::Kind::Fern);
   Add(Palette->Grasses,wood::Kind::Grass); Add(Palette->Rocks,wood::Kind::Rock); Add(Palette->Prairie,wood::Kind::Grass,false,true);
   // Palette index is the propId; slots beyond WoodPropCount have no bucket and are skipped.
   for(int32 PropId=0;PropId<Palette->Props.Num()&&PropId<WoodPropCount;++PropId) {
-   Meshes.Add(Palette->Props[PropId]); Kinds.Add(wood::Kind::Prop); Young.Add(false); PrairieMesh.Add(false); PropIds.Add(PropId);
+   Meshes.Add(Palette->Props[PropId]); Kinds.Add(wood::Kind::Prop); Young.Add(false); PrairieMesh.Add(false); PropIds.Add(PropId); KitIds.Add(-1);
+  }
+  // Palette index is the kitId; slots beyond WoodKitCount have no bucket and are skipped.
+  for(int32 KitId=0;KitId<Palette->Kit.Num()&&KitId<WoodKitCount;++KitId) {
+   Meshes.Add(Palette->Kit[KitId]); Kinds.Add(wood::Kind::Kit); Young.Add(false); PrairieMesh.Add(false); PropIds.Add(-1); KitIds.Add(KitId);
   }
  }
  for(int32 Index=0;Index<Meshes.Num();++Index) {
@@ -147,12 +152,13 @@ void AWoodWorld::Generate() {
    Body->CreatePhysicsMeshes();
   }
   Instances->SetStaticMesh(Asset);
-  if(Asset && Kinds[Index]!=wood::Kind::Rock && Kinds[Index]!=wood::Kind::Prop) {
+  if(Asset && Kinds[Index]!=wood::Kind::Rock && Kinds[Index]!=wood::Kind::Prop && Kinds[Index]!=wood::Kind::Kit) {
    for(int32 Slot=0;Slot<Asset->GetStaticMaterials().Num();++Slot) {
     if(auto* Material=Instances->CreateDynamicMaterialInstance(Slot)) WindMaterials.Add(Material);
    }
   }
-  Instances->SetCollisionEnabled(Kinds[Index]==wood::Kind::Tree||Kinds[Index]==wood::Kind::Rock||Kinds[Index]==wood::Kind::Prop?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
+  const bool Solid=Kinds[Index]==wood::Kind::Tree||Kinds[Index]==wood::Kind::Rock||Kinds[Index]==wood::Kind::Prop||(Kinds[Index]==wood::Kind::Kit&&WoodKitSolid(KitIds[Index]));
+  Instances->SetCollisionEnabled(Solid?ECollisionEnabled::QueryAndPhysics:ECollisionEnabled::NoCollision);
   const bool Understory=Kinds[Index]==wood::Kind::Fern||Kinds[Index]==wood::Kind::Grass;
   Instances->SetCullDistances(Understory?3500:25000,Understory?8000:45000);
   Instances->SetWorldPositionOffsetDisableDistance(Understory?6000:14000);
@@ -163,7 +169,7 @@ void AWoodWorld::Generate() {
   Vegetation.Add(Instances);
   Runtime->Available.Add(Asset!=nullptr);
   Runtime->Kinds.Add(Kinds[Index]);
-  auto Profile=Asset?WoodPlacementProfile(*Asset):FWoodPlacementProfile{};Profile.Young=Young[Index];Profile.Prairie=PrairieMesh[Index];Profile.PropId=PropIds[Index];
+  auto Profile=Asset?WoodPlacementProfile(*Asset):FWoodPlacementProfile{};Profile.Young=Young[Index];Profile.Prairie=PrairieMesh[Index];Profile.PropId=PropIds[Index];Profile.KitId=KitIds[Index];
   Runtime->Profiles.Add(Profile);
  }
  const FVector Start=ExplorerStart();

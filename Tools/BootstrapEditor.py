@@ -495,6 +495,50 @@ for index in range(4):
     LIB.save_loaded_asset(mesh)
     props.append(mesh)
 palette.set_editor_property('props',props)
+# Masonry kit (discovery pieces): palette index equals kitId from Source/TheWood/Public/Generation/WoodKit.h.
+# Forced replace-reimport; stone materials stay as imported from the GLB textures.
+# Box collision only for walls, piers, abutments and boulders; none for rubble, debris, fern patch, foundation and stepping stones.
+KIT_FILES=[
+ ('kit_sm_drystone_wall',True),
+ ('kit_sm_drystone_rubble',False),
+ ('kit_sm_stonepier',True),
+ ('kit_sm_stonepier_ruined',True),
+ ('kit_sm_foundationcourse',False),
+ ('kit_sm_masonrydebris',False),
+ ('kit_sm_fernpatch',False),
+ ('kit_sm_bridgeabutment',True),
+ ('kit_sm_riversteppingstone',False),
+ ('kit_sm_granitemonolith',True),
+ ('kit_sm_talusrock',True),
+]
+kit=[]
+for index,(name,solid) in enumerate(KIT_FILES):
+    source=prepared/(name+'.glb')
+    if not source.exists():
+        raise RuntimeError('Missing kit source: '+str(source))
+    destination='/Game/Art/Kit/'+VERSION
+    task=unreal.AssetImportTask()
+    task.set_editor_property('filename',str(source))
+    task.set_editor_property('destination_path',destination)
+    task.set_editor_property('automated',True)
+    task.set_editor_property('save',True)
+    task.set_editor_property('replace_existing',True)
+    TOOLS.import_asset_tasks([task])
+    found=[LIB.load_asset(path) for path in LIB.list_assets(destination,recursive=True)]
+    found=[mesh for mesh in found if isinstance(mesh,unreal.StaticMesh) and mesh.get_name()==name]
+    if len(found)!=1:
+        raise RuntimeError('Kit import produced no unique mesh: '+name)
+    mesh=found[0]
+    SMES.remove_collisions(mesh)
+    if solid:
+        SMES.add_simple_collisions(mesh,unreal.ScriptingCollisionShapeType.BOX)
+    for i,item in enumerate(mesh.get_editor_property('static_materials')):
+        interface=item.get_editor_property('material_interface')
+        if interface is not None and '/Game/Wood/RockMaterials/' not in interface.get_path_name():
+            mesh.set_material(i,with_instancing(interface))
+    LIB.save_loaded_asset(mesh)
+    kit.append(mesh)
+palette.set_editor_property('kit',kit)
 LIB.save_loaded_asset(palette)
 
 # Preserve low-root vertex data on older sapling assets too, for packaged

@@ -4,6 +4,7 @@
 #include "Generation/WoodHex.h"
 #include "Generation/WoodDiscovery.h"
 #include "Generation/WoodEntrance.h"
+#include "Generation/WoodKit.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -480,8 +481,15 @@ Chunk World::generate(int x,int y,bool includeFeatures) const {
  const auto habitat=habitatStage(region,structure,hydrology);
  chunk.features=habitat.features;
  for(const auto& piece:structure.pieces) {
-  const Kind kind=(piece.mesh.find("Fern")!=std::string::npos||piece.name.find("fern")!=std::string::npos)?Kind::Fern:Kind::Rock;
   const double normYaw=std::fmod(std::fmod(piece.yaw,360.0)+360.0,360.0);
+  const int kitId=kit::kitIdFor(piece.mesh);
+  if(kitId>=0) {
+   Feature feature{Kind::Kit,piece.position,normYaw,piece.scale,false};
+   feature.kitId=kitId; feature.pitch=piece.pitch; feature.roll=piece.roll;
+   chunk.features.push_back(feature);
+   continue;
+  }
+  const Kind kind=(piece.mesh.find("Fern")!=std::string::npos||piece.name.find("fern")!=std::string::npos)?Kind::Fern:Kind::Rock;
   chunk.features.push_back({kind,piece.position,normYaw,piece.scale,false});
  }
  return chunk;

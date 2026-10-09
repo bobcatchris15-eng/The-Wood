@@ -47,6 +47,8 @@ FTransform WoodGroundedTransform(const wood::World& World,const wood::Feature& F
 
 FTransform WoodGroundedTransform(const wood::Feature& Feature,const FWoodPlacementProfile& Profile,TFunctionRef<double(double,double)> GroundHeight) {
  const double X=Feature.position.x*100,Y=Feature.position.y*100;
+ // Kit pieces keep their authored z, pitch and roll exactly; no root fit.
+ if(Feature.kind==wood::Kind::Kit) return FTransform(FRotator(Feature.pitch,Feature.yaw,Feature.roll),FVector(X,Y,Feature.position.z*100),FVector(Feature.scale));
  const double Lean=Feature.kind==wood::Kind::Tree?FMath::Sin(FMath::DegreesToRadians(Feature.yaw*3))*2.5:0;
  FTransform Result(FRotator(Lean,Feature.yaw,0),FVector(X,Y,GroundHeight(X/100,Y/100)*100),FVector(Feature.scale));
  if(Feature.kind==wood::Kind::Tree) {

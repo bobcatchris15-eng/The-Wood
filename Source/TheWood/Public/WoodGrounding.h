@@ -11,9 +11,15 @@ struct FWoodPlacementProfile {
  bool Young=false;
  bool Prairie=false;
  int32 PropId=-1;
+ int32 KitId=-1;
 };
 // Palette Props slots and prop bucket count; prop buckets are 6+propId.
 inline constexpr int32 WoodPropCount=4;
+// Palette Kit slots (kitId order, WoodKit.h); kit buckets are WoodKitBucketBase+kitId.
+inline constexpr int32 WoodKitCount=11;
+inline constexpr int32 WoodKitBucketBase=6+WoodPropCount;
+// Kit meshes with collision: walls, piers, abutments, boulders. Rubble, debris, fern patch, foundation and stepping stones have none.
+inline bool WoodKitSolid(int32 KitId) { return KitId==0||KitId==2||KitId==3||KitId==7||KitId==9||KitId==10; }
 THEWOOD_API FWoodPlacementProfile WoodPlacementProfile(const UStaticMesh& Asset);
 
 // Cached imported root skirt vertices, in local Unreal centimetres.

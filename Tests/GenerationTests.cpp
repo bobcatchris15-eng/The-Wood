@@ -41,6 +41,8 @@ std::uint64_t fingerprintChunk(const wood::World& world,const wood::Chunk& c) {
  for(const auto& p:c.features) {
   f.integer(static_cast<std::int64_t>(p.kind)); f.real(p.position.x); f.real(p.position.y); f.real(p.position.z);
   f.real(p.yaw); f.real(p.scale); f.u64(p.young?1:0); f.u64(p.prairie?1:0);
+  // Kit fields hashed only for Kit features, so chunks without kit pieces keep their fingerprints.
+  if(p.kind==wood::Kind::Kit) { f.integer(p.kitId); f.real(p.pitch); f.real(p.roll); }
  }
  return f.h;
 }

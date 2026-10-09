@@ -19,6 +19,8 @@ public:
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> Rocks;
  // Prop meshes (E2): array index is the propId carried by Kind::Prop features.
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> Props;
+ // Masonry kit meshes (discovery pieces): array index is the kitId from WoodKit.h.
+ UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> Kit;
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UMaterialInterface> GroundMaterial;
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UMaterialInterface> WaterMaterial;
  // Trailhead lot gravel (M_Gravel_Lot): vertex alpha drives edge fade.
