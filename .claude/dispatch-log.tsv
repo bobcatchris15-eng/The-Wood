@@ -38,3 +38,20 @@ ts	task_id	clanker	model	n_targets	wall_s	turns	attempts	outcome	returned_bytes
 2026-10-08	E3	impl-worker	haiku	7	445	31	3	BREAKER(harness)	~1500
 2026-10-08	E3b	impl-worker	haiku	1	?	?	1	PASS	~900
 2026-10-08	E4	impl-worker	haiku	9	?	?	1	PASS	~1500
+2026-10-08	D0a	impl-worker	haiku	4	?	?	1	PASS	~1200
+2026-10-08	D0b	impl-worker	haiku	11	950	40	1	PASS	~1500
+2026-10-08	D0c	impl-worker	haiku	5	1875	76	2	PARTIAL(visual)	~2500
+2026-10-08	D0d	impl-worker	haiku	3	708	43	2	PASS	~1500
+2026-10-08	U1	impl-worker	haiku	8	1000	39	3	PASS(scope fix)	~1800
+2026-10-08	B0a	impl-worker	haiku	9	?	?	1	PARTIAL	~1500
+2026-10-08	B0b	impl-worker	haiku	4	3856	141	3	PASS	~2000
+2026-10-08	B1a-A	impl-worker	haiku	11	?	?	1	PASS	~900
+2026-10-08	B1a-B	impl-worker	haiku	12	2821	118	1	PASS	~2500
+2026-10-08	B1b	impl-worker	haiku	9	?	?	1	PASS	~2500
+2026-10-08	B1c	impl-worker	haiku	9	3703	109	2	PASS(orch floor)	~2500
+2026-10-08	B1d	impl-worker	haiku	8	?	?	1	PASS	~1500
+2026-10-09	T1a	impl-worker	haiku	4	?	?	1	PASS	~1800
+2026-10-09	T1b	impl-worker	haiku	5	977	20	1	PASS	~1500
+2026-10-09	T1c	impl-worker	haiku	8	1576	46	1	PASS	~1800
+2026-10-09	T1d	impl-worker	haiku	5	4800	104	3	BREAKER	~3000
+2026-10-09	T1d-fa	failure-analyst	haiku	-	150	19	1	CONF:LOW	~900

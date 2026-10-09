@@ -13,6 +13,7 @@ Take The Wood from current prototype to Docs/Specification.md v1.1 (M1–M5) via
 - D5 2026-10-08: Haiku halts hard at Target_Nodes edges (good), so packets must list the whole call chain: core → Runtime.h → PreparedChunk → World + WoodWorldStreaming call sites. Under-scoping cost B2b its 3 attempts. Before dispatch, grep consumers of any changed struct.
 - D5b: Packets now carry a standing clause: "may edit any other file under Source/, Tests/, Tools/ strictly required; list each". Mode S makes this safe; saves a round trip per scope miss.
 - D6: Art reimport skips existing versioned assets; new/changed meshes need forced replace (pattern in BootstrapEditor.py).
+- D8 2026-10-08: family share floor = 1.5% per 60x60 window per seed (10 families). Earlier 8%/4%/3% floors were arbitrary.
 - D7 2026-10-08: exposure contract = <=0.25 EV per 10 m (~0.1 EV/s at walk speed); observed 0.18. Original 0.1/10m was arbitrary. Revisit if playtest shows visible brightness swells at boundaries.
 - Prior effort (Soundscape, 2026-10-06) DONE; its open assumption carried below.
 
@@ -44,3 +45,11 @@ Take The Wood from current prototype to Docs/Specification.md v1.1 (M1–M5) via
 - Perf: Test-Core now ~140 s (was 26 s at start; growth from added tests + ~15% from epoch owner lookups). Add a per-chunk generate() time budget test before Phase 6; generation cost matters for streaming.
 - Test-Unreal.ps1 counts only Succeeded; SaveResume is SucceededWithWarnings (intended corrupt-file log) so summary says 6 of 7. Fix script to report warnings bucket.
 - Threshold: resident entrance-version chunks within 40 m are kept after crossing; adjacent regenerated wilderness chunks may show a seam near the passage. Playtest: cross, turn around, look.
+- Golden fingerprints cover no discovery chunk (D0b changed 0 of 15). Add a golden for a chunk containing a ruin.
+- SM_BridgeAbutment length is along span axis; physically should run along the bank. Check StreamFootbridge render.
+- All families share the pine/fern/grass asset set; old-growth/rainforest need distinct tree species (deciduous, cedar/spruce, mossy trunks). Asset task before Gate M4.
+- Goldens contain no new-family, ruin, or unreal-overlay-free... add goldens for a ruin chunk and a ColdRainforest chunk.
+- IcyHills reads tan, not icy: needs snow/frost ground archetype (5th look) or snow cover via weather W1. Revisit after W1.
+
+## BLOCKED
+- T1d species foliage: 3 attempts. Blender source/prepared crowns are full (scratchpad leafdiag PNGs). UE renders sparse leaf scatter. ROOTs: (1) collapse decimation shredded leaves [fixed: bark-only]; (2) BLEND->masked rewired wrong material, leaves undrawn [fixed: opaque 2-sided]; (3) wind ruled out by bisect. Current hypothesis (untested): review renders use -RenderOffscreen and draw the Nanite FALLBACK mesh (default heavily reduced), shredding leaves. Next: check r.Nanite in render log; set fallback to 100% / FallbackRelativeError 0; or render without -RenderOffscreen.
