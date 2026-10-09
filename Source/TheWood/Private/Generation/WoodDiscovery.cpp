@@ -1004,6 +1004,213 @@ DiscoveryPlan generateMonolithStanding(
     return plan;
 }
 
+// Unreal-region families. Built only from existing kit meshes; allocated only in unreal cells
+// (fallback weight zero everywhere else). Structural pieces stay grounded like every other family.
+
+// Treads run along one line and narrow toward an abrupt stop; the rise comes from the terrain.
+DiscoveryPlan generateStaircaseToNowhere(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::StaircaseRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::StaircaseToNowhere, Vec3{origin.x, origin.y, originZ}, 0.0);
+
+    const double theta = rng.nextDouble(0.0, 2.0 * kPi);
+    plan.yaw = theta * (180.0 / kPi);
+    const double ux = std::cos(theta);
+    const double uy = std::sin(theta);
+    const double vx = -uy;
+    const double vy = ux;
+
+    const int treadCount = rng.nextInt(4, 6);
+    std::vector<double> scales(static_cast<std::size_t>(treadCount), 1.0);
+    double total = 0.0;
+    for (int t = 0; t < treadCount; ++t) {
+        const double frac = static_cast<double>(t) / static_cast<double>(treadCount);
+        const double sc = 1.0 - 0.3 * frac;
+        scales[static_cast<std::size_t>(t)] = sc;
+        total += kFoundationLen * sc;
+    }
+
+    double along = -0.5 * total;
+    for (int t = 0; t < treadCount; ++t) {
+        const double sc = scales[static_cast<std::size_t>(t)];
+        const double len = kFoundationLen * sc;
+        const double a = along + 0.5 * len;
+        const double off = rng.nextDouble(-0.03, 0.03);
+        const double x = origin.x + ux * a + vx * off;
+        const double y = origin.y + uy * a + vy * off;
+        addGroundedPiece(plan, rng, heightFn, "stair_tread", "SM_FoundationCourse", x, y, plan.yaw, sc);
+        along += len;
+    }
+
+    for (int d = 0; d < 2; ++d) {
+        const double lat = ((d == 0) ? 1.0 : -1.0) * rng.nextDouble(0.8, 1.4);
+        const double a = 0.5 * total + rng.nextDouble(0.5, 1.5);
+        const double x = origin.x + ux * a + vx * lat;
+        const double y = origin.y + uy * a + vy * lat;
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.5, 0.8);
+        addGroundedPiece(plan, rng, heightFn, "stair_end_debris", "SM_MasonryDebris", x, y, yaw, scale);
+    }
+
+    const double half = 0.5 * total;
+    plan.reservation = DiscoveryReservation(DiscoveryType::StaircaseToNowhere, plan.position, half + 1.5, half + 4.0);
+    plan.valid = true;
+    return plan;
+}
+
+// Granite blade thrust point-first into the ground, leaning off vertical, with displaced debris around its foot.
+DiscoveryPlan generateRustedSword(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::RustedSwordRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::RustedSword, Vec3{origin.x, origin.y, originZ}, 0.0);
+    plan.yaw = rng.nextDouble(0.0, 360.0);
+
+    const double tilt = rng.nextDouble(12.0, 20.0);
+    const double bladeScale = rng.nextDouble(3.4, 4.0);
+    const double bladeBed = rng.nextDouble(kBedMin, kBedMax);
+    const double bladeZ = (heightFn ? heightFn(origin.x, origin.y) : 0.0) - bladeBed;
+    plan.pieces.emplace_back("sword_blade", "SM_GraniteMonolith",
+        Vec3{origin.x, origin.y, bladeZ}, plan.yaw, tilt, 0.0, bladeScale);
+
+    for (int d = 0; d < 3; ++d) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = rng.nextDouble(1.2, 2.4);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.4, 0.7);
+        addGroundedPiece(plan, rng, heightFn, "sword_displacement_debris", "SM_MasonryDebris", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::RustedSword, plan.position, 4.0, 7.5);
+    plan.valid = true;
+    return plan;
+}
+
+// Stone plinth with one isolated tall shaft standing on it, chips at the base.
+DiscoveryPlan generateStoneChessPiece(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::StoneChessPieceRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::StoneChessPiece, Vec3{origin.x, origin.y, originZ}, 0.0);
+    plan.yaw = rng.nextDouble(0.0, 360.0);
+
+    addGroundedPiece(plan, rng, heightFn, "chess_plinth", "SM_StonePier", origin.x, origin.y, plan.yaw, 0.9);
+    const double shaftScale = rng.nextDouble(1.2, 1.6);
+    addGroundedPiece(plan, rng, heightFn, "chess_shaft", "SM_GraniteMonolith", origin.x, origin.y, plan.yaw, shaftScale);
+
+    for (int d = 0; d < 2; ++d) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = rng.nextDouble(1.5, 2.2);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.4, 0.6);
+        addGroundedPiece(plan, rng, heightFn, "chess_base_chip", "SM_MasonryDebris", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::StoneChessPiece, plan.position, 3.5, 6.5);
+    plan.valid = true;
+    return plan;
+}
+
+// Ring of five stone spikes, alternating intact and broken, with loose debris at the centre.
+DiscoveryPlan generateBrokenCrown(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::BrokenCrownRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::BrokenCrown, Vec3{origin.x, origin.y, originZ}, 0.0);
+
+    const double ringRot = rng.nextDouble(0.0, 2.0 * kPi);
+    plan.yaw = ringRot * (180.0 / kPi);
+
+    const int spikeCount = 5;
+    for (int k = 0; k < spikeCount; ++k) {
+        const bool intact = (k % 2 == 0);
+        const double a = ringRot + 2.0 * kPi * static_cast<double>(k) / static_cast<double>(spikeCount)
+            + rng.nextDouble(-0.15, 0.15);
+        const double dist = rng.nextDouble(1.6, 2.4);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = intact ? rng.nextDouble(0.9, 1.1) : rng.nextDouble(0.5, 0.7);
+        addGroundedPiece(plan, rng, heightFn,
+            intact ? "crown_spike" : "crown_spike_broken",
+            intact ? "SM_StonePier" : "SM_StonePier_Ruined",
+            x, y, yaw, scale);
+    }
+
+    const double cA = rng.nextDouble(0.0, 2.0 * kPi);
+    const double cDist = rng.nextDouble(0.0, 1.0);
+    const double cx = origin.x + cDist * std::cos(cA);
+    const double cy = origin.y + cDist * std::sin(cA);
+    const double cYaw = rng.nextDouble(0.0, 360.0);
+    const double cScale = rng.nextDouble(0.5, 0.8);
+    addGroundedPiece(plan, rng, heightFn, "crown_centre_debris", "SM_MasonryDebris", cx, cy, cYaw, cScale);
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::BrokenCrown, plan.position, 3.5, 6.0);
+    plan.valid = true;
+    return plan;
+}
+
+// Unreal cells: one roll gates the cell, then one of the four unreal families is picked.
+// A chosen plan that breaches water clearance is dropped, never rerolled.
+static constexpr double kUnrealChance = 0.5;
+
+static DiscoveryPlan planUnrealDiscovery(
+    std::uint32_t seed,
+    int cellQ,
+    int cellR,
+    const Vec3& cellCenter,
+    const std::function<double(double, double)>& heightFn,
+    const std::function<double(double)>& streamXFn,
+    const std::function<double(double)>& streamHWFn)
+{
+    DiscoveryRng roll(hashCell(seed, cellQ, cellR) ^ Salt::UnrealCell);
+    if (roll.nextDouble(0.0, 1.0) >= kUnrealChance) {
+        return DiscoveryPlan{};
+    }
+
+    const int pick = roll.nextInt(0, 3);
+    DiscoveryPlan plan;
+    if (pick == 0) {
+        plan = generateStaircaseToNowhere(seed, cellCenter, heightFn);
+    } else if (pick == 1) {
+        plan = generateRustedSword(seed, cellCenter, heightFn);
+    } else if (pick == 2) {
+        plan = generateStoneChessPiece(seed, cellCenter, heightFn);
+    } else {
+        plan = generateBrokenCrown(seed, cellCenter, heightFn);
+    }
+
+    const bool hasStream = (streamXFn && streamHWFn);
+    if (!plan.valid || !hasStream) {
+        return plan;
+    }
+    for (const auto& p : plan.pieces) {
+        const double pSx = streamXFn(p.position.y);
+        const double pHw = streamHWFn(p.position.y);
+        if (std::abs(p.position.x - pSx) < pHw + kWaterClear) {
+            return DiscoveryPlan{};
+        }
+    }
+    return plan;
+}
+
 static DiscoveryPlan planNaturalDiscovery(
     std::uint32_t seed,
     int cellQ,
@@ -1121,7 +1328,8 @@ DiscoveryPlan planDiscovery(
     const std::function<double(double, double)>& heightFn,
     const std::function<double(double)>& streamXFn,
     const std::function<double(double)>& streamHWFn,
-    bool ruins)
+    bool ruins,
+    bool unreal)
 {
     const bool isHighlands = (cellClimate.biome[2] > 0.25) || (cellClimate.slope > 0.25) || (cellClimate.roughness > 0.5);
 
@@ -1150,6 +1358,14 @@ DiscoveryPlan planDiscovery(
         dStream = std::abs(cellCenter.x - sx);
     }
     const bool isStreamCrossing = hasStream && (dStream <= hw + 8.0);
+
+    // Unreal-region allocation: owning region's unreal flag. Zero weight outside unreal regions.
+    if (unreal) {
+        DiscoveryPlan unrealPlan = planUnrealDiscovery(seed, cellQ, cellR, cellCenter, heightFn, streamXFn, streamHWFn);
+        if (unrealPlan.valid) {
+            return unrealPlan;
+        }
+    }
 
     // Constructed Discovery Allocation: owning region's independent ruins flag (p=1/3)
     if (!ruins) {

@@ -97,6 +97,16 @@ inline constexpr std::uint32_t FoundationStripRng=0xF0A5U;
 inline constexpr std::uint32_t StonePierStumpRng=0x91E2U;
 // MonolithStanding RNG seed mix (generateMonolithStanding()).
 inline constexpr std::uint32_t MonolithStandingRng=0x3A17U;
+// Unreal-region allocation roll, unreal cells only (planDiscovery()).
+inline constexpr std::uint32_t UnrealCell=0x0E7A1U;
+// StaircaseToNowhere RNG seed mix (generateStaircaseToNowhere()).
+inline constexpr std::uint32_t StaircaseRng=0x57A1U;
+// RustedSword RNG seed mix (generateRustedSword()).
+inline constexpr std::uint32_t RustedSwordRng=0x5A0DU;
+// StoneChessPiece RNG seed mix (generateStoneChessPiece()).
+inline constexpr std::uint32_t StoneChessPieceRng=0xC4E5U;
+// BrokenCrown RNG seed mix (generateBrokenCrown()).
+inline constexpr std::uint32_t BrokenCrownRng=0xBC0AU;
 
 // Chunk placement layer base salts. Each layer adds the offsets below.
 // Tree layer base (layer spacing 8.5).

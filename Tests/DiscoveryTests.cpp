@@ -788,6 +788,90 @@ static void test_ruin_extra_types() {
         rollingFn, nearStreamX, nearStreamHW, nearCenter, false);
 }
 
+static bool isUnrealType(wood::DiscoveryType t) {
+    return t == wood::DiscoveryType::StaircaseToNowhere
+        || t == wood::DiscoveryType::RustedSword
+        || t == wood::DiscoveryType::StoneChessPiece
+        || t == wood::DiscoveryType::BrokenCrown;
+}
+
+// Unreal-region families: within 400 seeds the wanted type must appear, and every such plan is
+// grounded, contained by its reservation (the tree-exclusion radius), and clears the channel.
+static void check_unreal_type(
+    const char* label,
+    wood::DiscoveryType want,
+    const std::function<double(double, double)>& heightFn,
+    const std::function<double(double)>& streamXFn,
+    const std::function<double(double)>& streamHWFn,
+    const wood::Vec3& center)
+{
+    std::cout << "[TEST] " << label << "...\n";
+    wood::Surface climate;
+    bool found = false;
+    for (std::uint32_t seed = 1; seed <= 400; ++seed) {
+        const wood::DiscoveryPlan plan = wood::planDiscovery(seed, 3, 2, center, climate, heightFn, streamXFn, streamHWFn, false, true);
+        if (!plan.valid || plan.type != want) continue;
+        found = true;
+        EXPECT_FALSE(plan.pieces.empty());
+        EXPECT_TRUE(plan.reservation.type == want);
+        EXPECT_TRUE(plan.reservation.innerRadius > 0.0);
+        EXPECT_TRUE(plan.reservation.outerRadius > plan.reservation.innerRadius);
+        for (const auto& p : plan.pieces) {
+            EXPECT_GROUNDED(p, heightFn);
+            EXPECT_TRUE(wood::isInsideReservation(plan.reservation, p.position.x, p.position.y, false));
+            EXPECT_TRUE(std::abs(p.position.x - streamXFn(p.position.y)) >= streamHWFn(p.position.y) + 1.5 - 1e-9);
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+static void test_unreal_discoveries_generated() {
+    auto rollingFn = [](double x, double y) -> double { return 10.0 + 0.2 * std::sin(x * 0.1) + 0.2 * std::cos(y * 0.1); };
+    auto farStreamX = [](double) -> double { return 5000.0; };
+    auto farStreamHW = [](double) -> double { return 5.0; };
+
+    const wood::Vec3 center{20.0, 20.0, 10.0};
+    check_unreal_type("test_staircase_to_nowhere_unreal", wood::DiscoveryType::StaircaseToNowhere,
+        rollingFn, farStreamX, farStreamHW, center);
+    check_unreal_type("test_rusted_sword_unreal", wood::DiscoveryType::RustedSword,
+        rollingFn, farStreamX, farStreamHW, center);
+    check_unreal_type("test_stone_chess_piece_unreal", wood::DiscoveryType::StoneChessPiece,
+        rollingFn, farStreamX, farStreamHW, center);
+    check_unreal_type("test_broken_crown_unreal", wood::DiscoveryType::BrokenCrown,
+        rollingFn, farStreamX, farStreamHW, center);
+}
+
+// Zero fallback weight: with unreal=false no unreal family may be allocated, in any cell, ruin or not.
+static void test_unreal_zero_weight_outside_unreal() {
+    std::cout << "[TEST] test_unreal_zero_weight_outside_unreal...\n";
+    auto rollingFn = [](double x, double y) -> double { return 10.0 + 0.2 * std::sin(x * 0.1) + 0.2 * std::cos(y * 0.1); };
+    auto farStreamX = [](double) -> double { return 5000.0; };
+    auto farStreamHW = [](double) -> double { return 5.0; };
+
+    wood::Surface plainClimate;
+    wood::Surface forestClimate;
+    forestClimate.forest = 0.8;
+    forestClimate.biome[0] = 0.8;
+    const wood::Surface* climates[2] = { &plainClimate, &forestClimate };
+
+    int cells = 0;
+    for (int q = 0; q < 40; ++q) {
+        for (int r = 0; r < 50; ++r) {
+            ++cells;
+            const wood::Vec3 center{20.0 + 10.0 * q, 20.0 + 10.0 * r, 10.0};
+            for (const wood::Surface* climate : climates) {
+                for (bool ruins : { false, true }) {
+                    const wood::DiscoveryPlan plan = wood::planDiscovery(
+                        static_cast<std::uint32_t>(1000 + q * 50 + r), q, r, center, *climate,
+                        rollingFn, farStreamX, farStreamHW, ruins, false);
+                    EXPECT_FALSE(plan.valid && isUnrealType(plan.type));
+                }
+            }
+        }
+    }
+    EXPECT_EQ(cells, 2000);
+}
+
 int main() {
     std::cout << "Running DiscoveryTests...\n";
 
@@ -815,6 +899,9 @@ int main() {
     test_natural_water_clearance();
 
     test_ruin_extra_types();
+
+    test_unreal_discoveries_generated();
+    test_unreal_zero_weight_outside_unreal();
 
     std::cout << "\nTest Summary: " << (gTestCount - gFailures) << "/" << gTestCount << " passed.\n";
 

@@ -37,7 +37,11 @@ enum class DiscoveryType {
     DryStoneWallStub,
     FoundationStrip,
     StonePierStump,
-    MonolithStanding
+    MonolithStanding,
+    StaircaseToNowhere,
+    RustedSword,
+    StoneChessPiece,
+    BrokenCrown
 };
 
 struct DiscoveryReservation {
@@ -108,7 +112,8 @@ DiscoveryPlan planDiscovery(
     const std::function<double(double, double)>& heightFn,
     const std::function<double(double)>& streamXFn,
     const std::function<double(double)>& streamHWFn,
-    bool ruins);
+    bool ruins,
+    bool unreal = false);
 
 DiscoveryPlan generateDryStoneShelter(
     std::uint32_t seed,
@@ -176,6 +181,26 @@ DiscoveryPlan generateStonePierStump(
     const std::function<double(double, double)>& heightFn);
 
 DiscoveryPlan generateMonolithStanding(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateStaircaseToNowhere(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateRustedSword(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateStoneChessPiece(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateBrokenCrown(
     std::uint32_t seed,
     const Vec3& origin,
     const std::function<double(double, double)>& heightFn);
