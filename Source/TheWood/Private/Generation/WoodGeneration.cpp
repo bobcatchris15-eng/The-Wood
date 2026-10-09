@@ -6,6 +6,7 @@
 #include "Generation/WoodEntrance.h"
 #include "Generation/WoodKit.h"
 #include "Generation/WoodUnreal.h"
+#include "Generation/WoodFlora.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -89,10 +90,8 @@ Biome regionFamily(const World& w,int gx,int gy) {
 }
 
 // Per-family multipliers in Biome order; the four original families are identity (1 or 0).
-constexpr std::array<double,kFamilyCount> kTreeDensityMul{{1,1,1,1,0.7,1,0.25,0.15,0.8,0.05,1.3,1}};
 constexpr std::array<double,kFamilyCount> kTreeScaleMul{{1,1,1,1,1.35,1,0.6,1.2,1.1,1,1.25,1}};
 constexpr std::array<double,kFamilyCount> kRockMul{{1,1,1,1,1.5,1,2.0,1,0.3,0.2,0.4,1}};
-constexpr std::array<double,kFamilyCount> kFernMul{{1,1,1,1,1,2.0,0.05,0.4,1.5,0.3,2.5,1}};
 constexpr std::array<double,kFamilyCount> kLightBrightnessMul{{1,1,1,1,0.8,1,1.15,1.10,0.75,1.0,0.7,1}};
 constexpr std::array<double,kFamilyCount> kLightKelvinShift{{0,0,0,0,0,-400,900,500,-300,-100,200,0}};
 // Terrain relief multiplier per family: wet basins flatten local relief.
@@ -102,40 +101,6 @@ double familyMul(const std::array<double,kFamilyCount>& biome,const std::array<d
  double m=1;
  for(std::size_t i=0;i<kFamilyCount;++i) m+=biome[i]*(mul[i]-1);
  return m;
-}
-// T1c: per-family tree species mix in Biome order, columns in Species order (Pine, Broadleaf, BroadleafGiant, Conifer, Evergreen,
-// Acacia, BaldCypress, CypressKnees, Cattail, PrairieGrass, Krummholz). Columns 5-10 are the new-biome species; they are zero
-// for every family except Savannah, Swamp, Marsh, Prairie and IcyHills, so existing families draw identical species.
-// Rows need not sum to one: pickSpecies normalises by the blended total.
-constexpr std::array<std::array<double,kSpeciesCount>,kFamilyCount> kSpeciesMix{{
- {{0.4,0.5,0.0,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // TemperateForest
- {{0.6,0.4,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // DryGrassland
- {{0.7,0.0,0.0,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // RockyHighlands
- {{0.3,0.0,0.0,0.7,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // Taiga
- {{0.2,0.2,0.3,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // OldGrowthForest
- {{0.0,0.2,0.0,0.8,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // ColdRainforest
- {{0.4,0.0,0.0,0.6,0.0,0.0,0.0,0.0,0.0,0.0,0.5}}, // IcyHills
- {{0.0,0.7,0.0,0.0,0.3,0.7,0.0,0.0,0.0,0.0,0.0}}, // Savannah
- {{0.0,0.5,0.0,0.2,0.3,0.0,0.4,0.2,0.0,0.0,0.0}}, // Swamp
- {{0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.6,0.0,0.0}}, // Marsh
- {{0.0,0.3,0.1,0.0,0.6,0.0,0.0,0.0,0.0,0.0,0.0}}, // WarmRainforest
- {{0.6,0.4,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.0}}  // Prairie
-}};
-// Picks a species by blending the family rows with the position's family weights; roll is in [0,1).
-int pickSpecies(const std::array<double,kFamilyCount>& biome,double roll) {
- std::array<double,kSpeciesCount> weight{};
- double total=0;
- for(std::size_t f=0;f<kFamilyCount;++f) for(std::size_t s=0;s<kSpeciesCount;++s) weight[s]+=biome[f]*kSpeciesMix[f][s];
- for(const double w:weight) total+=w;
- if(total<=0) return static_cast<int>(Species::Pine);
- double target=roll*total;
- for(std::size_t s=0;s<kSpeciesCount;++s) {
-  if(target<weight[s]) return static_cast<int>(s);
-  target-=weight[s];
- }
- // Floating-point remainder: fall back to the last species carrying weight.
- for(std::size_t s=kSpeciesCount;s-->0;) if(weight[s]>0) return static_cast<int>(s);
- return static_cast<int>(Species::Pine);
 }
 // T1c: fallen deadwood per 100 m² (one lattice cell), blended by family weights.
 constexpr std::array<double,kFamilyCount> kDeadwoodDensity{{0.02,0,0,0.02,0.08,0.06,0,0,0.05,0,0,0}};
@@ -478,14 +443,21 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
    const double patch=0.5+0.5*noise(config.seed+Salt::PatchCover,px/38,py/38);
    const double routeDistance=std::abs(px-(streamX(py)-7));
    Kind kind; double scale; bool young=false; int species=static_cast<int>(Species::Pine);
-   if(type==0) {
-    // Dynamic groves and sunlit clearings interrupt the temperate and taiga canopies.
-    const double grove=smooth((patch-0.26)/0.36);
-    const double density=surface.forest*(0.04+0.78*grove)*ov.densityScale*familyMul(surface.biome,kTreeDensityMul);
-    if(surface.slope>=0.7||routeDistance<3.5||choice>density) continue;
+   flora::Site site{surface.biome,surface.moisture,surface.slope,surface.forest,std::abs(px-streamX(py)),streamHalfWidth(py)};
+   int floraIndex=-1; double heightM=0;
+   if(type==0||type==6) {
+    // Canopy and subcanopy trees: a catalogue ceiling per role and family, species from the viability engine.
+    const auto role=type==0?flora::Role::Canopy:flora::Role::Subcanopy;
+    const double ceiling=flora::roleDensity(surface.biome,role)*ov.densityScale*(0.2+1.6*patch);
+    if(choice>std::min(1.0,ceiling*spacing*spacing/100.0)||routeDistance<3.5) continue;
     if(isInsideReservation(reservations,px,py,true)) continue;
+    floraIndex=flora::pick(site,role,random(seed,gx,gy,salt+Salt::LayerSpecies));
+    if(floraIndex<0) continue;
+    const auto& placed=flora::table()[static_cast<std::size_t>(floraIndex)];
     kind=Kind::Tree;
-    species=pickSpecies(surface.biome,random(seed,gx,gy,salt+Salt::LayerSpecies));
+    const int mapped=flora::table()[static_cast<std::size_t>(placed.meshSource)].row.speciesEnum;
+    species=mapped>=0?mapped:static_cast<int>(Species::Pine);
+    heightM=placed.row.heightMin+(placed.row.heightMax-placed.row.heightMin)*random(seed,gx,gy,salt+Salt::LayerHeight);
     // Loose regeneration patches and a wide spread of multi-tiered cohorts.
     const double regeneration=0.5+0.5*noise(config.seed+Salt::Regeneration,px/55,py/55);
     young=random(seed,gx,gy,salt+Salt::LayerYoung)<0.11+0.28*regeneration;
@@ -505,26 +477,27 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     }
     scale*=familyMul(surface.biome,kTreeScaleMul);
    } else if(type==1) {
-    if(surface.slope>=0.7) continue;
-    // Two spatial scales form dense colonies separated by leaf-litter pockets.
-    const double colony=smooth((0.5+0.5*noise(config.seed+Salt::Colony,px/11,py/11)-0.28)/0.40);
-    const double habitatCover=surface.biome[0]+0.80*surface.biome[1]+0.30*surface.biome[2]+0.55*surface.biome[3]+0.90*surface.biome[4]+1.00*surface.biome[5]+0.20*surface.biome[6]+1.00*surface.biome[7]+1.00*surface.biome[8]+1.00*surface.biome[10]+0.80*surface.biome[11];
-    const double cover=(0.10+0.84*colony)*habitatCover*ov.densityScale;
-    // Low plants preserve an open walking strip without emptying both banks.
-    const double routeCover=routeDistance<1.2?0.20:1.0;
-    if(choice>cover*routeCover) continue;
-    const double fernChance=surface.moisture*(surface.biome[0]*(0.70+0.65*colony)+
-                                                0.04*surface.biome[1]+0.08*surface.biome[2]+0.15*surface.biome[3]+
-                                                0.10*surface.biome[4]+0.40*surface.biome[5]+0.30*surface.biome[8]+0.04*surface.biome[11])*familyMul(surface.biome,kFernMul);
-    kind=random(seed,gx,gy,salt+Salt::LayerFernChance)<fernChance?Kind::Fern:Kind::Grass;
-    const double streamDist=std::abs(px-streamX(py));
-    if(streamDist>=streamHalfWidth(py)+0.6&&streamDist<=5.0&&routeDistance>2.2&&random(seed,gx,gy,salt+Salt::LayerRockChance)<0.22) {
-     kind=Kind::Rock;
-     scale=0.55+random(seed,gx,gy,salt+Salt::LayerSize)*0.9;
-    } else {
-     scale=kind==Kind::Fern?(0.42+random(seed,gx,gy,salt+Salt::LayerSize)*1.65)*(1-0.25*surface.biome[3]):
-                           (0.48+random(seed,gx,gy,salt+Salt::LayerSize)*2.05)*(1-0.45*surface.biome[2]);
+    // Ground-cover flora: a ceiling per role; the role is chosen in proportion to its ceiling, then a viable species.
+    // Moss (taiga carpet included) is placed only here, so each role is counted once against its ceiling.
+    const std::array<flora::Role,8> groundRoles{{flora::Role::Shrub,flora::Role::Fern,flora::Role::Grass,flora::Role::Reed,flora::Role::Flower,flora::Role::Moss,flora::Role::Aquatic,flora::Role::Fungus}};
+    std::array<double,8> ceilings{};
+    double total=0;
+    for(std::size_t g=0;g<groundRoles.size();++g) {
+     ceilings[g]=flora::roleDensity(surface.biome,groundRoles[g])*ov.densityScale*(0.2+1.6*patch);
+     total+=ceilings[g];
     }
+    // Low plants preserve an open walking strip without emptying both banks.
+    const double routeCover=routeDistance<1.2?0.2:1.0;
+    if(total<=0||choice>std::min(1.0,total*spacing*spacing/100.0)*routeCover) continue;
+    double roleRoll=random(seed,gx,gy,salt+Salt::LayerFloraRole)*total;
+    std::size_t g=0;
+    while(g+1<groundRoles.size()&&roleRoll>=ceilings[g]) { roleRoll-=ceilings[g]; ++g; }
+    floraIndex=flora::pick(site,groundRoles[g],random(seed,gx,gy,salt+Salt::LayerSpecies));
+    if(floraIndex<0) continue;
+    const auto& placed=flora::table()[static_cast<std::size_t>(floraIndex)];
+    kind=placed.row.role==flora::Role::Fern?Kind::Fern:Kind::Grass;
+    heightM=placed.row.heightMin+(placed.row.heightMax-placed.row.heightMin)*random(seed,gx,gy,salt+Salt::LayerHeight);
+    scale=kind==Kind::Fern?(0.42+random(seed,gx,gy,salt+Salt::LayerSize)*1.65):(0.48+random(seed,gx,gy,salt+Salt::LayerSize)*2.05);
    } else if(type==3) {
     // Tallgrass prairie: dense, slightly clumped grass confined to grassland cores.
     // Savannah grass carries the prairie layer at 0.6 strength.
@@ -535,13 +508,6 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     if(core<=0||routeDistance<2.2||choice>core*(0.25+0.5*clump)) continue;
     kind=Kind::Grass;
     scale=0.7+random(seed,gx,gy,salt+Salt::LayerSize)*0.9;
-   } else if(type==4) {
-    // Taiga moss and low shrub carpet: dense small cover confined to taiga cores.
-    const double carpet=smooth((surface.biome[3]-0.5)/0.4);
-    const double mossPatch=0.5+0.5*noise(config.seed+Salt::TaigaMoss,px/15,py/15);
-    if(carpet<=0||routeDistance<1.2||choice>carpet*(0.55+0.45*mossPatch)) continue;
-    kind=random(seed,gx,gy,salt+Salt::LayerFernChance)<0.10?Kind::Fern:Kind::Grass;
-    scale=0.30+random(seed,gx,gy,salt+Salt::LayerSize)*0.45;
    } else if(type==5) {
     // Fallen logs: one lattice cell per 100 m², kept off walking routes, streams (above) and discovery reservations.
     const double density=deadwoodDensity(surface.biome);
@@ -563,15 +529,21 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
    }
    Feature feature{kind,{px,py,terrainHeight(px,py)},random(seed,gx,gy,salt+Salt::LayerYaw)*360,scale*ov.featureScale,young,type==3};
    feature.species=species;
+   if(floraIndex>=0) {
+    feature.flora=floraIndex;
+    feature.floraMesh=flora::table()[static_cast<std::size_t>(floraIndex)].meshSource;
+    feature.heightM=heightM;
+    feature.tint=static_cast<int>(random(seed,gx,gy,salt+Salt::LayerTint)*4);
+   }
    habitat.features.push_back(feature);
   }
  };
- layer(8.5,Salt::TreeLayer,0);
+ layer(6.0,Salt::TreeLayer,0);
  layer(1.5,Salt::GroundCoverLayer,1);
  layer(6,Salt::RockLayer,2);
  layer(1.0,Salt::PrairieLayer,3);
- layer(1.5,Salt::TaigaMossLayer,4);
  layer(10.0,Salt::DeadwoodLayer,5);
+ layer(6.0,Salt::SubcanopyLayer,6);
  if(!entered_) for(auto feature:entrance::fixedFeatures()) {
   if(feature.position.x<minX||feature.position.x>=maxX||feature.position.y<minY||feature.position.y>=maxY) continue;
   feature.position.z=terrainHeight(feature.position.x,feature.position.y);

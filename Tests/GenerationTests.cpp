@@ -365,13 +365,15 @@ int main() {
   // B1c: kFamilyCount 8->10 (+Swamp, Marsh)
   // B1d: kFamilyCount 10->11 (+WarmRainforest)
   // T1c: tree species + deadwood (fingerprint hashes species and Deadwood; all 15 cases re-baselined)
+  // F1: flora engine (WoodFlora.h) re-baselined the 12 feature cases; the 3 terrain-only cases are unchanged.
+  // F2: ground-cover consolidation (moss only via ground layer; aquatic + fungus enabled) re-baselined 9 feature cases; the (12,12) feature cases and the 3 terrain-only cases are unchanged.
   struct GoldenCase { unsigned seed; int x,y; bool features; std::uint64_t expected; };
   const GoldenCase cases[]={
-   {0,0,0,true,0xd23a4933a3e5cf24ULL},{0,3,-2,true,0x6ef3e9ac175c9fd6ULL},{0,-5,7,true,0xf09915047de17397ULL},{0,12,12,true,0xc0ec4b22aae013efULL},{0,0,0,false,0x675a54c2da3a3c3eULL},
-   {42,0,0,true,0x6d8446813ebec595ULL},{42,3,-2,true,0xc1f271dbb50299f2ULL},{42,-5,7,true,0xfa7522ea888d9839ULL},{42,12,12,true,0xf76aa905b3029b95ULL},{42,0,0,false,0x0f61a6ac614626beULL},
-   {98765,0,0,true,0x094dd9123ab7b6b9ULL}, // T1c; was U1 (unreal region, overlay density)
-   {98765,3,-2,true,0xda2012233f3b57c8ULL}, // T1c; was U1 (unreal region, overlay density)
-   {98765,-5,7,true,0x2325ae0bce2422e7ULL},{98765,12,12,true,0xfda1a99be6896532ULL},{98765,0,0,false,0x8c534ebf0aa6c2f5ULL},
+   {0,0,0,true,0x80dd54dc05a91649ULL},{0,3,-2,true,0xc1a63b27ba8d0d2dULL},{0,-5,7,true,0xc921e4be45497687ULL},{0,12,12,true,0xdf8fde3cad4d375aULL},{0,0,0,false,0x675a54c2da3a3c3eULL},
+   {42,0,0,true,0x630ecdf7ab50f249ULL},{42,3,-2,true,0xce2f495ee72f71daULL},{42,-5,7,true,0x820b55c3172f53f2ULL},{42,12,12,true,0xfa9aa31c7772ee67ULL},{42,0,0,false,0x0f61a6ac614626beULL},
+   {98765,0,0,true,0x8c5cc6df5038c5cfULL}, // T1c; was U1 (unreal region, overlay density)
+   {98765,3,-2,true,0x2ddd6c0027fce356ULL}, // T1c; was U1 (unreal region, overlay density)
+   {98765,-5,7,true,0xb6b6ac3234c6a934ULL},{98765,12,12,true,0x0c7a872187bdc4b5ULL},{98765,0,0,false,0x8c534ebf0aa6c2f5ULL},
   };
   for(const auto& gc:cases) {
    World w({gc.seed,128,32});

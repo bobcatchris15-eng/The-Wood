@@ -147,6 +147,14 @@ inline constexpr std::uint32_t LayerYoung=7;
 inline constexpr std::uint32_t LayerRockChance=9;
 // Tree species weight roll in tree layer (+10).
 inline constexpr std::uint32_t LayerSpecies=10;
+// Flora role pick within the ground-cover layer, by role ceiling share (+11).
+inline constexpr std::uint32_t LayerFloraRole=11;
+// Per-instance hue/value tint index 0-3 (+12).
+inline constexpr std::uint32_t LayerTint=12;
+// Per-instance height within the species range (+13).
+inline constexpr std::uint32_t LayerHeight=13;
+// Subcanopy tree layer base (layer spacing 6, flora Subcanopy role).
+inline constexpr std::uint32_t SubcanopyLayer=180;
 
 // Fallen deadwood layer base (layer spacing 10, one lattice cell per 100 m²).
 inline constexpr std::uint32_t DeadwoodLayer=140;

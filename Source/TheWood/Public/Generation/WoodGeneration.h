@@ -50,7 +50,10 @@ static_assert(static_cast<int>(Species::Krummholz)+1==kSpeciesCount,"kSpeciesCou
 // Prop features carry propId (0 signboard, 1 picnic table, 2 bin, 3 fence segment); -1 otherwise.
 // Kit features carry kitId (WoodKit.h table index); pitch/roll copied from the piece (same units); -1/0 otherwise.
 // Tree features carry species (Species order); 0 otherwise.
-struct Feature { Kind kind; Vec3 position; double yaw=0, scale=1; bool young=false; bool prairie=false; int propId=-1; int kitId=-1; double pitch=0, roll=0; int species=0; };
+// Flora features (Tree, Fern, Grass from the viability engine) also carry: flora = WoodFlora.h table index of the placed species,
+// floraMesh = table index whose approved mesh renders it (fallback applied), tint 0-3, heightM metres within the species range.
+// flora/floraMesh are -1 for every other feature. yaw is the rotation.
+struct Feature { Kind kind; Vec3 position; double yaw=0, scale=1; bool young=false; bool prairie=false; int propId=-1; int kitId=-1; double pitch=0, roll=0; int species=0; int flora=-1; int floraMesh=-1; int tint=0; double heightM=0; };
 struct Chunk { int x=0, y=0, cells=0; std::vector<Vec3> vertices; std::vector<std::uint32_t> triangles; std::vector<Feature> features; };
 struct Lighting { double brightness=0, kelvin=0; };
 // Outputs of the generate() pipeline stages; each stage reads Settings and earlier stage outputs only.
