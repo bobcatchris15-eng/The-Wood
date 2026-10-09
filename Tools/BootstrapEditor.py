@@ -12,6 +12,46 @@ MEL = unreal.MaterialEditingLibrary
 SMES = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
 ROOT = Path(__file__).resolve().parent.parent
 VERSION = 'CanopyV4'
+STATS = {'imported': 0, 'skipped': 0}
+
+
+def content_dir(package_dir):
+    return ROOT / 'Content' / package_dir[len('/Game/'):]
+
+
+def is_stale(source, package_dir, name=None):
+    """True when the import must run: no matching .uasset on disk, or source newer than the oldest one.
+    name=None checks every .uasset under package_dir (folder level, for PolyHaven variants)."""
+    base = content_dir(package_dir)
+    targets = list(base.rglob((name or '*') + '.uasset')) if base.exists() else []
+    if not targets:
+        return True
+    return Path(source).stat().st_mtime > min(t.stat().st_mtime for t in targets)
+
+
+def import_source(source, destination):
+    task = unreal.AssetImportTask()
+    task.set_editor_property('filename', str(source))
+    task.set_editor_property('destination_path', destination)
+    task.set_editor_property('automated', True)
+    task.set_editor_property('save', True)
+    task.set_editor_property('replace_existing', True)
+    TOOLS.import_asset_tasks([task])
+
+
+def import_unit(source, destination, name=None):
+    """Import one source when missing or stale. Returns True when an import ran (heavy steps then apply)."""
+    if is_stale(source, destination, name):
+        import_source(source, destination)
+        STATS['imported'] += 1
+        return True
+    STATS['skipped'] += 1
+    return False
+
+
+def find_meshes(destination, name):
+    found = [LIB.load_asset(path) for path in LIB.list_assets(destination, recursive=True)]
+    return [mesh for mesh in found if isinstance(mesh, unreal.StaticMesh) and mesh.get_name() == name]
 
 
 def expr(mat, cls, **properties):
@@ -71,13 +111,15 @@ def finish(mat):
 def texture(asset, map_name):
     name = asset + '_' + map_name + '_2k'
     path = '/Game/Art/Ground/' + name
-    if not LIB.does_asset_exist(path):
+    source = ROOT / 'ArtSource/PolyHaven' / asset / (asset + '-' + map_name + '.jpg')
+    if is_stale(source, '/Game/Art/Ground', name):
         task = unreal.AssetImportTask()
-        task.set_editor_property('filename', str(ROOT / 'ArtSource/PolyHaven' / asset / (asset + '-' + map_name + '.jpg')))
+        task.set_editor_property('filename', str(source))
         task.set_editor_property('destination_path', '/Game/Art/Ground')
         task.set_editor_property('destination_name', name)
         task.set_editor_property('automated', True)
         task.set_editor_property('save', True)
+        task.set_editor_property('replace_existing', True)
         TOOLS.import_asset_tasks([task])
     tex = LIB.load_asset(path)
     if tex is None:
@@ -235,15 +277,19 @@ def explicit_needles():
     view=doc['bufferViews'][image['bufferView']]
     start=28+size+view.get('byteOffset',0)
     atlas=ROOT/'ArtSource/Prepared/PineNeedlesRGBA.png'
-    atlas.write_bytes(data[start:start+view['byteLength']])
+    # Rewrite the PNG only when bytes change, so its mtime stays meaningful for the import gate.
+    payload=data[start:start+view['byteLength']]
+    if not atlas.exists() or atlas.read_bytes()!=payload:
+        atlas.write_bytes(payload)
     path='/Game/Art/Ground/T_PineNeedlesRGBA_'+VERSION
-    if not LIB.does_asset_exist(path):
+    if is_stale(atlas,'/Game/Art/Ground','T_PineNeedlesRGBA_'+VERSION):
         task=unreal.AssetImportTask()
         task.set_editor_property('filename',str(atlas))
         task.set_editor_property('destination_path','/Game/Art/Ground')
         task.set_editor_property('destination_name','T_PineNeedlesRGBA_'+VERSION)
         task.set_editor_property('automated',True)
         task.set_editor_property('save',True)
+        task.set_editor_property('replace_existing',True)
         TOOLS.import_asset_tasks([task])
     tex=LIB.load_asset(path)
     if tex is None:
@@ -364,13 +410,15 @@ def author_lods(mesh, slot):
 def gravel_texture(map_name, file_name, normal=False, srgb=False):
     """Gravel022 1K source textures; normal map is OpenGL (green-up) and flipped in-material."""
     path = '/Game/Art/Ground/Gravel022_' + map_name + '_1k'
-    if not LIB.does_asset_exist(path):
+    source = ROOT / 'ArtSource/Textures/Gravel022' / file_name
+    if is_stale(source, '/Game/Art/Ground', 'Gravel022_' + map_name + '_1k'):
         task = unreal.AssetImportTask()
-        task.set_editor_property('filename', str(ROOT / 'ArtSource/Textures/Gravel022' / file_name))
+        task.set_editor_property('filename', str(source))
         task.set_editor_property('destination_path', '/Game/Art/Ground')
         task.set_editor_property('destination_name', 'Gravel022_' + map_name + '_1k')
         task.set_editor_property('automated', True)
         task.set_editor_property('save', True)
+        task.set_editor_property('replace_existing', True)
         TOOLS.import_asset_tasks([task])
     tex = LIB.load_asset(path)
     if tex is None:
@@ -429,23 +477,15 @@ for record in records:
     if record['asset'] not in slots:
         continue
     destination='/Game/Art/PolyHaven/' + VERSION + '/' + record['variant']
+    # Re-import only when the variant is missing or its source is newer (Prepare-Art revisions bump mtime).
+    rebuild=import_unit(prepared/record['file'],destination)
     existing=LIB.list_assets(destination,recursive=True)
-    if not existing or record['asset'] in ('pine_tree_01','prairie_clump','rock_07','boulder_01','rock_moss_set_01','rock_moss_set_02'):
-        # Pine, prairie clump and 2k rock meshes change with every Prepare-Art revision; re-import over the version.
-        task=unreal.AssetImportTask()
-        task.set_editor_property('filename',str(prepared/record['file']))
-        task.set_editor_property('destination_path',destination)
-        task.set_editor_property('automated',True)
-        task.set_editor_property('save',True)
-        task.set_editor_property('replace_existing',True)
-        TOOLS.import_asset_tasks([task])
-        existing=LIB.list_assets(destination,recursive=True)
     meshes=[LIB.load_asset(path) for path in existing]
     meshes=[mesh for mesh in meshes if isinstance(mesh,unreal.StaticMesh)]
     if not meshes:
         raise RuntimeError('Import produced no mesh: '+record['variant'])
     slot=slots[record['asset']]
-    for mesh in meshes:
+    for mesh in (meshes if rebuild else []):
         if slot in ('trees','saplings'):
             mesh.set_editor_property('allow_cpu_access',True)
         # All lighting is dynamic; UV1 is the authored root wind mask. Keep
@@ -469,7 +509,7 @@ for record in records:
                     mesh.set_material(i,with_instancing(interface))
         LIB.save_loaded_asset(mesh)
     groups[slot].extend(meshes)
-    if slot == 'rocks':
+    if slot == 'rocks' and rebuild:
         # Verification log: rock textures should report max dimension 2048 (2k source set).
         for path in LIB.list_assets(destination,recursive=True):
             asset=LIB.load_asset(path)
@@ -489,25 +529,19 @@ for index in range(4):
     if not source.exists():
         raise RuntimeError('Missing prop source: '+str(source))
     destination='/Game/Art/Props/'+VERSION
-    task=unreal.AssetImportTask()
-    task.set_editor_property('filename',str(source))
-    task.set_editor_property('destination_path',destination)
-    task.set_editor_property('automated',True)
-    task.set_editor_property('save',True)
-    task.set_editor_property('replace_existing',True)
-    TOOLS.import_asset_tasks([task])
-    found=[LIB.load_asset(path) for path in LIB.list_assets(destination,recursive=True)]
-    found=[mesh for mesh in found if isinstance(mesh,unreal.StaticMesh) and mesh.get_name()==name]
+    rebuild=import_unit(source,destination,name)
+    found=find_meshes(destination,name)
     if len(found)!=1:
         raise RuntimeError('Prop import produced no unique mesh: '+name)
     mesh=found[0]
-    SMES.remove_collisions(mesh)
-    SMES.add_simple_collisions(mesh,unreal.ScriptingCollisionShapeType.BOX)
-    for i,item in enumerate(mesh.get_editor_property('static_materials')):
-        interface=item.get_editor_property('material_interface')
-        if interface is not None and '/Game/Wood/RockMaterials/' not in interface.get_path_name():
-            mesh.set_material(i,with_instancing(interface))
-    LIB.save_loaded_asset(mesh)
+    if rebuild:
+        SMES.remove_collisions(mesh)
+        SMES.add_simple_collisions(mesh,unreal.ScriptingCollisionShapeType.BOX)
+        for i,item in enumerate(mesh.get_editor_property('static_materials')):
+            interface=item.get_editor_property('material_interface')
+            if interface is not None and '/Game/Wood/RockMaterials/' not in interface.get_path_name():
+                mesh.set_material(i,with_instancing(interface))
+        LIB.save_loaded_asset(mesh)
     props.append(mesh)
 palette.set_editor_property('props',props)
 # Masonry kit (discovery pieces): palette index equals kitId from Source/TheWood/Public/Generation/WoodKit.h.
@@ -532,27 +566,57 @@ for index,(name,solid) in enumerate(KIT_FILES):
     if not source.exists():
         raise RuntimeError('Missing kit source: '+str(source))
     destination='/Game/Art/Kit/'+VERSION
-    task=unreal.AssetImportTask()
-    task.set_editor_property('filename',str(source))
-    task.set_editor_property('destination_path',destination)
-    task.set_editor_property('automated',True)
-    task.set_editor_property('save',True)
-    task.set_editor_property('replace_existing',True)
-    TOOLS.import_asset_tasks([task])
-    found=[LIB.load_asset(path) for path in LIB.list_assets(destination,recursive=True)]
-    found=[mesh for mesh in found if isinstance(mesh,unreal.StaticMesh) and mesh.get_name()==name]
+    rebuild=import_unit(source,destination,name)
+    found=find_meshes(destination,name)
     if len(found)!=1:
         raise RuntimeError('Kit import produced no unique mesh: '+name)
     mesh=found[0]
-    SMES.remove_collisions(mesh)
-    if solid:
-        SMES.add_simple_collisions(mesh,unreal.ScriptingCollisionShapeType.BOX)
-    for i,item in enumerate(mesh.get_editor_property('static_materials')):
-        interface=item.get_editor_property('material_interface')
-        if interface is not None and '/Game/Wood/RockMaterials/' not in interface.get_path_name():
-            mesh.set_material(i,with_instancing(interface))
-    LIB.save_loaded_asset(mesh)
+    if rebuild:
+        SMES.remove_collisions(mesh)
+        if solid:
+            SMES.add_simple_collisions(mesh,unreal.ScriptingCollisionShapeType.BOX)
+        for i,item in enumerate(mesh.get_editor_property('static_materials')):
+            interface=item.get_editor_property('material_interface')
+            if interface is not None and '/Game/Wood/RockMaterials/' not in interface.get_path_name():
+                mesh.set_material(i,with_instancing(interface))
+        LIB.save_loaded_asset(mesh)
     kit.append(mesh)
+# Authored logs and landmarks (Blender, ArtSource/Authored): kit ids 11-20, appended after the masonry kit (WoodKit.h).
+# Each FBX imports with its sibling .fbm textures. Logs have no collision; landmarks are solid.
+AUTHORED_KIT=[
+ ('ArtSource/Authored/Logs/log_long.fbx','/Game/Art/Authored/Logs','log_long',False),
+ ('ArtSource/Authored/Logs/log_short.fbx','/Game/Art/Authored/Logs','log_short',False),
+ ('ArtSource/Authored/Logs/log_mossy_rotten.fbx','/Game/Art/Authored/Logs','log_mossy_rotten',False),
+ ('ArtSource/Authored/Logs/stump_snag.fbx','/Game/Art/Authored/Logs','stump_snag',False),
+ ('ArtSource/Authored/Landmarks/fire_lookout_tower.fbx','/Game/Art/Authored/Landmarks','fire_lookout_tower',True),
+ ('ArtSource/Authored/Landmarks/rock_spire.fbx','/Game/Art/Authored/Landmarks','rock_spire',True),
+ ('ArtSource/Authored/Landmarks/stone_ring_base.fbx','/Game/Art/Authored/Landmarks','stone_ring_base',True),
+ ('ArtSource/Authored/Landmarks/standing_stone_01.fbx','/Game/Art/Authored/Landmarks','standing_stone_01',True),
+ ('ArtSource/Authored/Landmarks/standing_stone_02.fbx','/Game/Art/Authored/Landmarks','standing_stone_02',True),
+ ('ArtSource/Authored/Landmarks/standing_stone_03.fbx','/Game/Art/Authored/Landmarks','standing_stone_03',True),
+]
+for relative,destination,name,solid in AUTHORED_KIT:
+    source=ROOT/relative
+    if not source.exists():
+        raise RuntimeError('Missing authored source: '+str(source))
+    rebuild=import_unit(source,destination,name)
+    found=find_meshes(destination,name)
+    if len(found)!=1:
+        raise RuntimeError('Authored import produced no unique mesh: '+name)
+    mesh=found[0]
+    if rebuild:
+        SMES.remove_collisions(mesh)
+        if solid:
+            SMES.add_simple_collisions(mesh,unreal.ScriptingCollisionShapeType.BOX)
+        for i,item in enumerate(mesh.get_editor_property('static_materials')):
+            interface=item.get_editor_property('material_interface')
+            if interface is not None and '/Game/Wood/RockMaterials/' not in interface.get_path_name():
+                mesh.set_material(i,with_instancing(interface))
+        LIB.save_loaded_asset(mesh)
+    kit.append(mesh)
+# Kit ids must match WoodKit.h exactly; a mismatch would silently shift every kit bucket.
+if len(kit)!=21:
+    raise RuntimeError('Kit array length %d, expected 21 (WoodKit.h count)' % len(kit))
 palette.set_editor_property('kit',kit)
 # Species canopy and dead wood (Prepare-Art TREE_GROUPS). Forced replace-reimport; palette arrays are not yet routed at runtime.
 # Standing trees: Nanite on LOD0 only (no authored LODs; leaves kept at 100% triangles, no trim), UV1 root mask kept,
@@ -578,44 +642,39 @@ for group,name in SPECIES_FILES:
     if not source.exists():
         raise RuntimeError('Missing species source: '+str(source))
     destination='/Game/Art/Species/'+VERSION
-    task=unreal.AssetImportTask()
-    task.set_editor_property('filename',str(source))
-    task.set_editor_property('destination_path',destination)
-    task.set_editor_property('automated',True)
-    task.set_editor_property('save',True)
-    task.set_editor_property('replace_existing',True)
-    TOOLS.import_asset_tasks([task])
-    found=[LIB.load_asset(path) for path in LIB.list_assets(destination,recursive=True)]
-    found=[mesh for mesh in found if isinstance(mesh,unreal.StaticMesh) and mesh.get_name()==name]
+    rebuild=import_unit(source,destination,name)
+    found=find_meshes(destination,name)
     if len(found)!=1:
         raise RuntimeError('Species import produced no unique mesh: '+name)
     mesh=found[0]
-    SMES.remove_collisions(mesh)
-    if group!='snag':
-        mesh.set_editor_property('allow_cpu_access',True)
-    settings=SMES.get_lod_build_settings(mesh,0)
-    settings.set_editor_property('generate_lightmap_u_vs',False)
-    SMES.set_lod_build_settings(mesh,0,settings)
-    # Nanite replaces authored distance LODs for species: LOD0 only. Keep 100% of triangles and no error trim so
-    # leaf geometry is not decimated by the Nanite build.
-    nanite=SMES.get_nanite_settings(mesh)
-    nanite.set_editor_property('enabled',True)
-    nanite.set_editor_property('keep_percent_triangles',1.0)
-    nanite.set_editor_property('trim_relative_error',0.0)
-    # Fallback mesh renders only when Nanite is inactive (non-SM6 RHI). Project targets D3D12 SM6 so Nanite is active;
-    # a light relative-error fallback keeps the content build fast. Nanite LOD0 is unaffected by fallback settings.
-    nanite.set_editor_property('fallback_target',unreal.NaniteFallbackTarget.RELATIVE_ERROR)
-    nanite.set_editor_property('fallback_relative_error',1.0)
-    SMES.set_nanite_settings(mesh,nanite,True)
-    if group!='snag':
-        for i,item in enumerate(mesh.get_editor_property('static_materials')):
-            interface=item.get_editor_property('material_interface')
-            if interface is not None and '/Game/Wood/FoliageWind/' not in interface.get_path_name():
-                # Leaf and twig slots are opaque real geometry (Prepare-Art sets alphaMode OPAQUE); all two-sided.
-                leaf='leaves' in interface.get_name().lower() or 'twig' in interface.get_name().lower()
-                mesh.set_material(i,with_wind(interface,SPECIES_LEAF_WIND if leaf else 16.0,True,False))
-    LIB.save_loaded_asset(mesh)
-    unreal.log('SPECIES_NANITE %s enabled=%s' % (name, SMES.get_nanite_settings(mesh).get_editor_property('enabled')))
+    # Nanite, LOD and wind wiring are heavy (the OOM site); they run only after a fresh import.
+    if rebuild:
+        SMES.remove_collisions(mesh)
+        if group!='snag':
+            mesh.set_editor_property('allow_cpu_access',True)
+        settings=SMES.get_lod_build_settings(mesh,0)
+        settings.set_editor_property('generate_lightmap_u_vs',False)
+        SMES.set_lod_build_settings(mesh,0,settings)
+        # Nanite replaces authored distance LODs for species: LOD0 only. Keep 100% of triangles and no error trim so
+        # leaf geometry is not decimated by the Nanite build.
+        nanite=SMES.get_nanite_settings(mesh)
+        nanite.set_editor_property('enabled',True)
+        nanite.set_editor_property('keep_percent_triangles',1.0)
+        nanite.set_editor_property('trim_relative_error',0.0)
+        # Fallback mesh renders only when Nanite is inactive (non-SM6 RHI). Project targets D3D12 SM6 so Nanite is active;
+        # a light relative-error fallback keeps the content build fast. Nanite LOD0 is unaffected by fallback settings.
+        nanite.set_editor_property('fallback_target',unreal.NaniteFallbackTarget.RELATIVE_ERROR)
+        nanite.set_editor_property('fallback_relative_error',1.0)
+        SMES.set_nanite_settings(mesh,nanite,True)
+        if group!='snag':
+            for i,item in enumerate(mesh.get_editor_property('static_materials')):
+                interface=item.get_editor_property('material_interface')
+                if interface is not None and '/Game/Wood/FoliageWind/' not in interface.get_path_name():
+                    # Leaf and twig slots are opaque real geometry (Prepare-Art sets alphaMode OPAQUE); all two-sided.
+                    leaf='leaves' in interface.get_name().lower() or 'twig' in interface.get_name().lower()
+                    mesh.set_material(i,with_wind(interface,SPECIES_LEAF_WIND if leaf else 16.0,True,False))
+        LIB.save_loaded_asset(mesh)
+        unreal.log('SPECIES_NANITE %s enabled=%s' % (name, SMES.get_nanite_settings(mesh).get_editor_property('enabled')))
     species[group].append(mesh)
 for group,palette_slot in SPECIES_PALETTE.items():
     if not species[group]:
@@ -636,11 +695,39 @@ for record in records:
                 mesh.set_editor_property('allow_cpu_access',True)
                 LIB.save_loaded_asset(mesh)
 
+# Authored fauna (Blender, ArtSource/Authored/Creatures): imported only; not referenced by palettes yet.
+for source in sorted((ROOT/'ArtSource/Authored/Creatures').glob('*.fbx')):
+    import_unit(source,'/Game/Art/Authored/Creatures',source.stem)
+# Authored vegetation (ArtSource/Authored/Vegetation): leaves Masked with wind, as species; not referenced by palettes yet.
+for source in sorted((ROOT/'ArtSource/Authored/Vegetation').glob('*.glb')):
+    destination='/Game/Art/Authored/Vegetation'
+    name=source.stem
+    if import_unit(source,destination,name):
+        # Re-exported glbs hold one mesh each: no merge. Drop the retired combine package and any split parts.
+        legacy=destination+'/'+name+'/'+name
+        if LIB.does_asset_exist(legacy):
+            LIB.delete_asset(legacy)
+        for path in LIB.list_assets(destination,recursive=True):
+            stray=LIB.load_asset(path)
+            if isinstance(stray,unreal.StaticMesh) and stray.get_name().startswith(name+'__'):
+                LIB.delete_asset(str(stray.get_path_name()).split('.')[0])
+        found=find_meshes(destination,name)
+        if len(found)!=1:
+            raise RuntimeError('Vegetation import produced no unique mesh: '+name)
+        mesh=found[0]
+        for i,item in enumerate(mesh.get_editor_property('static_materials')):
+            interface=item.get_editor_property('material_interface')
+            if interface is not None and '/Game/Wood/FoliageWind/' not in interface.get_path_name():
+                leaf=any(key in interface.get_name().lower() for key in ('leaf','leaves','needle','twig','frond','blade'))
+                mesh.set_material(i,with_wind(interface,3.0 if leaf else 16.0,True,leaf))
+        LIB.save_loaded_asset(mesh)
+
 map_path='/Game/Maps/VisualBenchmark'
 if not LIB.does_asset_exist(map_path):
     subsystem=unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
     if not subsystem.new_level(map_path) or not subsystem.save_current_level():
         raise RuntimeError('Could not create benchmark map')
+unreal.log('Bootstrap: imported %d, skipped %d' % (STATS['imported'], STATS['skipped']))
 unreal.log('The Wood forest art initialized: mature canopy, textured ground, flowing ripples and anchored foliage wind.')
 
 
