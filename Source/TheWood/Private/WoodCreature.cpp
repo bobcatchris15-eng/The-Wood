@@ -1,0 +1,74 @@
+#include "WoodCreature.h"
+#include "WoodWorld.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
+
+namespace {
+// Retreat speed, cm/s.
+constexpr double RetreatSpeedCmS=300.0;
+// Placeholder box scale per kind, multiples of the 100 cm engine cube.
+FVector ScaleFor(wood::fauna::CreatureKind Kind) {
+ using wood::fauna::CreatureKind;
+ switch(Kind) {
+ case CreatureKind::Deer: return FVector(1.8,0.7,1.5);
+ case CreatureKind::Elk: return FVector(2.2,0.8,2.0);
+ case CreatureKind::Bear: return FVector(2.4,1.2,2.0);
+ case CreatureKind::Fox: return FVector(0.8,0.3,0.5);
+ case CreatureKind::Hare: return FVector(0.4,0.2,0.3);
+ case CreatureKind::Crow: return FVector(0.2,0.15,0.15);
+ case CreatureKind::Owl: return FVector(0.25,0.25,0.3);
+ case CreatureKind::Heron: return FVector(0.8,0.3,1.2);
+ }
+ return FVector(1.0);
+}
+}
+
+AWoodCreature::AWoodCreature() {
+ PrimaryActorTick.bCanEverTick=true;
+ Body=CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
+ RootComponent=Body;
+ Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void AWoodCreature::Init(wood::fauna::CreatureKind Kind, AWoodWorld* Terrain, double Heading) {
+ KindValue=Kind;
+ Mind=wood::fauna::mindFor(Kind);
+ HeadingDeg=Heading;
+ Ground=Terrain;
+ const FVector Scale=ScaleFor(Kind);
+ Body->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube")));
+ Body->SetRelativeScale3D(Scale);
+ // Cube pivot is its centre; lift by half its height so the base sits on the ground.
+ Body->SetRelativeLocation(FVector(0,0,Scale.Z*50.0));
+}
+
+void AWoodCreature::Tick(float DeltaSeconds) {
+ Super::Tick(DeltaSeconds);
+ const APlayerController* PC=GetWorld()?GetWorld()->GetFirstPlayerController():nullptr;
+ const APawn* Pawn=PC?PC->GetPawn():nullptr;
+ if(!Pawn) return;
+ const FVector Here=GetActorLocation();
+ const FVector PlayerPos=Pawn->GetActorLocation();
+ const FVector ToPlayer(PlayerPos.X-Here.X,PlayerPos.Y-Here.Y,0.0);
+ const double DistM=ToPlayer.Size()/100.0;
+ StateValue=wood::fauna::stepCreature(StateValue,DistM,DeltaSeconds,Mind);
+ if(StateValue==wood::fauna::CreatureState::Retreat) {
+  // Away from the player only: the step never reduces horizontal distance.
+  FVector Away(-ToPlayer.X,-ToPlayer.Y,0.0);
+  if(Away.IsNearlyZero()) {
+   const double Rad=FMath::DegreesToRadians(HeadingDeg);
+   Away=FVector(FMath::Cos(Rad),FMath::Sin(Rad),0.0);
+  }
+  Away.Normalize();
+  FVector Next=Here+Away*RetreatSpeedCmS*DeltaSeconds;
+  if(Ground.IsValid()) Next.Z=Ground->GroundAt(Next.X,Next.Y);
+  SetActorLocation(Next);
+  SetActorRotation(FRotator(0,Away.Rotation().Yaw,0));
+ } else if(!ToPlayer.IsNearlyZero()) {
+  // Notice, Watch and Warn stand still and face the player.
+  SetActorRotation(FRotator(0,ToPlayer.Rotation().Yaw,0));
+ }
+}

@@ -17,6 +17,8 @@ class ARectLight;
 class ASkyLight;
 class AExponentialHeightFog;
 class UMaterialInstanceDynamic;
+class UWoodWeatherComponent;
+struct FWoodResident;
 
 UCLASS()
 class THEWOOD_API AWoodWorld : public AActor {
@@ -98,6 +100,12 @@ private:
  void UpdateForgetting();
  void Realize(const FWoodPreparedChunk& Prepared, bool Detailed=true);
  void SpawnTrailheadLot();
+ // Per-chunk fauna (2x2 fauna cells) and once-per-region landmark placeholders.
+ void SpawnFauna(FWoodResident& Resident, FIntPoint Chunk);
+ void SpawnLandmarks(FIntPoint Chunk);
  UPROPERTY() TObjectPtr<UProceduralMeshComponent> TrailheadLot;
+ UPROPERTY() TObjectPtr<UWoodWeatherComponent> WeatherState;
+ UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> Landmarks;
+ TSet<FIntPoint> LandmarkRegions;
 };
 

@@ -4,8 +4,12 @@
 #include "Async/Async.h"
 #include "GameFramework/PlayerController.h"
 #include "WoodPalette.h"
+#include "WoodCreature.h"
+#include "WoodWeatherComponent.h"
 #include "Generation/WoodAtmosphere.h"
 #include "Generation/WoodEntrance.h"
+#include "Generation/WoodFauna.h"
+#include "Generation/WoodLandmarks.h"
 #include "ProceduralMeshComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/RectLightComponent.h"
@@ -54,6 +58,7 @@ AWoodWorld::~AWoodWorld() = default;
 AWoodWorld::AWoodWorld():Generator(wood::Settings{}),Runtime(MakeShared<FWoodRuntime>()) {
  PrimaryActorTick.bCanEverTick=true;
  RootComponent=CreateDefaultSubobject<USceneComponent>(TEXT("GeneratedWorld"));
+ WeatherState=CreateDefaultSubobject<UWoodWeatherComponent>(TEXT("WoodWeather"));
  bResumeEnabled=!FString(FCommandLine::Get()).Contains(TEXT("-WoodFresh"));
  ResumePath=FPaths::Combine(FPaths::ProjectSavedDir(),TEXT("Wood"),TEXT("resume.json"));
 }
@@ -246,6 +251,7 @@ void AWoodWorld::Tick(float DeltaSeconds) {
  const FVector Position=Viewer?Viewer->GetActorLocation():FVector::ZeroVector;
  CheckThreshold(Position);
  Stream(Position);
+ if(WeatherState) WeatherState->Advance(DeltaSeconds,Generator,Position,Clock.seconds);
  if(SkyComponent) SkyComponent->SetWorldLocation(Position);
  const auto Habitat=Generator.sample(Position.X/100,Position.Y/100);
  const auto Weather=wood::atmosphere(Habitat.forest,Position.X/100,Position.Y/100,Clock.seconds);
@@ -254,7 +260,7 @@ void AWoodWorld::Tick(float DeltaSeconds) {
   SkyMaterial->SetScalarParameterValue(TEXT("SkyBrightness"),static_cast<float>(4*LocalLight.brightness*(1-0.45*Weather.cloudCover)));
   SkyMaterial->SetScalarParameterValue(TEXT("CloudCover"),static_cast<float>(Weather.cloudCover));
  }
- if(AmbientLight) AmbientLight->GetLightComponent()->SetIntensity(static_cast<float>(0.25+0.75*LocalLight.brightness*(1-0.45*Weather.cloudCover)));
+ if(AmbientLight) AmbientLight->GetLightComponent()->SetIntensity(static_cast<float>((0.25+0.75*LocalLight.brightness*(1-0.45*Weather.cloudCover))*(WeatherState?WeatherState->AmbientScale():1.0f)));
   const float CurrentWind=static_cast<float>(Weather.windStrength);
   static float LastWindValue=-1.0f;
   if(FMath::Abs(CurrentWind-LastWindValue)>0.005f) {
@@ -263,7 +269,7 @@ void AWoodWorld::Tick(float DeltaSeconds) {
   }
  if(AtmosphereFog) {
   AtmosphereFog->SetActorLocation(FVector(Position.X,Position.Y,Position.Z+1200));
-  AtmosphereFog->GetComponent()->SetFogDensity(static_cast<float>(0.014+Weather.fogDensity));
+  AtmosphereFog->GetComponent()->SetFogDensity(static_cast<float>(0.014+Weather.fogDensity+(WeatherState?WeatherState->FogDensityBoost():0.0f)));
  }
  for(int32 Index=0;Index<RegionLights.Num();++Index) {
   auto* Component=Cast<URectLightComponent>(RegionLights[Index]->GetLightComponent());

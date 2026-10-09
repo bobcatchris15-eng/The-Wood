@@ -1,5 +1,6 @@
 #include "WoodWorld.h"
 #include "Generation/WoodStreaming.h"
+#include "Generation/WoodLandmarks.h"
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -13,6 +14,7 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Generation/WoodEntrance.h"
+#include "WoodCreature.h"
 #include <cmath>
 
 namespace {
@@ -50,6 +52,7 @@ void AWoodWorld::CheckThreshold(FVector Position) {
  for(const auto& Key:Evict) {
   auto& C=Runtime->Chunks[Key];
   for(int32 I=0;I<C.Instances.Num();++I) if(!C.Instances[I].IsEmpty()) Vegetation[I]->RemoveInstancesById(C.Instances[I],false);
+  for(auto& Creature:C.Creatures) if(Creature.IsValid()) Creature->Destroy();
   Terrain.Remove(C.Ground);C.Ground->DestroyComponent();
   if(C.Water) {Water.Remove(C.Water);C.Water->DestroyComponent();}
   Runtime->Chunks.Remove(Key);
@@ -113,6 +116,69 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
   Resident.Instances[I]=Vegetation[I]->AddInstancesById(Placements[I],true,false);
  }
  Resident.Detailed=true;
+ SpawnFauna(Resident,Key);
+ SpawnLandmarks(Key);
+}
+void AWoodWorld::SpawnFauna(FWoodResident& Resident,FIntPoint Chunk) {
+ if(!GetWorld()) return;
+ // Fauna cells are 64 m; one 128 m terrain chunk holds a 2x2 block of them. Spawns are chunk-local metres.
+ const double Cell=wood::fauna::kChunkM;
+ for(int32 J=0;J<2;++J) for(int32 I=0;I<2;++I) {
+  const int32 GX=Chunk.X*2+I,GY=Chunk.Y*2+J;
+  const auto Region=Generator.regionOwner(GX*Cell+Cell/2,GY*Cell+Cell/2);
+  const auto Family=Generator.region(Region.q,Region.r).family;
+  for(const auto& Spawn:wood::fauna::spawnCreatures(static_cast<uint32>(Seed),GX,GY,Family)) {
+   const double X=GX*Cell+Spawn.x,Y=GY*Cell+Spawn.y;
+   const FVector Where(X*100,Y*100,GroundAt(X*100,Y*100));
+   if(auto* Creature=GetWorld()->SpawnActor<AWoodCreature>(Where,FRotator(0,Spawn.heading,0))) {
+    Creature->Init(Spawn.kind,this,Spawn.heading);
+    Resident.Creatures.Add(Creature);
+   }
+  }
+ }
+}
+void AWoodWorld::SpawnLandmarks(FIntPoint Chunk) {
+ if(!Palette || !GetWorld()) return;
+ // Each region places at most one landmark; it is realized once, the first time a chunk centred in it goes detailed.
+ const auto Region=Generator.regionOwner((Chunk.X+0.5)*128.0,(Chunk.Y+0.5)*128.0);
+ const FIntPoint RegionKey(Region.q,Region.r);
+ if(LandmarkRegions.Contains(RegionKey)) return;
+ LandmarkRegions.Add(RegionKey);
+ const auto Found=wood::landmark::placeLandmark(static_cast<uint32>(Seed),Region.q,Region.r,Generator);
+ if(!Found) return;
+ const auto& Lm=*Found;
+ // Placeholder kit meshes: kitId 2 = SM_StonePier, kitId 9 = SM_GraniteMonolith (WoodKit.h table).
+ auto KitMesh=[this](int32 KitId) -> UStaticMesh* {
+  return Palette->Kit.IsValidIndex(KitId)?Palette->Kit[KitId].LoadSynchronous():nullptr;
+ };
+ UStaticMesh* Asset=nullptr;
+ switch(Lm.kind) {
+ case wood::landmark::LandmarkKind::Spire:
+ case wood::landmark::LandmarkKind::StoneRing: Asset=KitMesh(9); break;
+ case wood::landmark::LandmarkKind::Tower: Asset=KitMesh(2); break;
+ case wood::landmark::LandmarkKind::Waterfall: if(Palette->Rocks.IsValidIndex(0)) Asset=Palette->Rocks[0].LoadSynchronous(); break;
+ case wood::landmark::LandmarkKind::GiantTree: {
+  // Tallest species tree across all canopy arrays.
+  double Tallest=0;
+  for(const auto* Set:{&Palette->Trees,&Palette->ConiferTrees,&Palette->EvergreenTrees,&Palette->BroadleafTrees}) for(const auto& Soft:*Set) {
+   auto* Mesh=Soft.LoadSynchronous();
+   if(Mesh && Mesh->GetBoundingBox().GetSize().Z>Tallest) { Tallest=Mesh->GetBoundingBox().GetSize().Z; Asset=Mesh; }
+  }
+  break;
+ }
+ }
+ if(!Asset) return;
+ const double MeshHeightCm=Asset->GetBoundingBox().GetSize().Z;
+ if(MeshHeightCm<=0) return;
+ auto* Part=NewObject<UStaticMeshComponent>(this);
+ Part->SetupAttachment(RootComponent);
+ Part->SetStaticMesh(Asset);
+ // Mesh pivots sit at ground contact (palette convention), so scale by height and place at the core ground height.
+ Part->SetRelativeLocation(FVector(Lm.x*100,Lm.y*100,Lm.z*100));
+ Part->SetRelativeScale3D(FVector(static_cast<float>(Lm.heightM*100/MeshHeightCm)));
+ Part->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+ Part->RegisterComponent();
+ Landmarks.Add(Part);
 }
 // Retained chunks keep their regions observed; a region unobserved for the grace period gets a new epoch.
 void AWoodWorld::UpdateForgetting() {
@@ -152,6 +218,7 @@ void AWoodWorld::Stream(FVector Position) {
   auto& C=Runtime->Chunks[Key];for(int32 I=0;I<C.Instances.Num();++I) if(!C.Instances[I].IsEmpty()) {
    Vegetation[I]->RemoveInstancesById(C.Instances[I],false);
   }
+  for(auto& Creature:C.Creatures) if(Creature.IsValid()) Creature->Destroy();
   Terrain.Remove(C.Ground);C.Ground->DestroyComponent();if(C.Water) {Water.Remove(C.Water);C.Water->DestroyComponent();}Runtime->Chunks.Remove(Key);
  }
  UpdateForgetting();
