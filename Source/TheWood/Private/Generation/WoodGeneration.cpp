@@ -102,6 +102,44 @@ double familyMul(const std::array<double,kFamilyCount>& biome,const std::array<d
  for(std::size_t i=0;i<kFamilyCount;++i) m+=biome[i]*(mul[i]-1);
  return m;
 }
+// T1c: per-family tree species mix in Biome order, columns in Species order (Pine, Broadleaf, BroadleafGiant, Conifer, Evergreen).
+// Each row sums to one, so a position's blended mix sums to one.
+constexpr std::array<std::array<double,kSpeciesCount>,kFamilyCount> kSpeciesMix{{
+ {{0.4,0.5,0.0,0.1,0.0}}, // TemperateForest
+ {{0.6,0.4,0.0,0.0,0.0}}, // DryGrassland
+ {{0.7,0.0,0.0,0.3,0.0}}, // RockyHighlands
+ {{0.3,0.0,0.0,0.7,0.0}}, // Taiga
+ {{0.2,0.2,0.3,0.3,0.0}}, // OldGrowthForest
+ {{0.0,0.2,0.0,0.8,0.0}}, // ColdRainforest
+ {{0.4,0.0,0.0,0.6,0.0}}, // IcyHills
+ {{0.0,0.7,0.0,0.0,0.3}}, // Savannah
+ {{0.0,0.5,0.0,0.2,0.3}}, // Swamp
+ {{0.0,1.0,0.0,0.0,0.0}}, // Marsh
+ {{0.0,0.3,0.1,0.0,0.6}}  // WarmRainforest
+}};
+// Picks a species by blending the family rows with the position's family weights; roll is in [0,1).
+int pickSpecies(const std::array<double,kFamilyCount>& biome,double roll) {
+ std::array<double,kSpeciesCount> weight{};
+ double total=0;
+ for(std::size_t f=0;f<kFamilyCount;++f) for(std::size_t s=0;s<kSpeciesCount;++s) weight[s]+=biome[f]*kSpeciesMix[f][s];
+ for(const double w:weight) total+=w;
+ if(total<=0) return static_cast<int>(Species::Pine);
+ double target=roll*total;
+ for(std::size_t s=0;s<kSpeciesCount;++s) {
+  if(target<weight[s]) return static_cast<int>(s);
+  target-=weight[s];
+ }
+ // Floating-point remainder: fall back to the last species carrying weight.
+ for(std::size_t s=kSpeciesCount;s-->0;) if(weight[s]>0) return static_cast<int>(s);
+ return static_cast<int>(Species::Pine);
+}
+// T1c: fallen deadwood per 100 m² (one lattice cell), blended by family weights.
+constexpr std::array<double,kFamilyCount> kDeadwoodDensity{{0.02,0,0,0.02,0.08,0.06,0,0,0.05,0,0}};
+double deadwoodDensity(const std::array<double,kFamilyCount>& biome) {
+ double d=0;
+ for(std::size_t i=0;i<kFamilyCount;++i) d+=biome[i]*kDeadwoodDensity[i];
+ return d;
+}
 
 Region describe(const World& w,int gx,int gy) {
  const auto seed=w.regionSeed(gx,gy);
@@ -434,7 +472,7 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
    const auto ov=overlayField(*this,px,py);
    const double patch=0.5+0.5*noise(config.seed+Salt::PatchCover,px/38,py/38);
    const double routeDistance=std::abs(px-(streamX(py)-7));
-   Kind kind; double scale; bool young=false;
+   Kind kind; double scale; bool young=false; int species=static_cast<int>(Species::Pine);
    if(type==0) {
     // Dynamic groves and sunlit clearings interrupt the temperate and taiga canopies.
     const double grove=smooth((patch-0.26)/0.36);
@@ -442,6 +480,7 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     if(surface.slope>=0.7||routeDistance<3.5||choice>density) continue;
     if(isInsideReservation(reservations,px,py,true)) continue;
     kind=Kind::Tree;
+    species=pickSpecies(surface.biome,random(seed,gx,gy,salt+Salt::LayerSpecies));
     // Loose regeneration patches and a wide spread of multi-tiered cohorts.
     const double regeneration=0.5+0.5*noise(config.seed+Salt::Regeneration,px/55,py/55);
     young=random(seed,gx,gy,salt+Salt::LayerYoung)<0.11+0.28*regeneration;
@@ -497,6 +536,12 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     if(carpet<=0||routeDistance<1.2||choice>carpet*(0.55+0.45*mossPatch)) continue;
     kind=random(seed,gx,gy,salt+Salt::LayerFernChance)<0.10?Kind::Fern:Kind::Grass;
     scale=0.30+random(seed,gx,gy,salt+Salt::LayerSize)*0.45;
+   } else if(type==5) {
+    // Fallen logs: one lattice cell per 100 m², kept off walking routes, streams (above) and discovery reservations.
+    const double density=deadwoodDensity(surface.biome);
+    if(density<=0||routeDistance<2.5||choice>density||isInsideReservation(reservations,px,py,true)) continue;
+    kind=Kind::Deadwood;
+    scale=0.8+random(seed,gx,gy,salt+Salt::LayerSize)*0.5;
    } else {
     // Larger rock groups occur in patches, particularly on exposed highlands.
     const double rocky=0.5+0.5*noise(config.seed+Salt::Rocky,px/24,py/24);
@@ -510,7 +555,9 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     const double highlandBoost=surface.biome[2]>0.35?(1.2+1.5*surface.biome[2]):1.0;
     scale=((streamDist<=4.5)?(0.65+random(seed,gx,gy,salt+Salt::LayerSize)*1.5):(0.95+random(seed,gx,gy,salt+Salt::LayerSize)*2.6))*highlandBoost;
    }
-   habitat.features.push_back({kind,{px,py,terrainHeight(px,py)},random(seed,gx,gy,salt+Salt::LayerYaw)*360,scale*ov.featureScale,young,type==3});
+   Feature feature{kind,{px,py,terrainHeight(px,py)},random(seed,gx,gy,salt+Salt::LayerYaw)*360,scale*ov.featureScale,young,type==3};
+   feature.species=species;
+   habitat.features.push_back(feature);
   }
  };
  layer(8.5,Salt::TreeLayer,0);
@@ -518,6 +565,7 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
  layer(6,Salt::RockLayer,2);
  layer(1.0,Salt::PrairieLayer,3);
  layer(1.5,Salt::TaigaMossLayer,4);
+ layer(10.0,Salt::DeadwoodLayer,5);
  if(!entered_) for(auto feature:entrance::fixedFeatures()) {
   if(feature.position.x<minX||feature.position.x>=maxX||feature.position.y<minY||feature.position.y>=maxY) continue;
   feature.position.z=terrainHeight(feature.position.x,feature.position.y);

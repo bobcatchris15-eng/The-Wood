@@ -118,19 +118,33 @@ void AWoodWorld::Generate() {
  TArray<bool> PrairieMesh;
  TArray<int32> PropIds;
  TArray<int32> KitIds;
+ TArray<int32> SpeciesIds;
  if(Palette) {
-  auto Add=[&](const TArray<TSoftObjectPtr<UStaticMesh>>& Source,wood::Kind Kind,bool IsYoung=false,bool IsPrairie=false) {
-   for(const auto& Mesh:Source) { Meshes.Add(Mesh); Kinds.Add(Kind);Young.Add(IsYoung);PrairieMesh.Add(IsPrairie);PropIds.Add(-1);KitIds.Add(-1); }
+  auto Add=[&](const TArray<TSoftObjectPtr<UStaticMesh>>& Source,wood::Kind Kind,bool IsYoung=false,bool IsPrairie=false,int32 Species=-1) {
+   for(const auto& Mesh:Source) { Meshes.Add(Mesh); Kinds.Add(Kind);Young.Add(IsYoung);PrairieMesh.Add(IsPrairie);PropIds.Add(-1);KitIds.Add(-1);SpeciesIds.Add(Species); }
   };
-  Add(Palette->Trees,wood::Kind::Tree); Add(Palette->Saplings,wood::Kind::Tree,true); Add(Palette->Ferns,wood::Kind::Fern);
+  // Tree species (wood::Species): Trees are pines; saplings are young and take the young bucket regardless of species.
+  Add(Palette->Trees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::Pine));
+  Add(Palette->Saplings,wood::Kind::Tree,true);
+  // Broadleaf meshes split by name: the jacaranda is the giant, every other broadleaf is small.
+  for(const auto& Mesh:Palette->BroadleafTrees) {
+   const bool Giant=Mesh.ToSoftObjectPath().GetAssetName().Contains(TEXT("jacaranda"),ESearchCase::IgnoreCase);
+   Meshes.Add(Mesh); Kinds.Add(wood::Kind::Tree); Young.Add(false); PrairieMesh.Add(false); PropIds.Add(-1); KitIds.Add(-1);
+   SpeciesIds.Add(static_cast<int32>(Giant?wood::Species::BroadleafGiant:wood::Species::Broadleaf));
+  }
+  Add(Palette->ConiferTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::Conifer));
+  Add(Palette->EvergreenTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::Evergreen));
+  Add(Palette->Ferns,wood::Kind::Fern);
   Add(Palette->Grasses,wood::Kind::Grass); Add(Palette->Rocks,wood::Kind::Rock); Add(Palette->Prairie,wood::Kind::Grass,false,true);
+  // Fallen logs: Kind::Deadwood has no collision and no wind material.
+  Add(Palette->DeadWood,wood::Kind::Deadwood);
   // Palette index is the propId; slots beyond WoodPropCount have no bucket and are skipped.
   for(int32 PropId=0;PropId<Palette->Props.Num()&&PropId<WoodPropCount;++PropId) {
-   Meshes.Add(Palette->Props[PropId]); Kinds.Add(wood::Kind::Prop); Young.Add(false); PrairieMesh.Add(false); PropIds.Add(PropId); KitIds.Add(-1);
+   Meshes.Add(Palette->Props[PropId]); Kinds.Add(wood::Kind::Prop); Young.Add(false); PrairieMesh.Add(false); PropIds.Add(PropId); KitIds.Add(-1); SpeciesIds.Add(-1);
   }
   // Palette index is the kitId; slots beyond WoodKitCount have no bucket and are skipped.
   for(int32 KitId=0;KitId<Palette->Kit.Num()&&KitId<WoodKitCount;++KitId) {
-   Meshes.Add(Palette->Kit[KitId]); Kinds.Add(wood::Kind::Kit); Young.Add(false); PrairieMesh.Add(false); PropIds.Add(-1); KitIds.Add(KitId);
+   Meshes.Add(Palette->Kit[KitId]); Kinds.Add(wood::Kind::Kit); Young.Add(false); PrairieMesh.Add(false); PropIds.Add(-1); KitIds.Add(KitId); SpeciesIds.Add(-1);
   }
  }
  for(int32 Index=0;Index<Meshes.Num();++Index) {
@@ -152,7 +166,7 @@ void AWoodWorld::Generate() {
    Body->CreatePhysicsMeshes();
   }
   Instances->SetStaticMesh(Asset);
-  if(Asset && Kinds[Index]!=wood::Kind::Rock && Kinds[Index]!=wood::Kind::Prop && Kinds[Index]!=wood::Kind::Kit) {
+  if(Asset && Kinds[Index]!=wood::Kind::Rock && Kinds[Index]!=wood::Kind::Prop && Kinds[Index]!=wood::Kind::Kit && Kinds[Index]!=wood::Kind::Deadwood) {
    for(int32 Slot=0;Slot<Asset->GetStaticMaterials().Num();++Slot) {
     if(auto* Material=Instances->CreateDynamicMaterialInstance(Slot)) WindMaterials.Add(Material);
    }
@@ -169,7 +183,7 @@ void AWoodWorld::Generate() {
   Vegetation.Add(Instances);
   Runtime->Available.Add(Asset!=nullptr);
   Runtime->Kinds.Add(Kinds[Index]);
-  auto Profile=Asset?WoodPlacementProfile(*Asset):FWoodPlacementProfile{};Profile.Young=Young[Index];Profile.Prairie=PrairieMesh[Index];Profile.PropId=PropIds[Index];Profile.KitId=KitIds[Index];
+  auto Profile=Asset?WoodPlacementProfile(*Asset):FWoodPlacementProfile{};Profile.Young=Young[Index];Profile.Prairie=PrairieMesh[Index];Profile.PropId=PropIds[Index];Profile.KitId=KitIds[Index];Profile.Species=SpeciesIds[Index];
   Runtime->Profiles.Add(Profile);
  }
  const FVector Start=ExplorerStart();

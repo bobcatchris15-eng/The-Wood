@@ -204,6 +204,57 @@ int main() {
   check(world.sample(t.origin.x,t.origin.y).biome[3]>0.65,"taiga core origin is taiga-dominant");
   check(coverPer100>=3.0*taigaBaseline,"taiga core cover density is at least 3x the pre-change baseline");
  }
+ // T1c: tree species shares and deadwood by family core. A core chunk has its centre weight >= 0.9 in one family.
+ {
+  const auto coreChunks=[](const World& w,Biome family) {
+   std::vector<std::pair<int,int>> out;
+   const auto index=static_cast<std::size_t>(family);
+   for(int cy=-20;cy<20;++cy) for(int cx=-20;cx<20;++cx)
+    if(w.sample(cx*128+64.0,cy*128+64.0).biome[index]>=0.9) out.push_back({cx,cy});
+   return out;
+  };
+  struct Mix { Biome family; std::array<double,kSpeciesCount> share; };
+  const Mix mixes[]={{Biome::TemperateForest,{{0.4,0.5,0.0,0.1,0.0}}},{Biome::OldGrowthForest,{{0.2,0.2,0.3,0.3,0.0}}}};
+  for(const auto& mix:mixes) {
+   std::array<std::size_t,kSpeciesCount> counts{};
+   std::size_t trees=0;
+   for(unsigned seed:{0u,42u,98765u}) {
+    World world({seed,128,64});
+    const auto cores=coreChunks(world,mix.family);
+    for(std::size_t k=0;k<cores.size()&&k<12;++k)
+     for(const auto& f:world.generate(cores[k].first,cores[k].second).features) {
+      if(f.kind!=Kind::Tree) continue;
+      ++trees; ++counts[static_cast<std::size_t>(f.species)];
+     }
+   }
+   check(trees>=500,"species sample holds at least 500 trees per family core");
+   for(std::size_t s=0;s<kSpeciesCount;++s)
+    check(std::abs(static_cast<double>(counts[s])/static_cast<double>(trees)-mix.share[s])<=0.05,"tree species shares match the family mix within 5 percent");
+  }
+  std::size_t oldGrowthChunks=0,oldGrowthLogs=0,dryChunks=0,dryLogs=0;
+  for(unsigned seed:{0u,42u,98765u}) {
+   World world({seed,128,64});
+   const auto oldCores=coreChunks(world,Biome::OldGrowthForest);
+   for(std::size_t k=0;k<oldCores.size()&&k<12;++k) {
+    ++oldGrowthChunks;
+    for(const auto& f:world.generate(oldCores[k].first,oldCores[k].second).features) oldGrowthLogs+=f.kind==Kind::Deadwood;
+   }
+   const auto dryCores=coreChunks(world,Biome::DryGrassland);
+   for(std::size_t k=0;k<dryCores.size()&&k<12;++k) {
+    ++dryChunks;
+    // Pure core only: a log at a position with any other family weight carries that family's (small) density.
+    for(const auto& f:world.generate(dryCores[k].first,dryCores[k].second).features) {
+     if(f.kind!=Kind::Deadwood) continue;
+     if(world.sample(f.position.x,f.position.y).biome[static_cast<std::size_t>(Biome::DryGrassland)]>=0.999) ++dryLogs;
+    }
+   }
+  }
+  check(oldGrowthChunks>0,"OldGrowth core chunks exist in the sampled window");
+  check(oldGrowthLogs>0,"deadwood present in OldGrowth core");
+  check(dryChunks>0,"DryGrassland core chunks exist in the sampled window");
+  check(dryLogs==0,"deadwood absent from DryGrassland core");
+  std::cout<<"Deadwood core logs: OldGrowth "<<oldGrowthLogs<<" over "<<oldGrowthChunks<<" chunks, DryGrassland "<<dryLogs<<" over "<<dryChunks<<" chunks\n";
+ }
  if(!failures) std::cout<<"PASS: regional planning, ecology, climate blends, lighting, routes and triangulated grounding\n";
  return failures?1:0;
 }

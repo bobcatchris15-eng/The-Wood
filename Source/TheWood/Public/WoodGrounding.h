@@ -12,12 +12,20 @@ struct FWoodPlacementProfile {
  bool Prairie=false;
  int32 PropId=-1;
  int32 KitId=-1;
+ // Tree species (wood::Species index) for Tree meshes; -1 otherwise.
+ int32 Species=-1;
 };
 // Palette Props slots and prop bucket count; prop buckets are 6+propId.
 inline constexpr int32 WoodPropCount=4;
 // Palette Kit slots (kitId order, WoodKit.h); kit buckets are WoodKitBucketBase+kitId.
 inline constexpr int32 WoodKitCount=11;
 inline constexpr int32 WoodKitBucketBase=6+WoodPropCount;
+// Bucket map (candidate tables, WoodPreparedChunk.cpp): 0-3 kinds, 4 young, 5 prairie, 6-9 props,
+// 10-20 kits, 21-25 tree species (WoodSpeciesBucketBase+species), 26 deadwood.
+inline constexpr int32 WoodSpeciesCount=wood::kSpeciesCount;
+inline constexpr int32 WoodSpeciesBucketBase=WoodKitBucketBase+WoodKitCount;
+inline constexpr int32 WoodDeadwoodBucket=WoodSpeciesBucketBase+WoodSpeciesCount;
+inline constexpr int32 WoodBucketCount=WoodDeadwoodBucket+1;
 // Kit meshes with collision: walls, piers, abutments, boulders. Rubble, debris, fern patch, foundation and stepping stones have none.
 inline bool WoodKitSolid(int32 KitId) { return KitId==0||KitId==2||KitId==3||KitId==7||KitId==9||KitId==10; }
 THEWOOD_API FWoodPlacementProfile WoodPlacementProfile(const UStaticMesh& Asset);

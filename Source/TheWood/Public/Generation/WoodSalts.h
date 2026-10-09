@@ -103,6 +103,11 @@ inline constexpr std::uint32_t LayerFernChance=5;
 inline constexpr std::uint32_t LayerYoung=7;
 // Rock-replacement roll in ground-cover layer (+9).
 inline constexpr std::uint32_t LayerRockChance=9;
+// Tree species weight roll in tree layer (+10).
+inline constexpr std::uint32_t LayerSpecies=10;
+
+// Fallen deadwood layer base (layer spacing 10, one lattice cell per 100 m²).
+inline constexpr std::uint32_t DeadwoodLayer=140;
 
 } // namespace Salt
 } // namespace wood

@@ -43,7 +43,11 @@ std::uint64_t fingerprintChunk(const wood::World& world,const wood::Chunk& c) {
   f.real(p.yaw); f.real(p.scale); f.u64(p.young?1:0); f.u64(p.prairie?1:0);
   // Kit fields hashed only for Kit features, so chunks without kit pieces keep their fingerprints.
   if(p.kind==wood::Kind::Kit) { f.integer(p.kitId); f.real(p.pitch); f.real(p.roll); }
+  // T1c: tree species and deadwood are hashed for every feature.
+  f.integer(p.species); f.integer(p.kind==wood::Kind::Deadwood?1:0);
  }
+ // T1c: trailing tag so chunks without features (no species or deadwood records) also re-fingerprint.
+ f.integer(0x71C7EEu);
  return f.h;
 }
 int main() {
@@ -360,13 +364,14 @@ int main() {
   // B1b: kFamilyCount 6->8 (+IcyHills, Savannah)
   // B1c: kFamilyCount 8->10 (+Swamp, Marsh)
   // B1d: kFamilyCount 10->11 (+WarmRainforest)
+  // T1c: tree species + deadwood (fingerprint hashes species and Deadwood; all 15 cases re-baselined)
   struct GoldenCase { unsigned seed; int x,y; bool features; std::uint64_t expected; };
   const GoldenCase cases[]={
-   {0,0,0,true,0x338cb5e83b249e17ULL},{0,3,-2,true,0xaf85087e30dc82edULL},{0,-5,7,true,0xab78e9b16d4612e7ULL},{0,12,12,true,0xfeed981d523be5b9ULL},{0,0,0,false,0x3ea0252fe7ec6318ULL},
-   {42,0,0,true,0xdfa2056accec3f05ULL},{42,3,-2,true,0x896b503b10a5cf8fULL},{42,-5,7,true,0x44ff7bda12fe3ce5ULL},{42,12,12,true,0xd70bc11a084283b7ULL},{42,0,0,false,0xe1d20fb53bf66d18ULL},
-   {98765,0,0,true,0x16cde6e759bf9387ULL}, // changed in U1: chunk lies in an unreal region (overlay density)
-   {98765,3,-2,true,0xd16057461051355dULL}, // changed in U1: chunk lies in an unreal region (overlay density)
-   {98765,-5,7,true,0x5f088fb68466bfdbULL},{98765,12,12,true,0x1359bd81ed86a120ULL},{98765,0,0,false,0x6f9734feeb9274dfULL},
+   {0,0,0,true,0x9eda86d125b4e204ULL},{0,3,-2,true,0x741dcb18fa8cbd96ULL},{0,-5,7,true,0xd8d6cfab51312237ULL},{0,12,12,true,0xab28fc6094983eafULL},{0,0,0,false,0x8a111cce6e8c38deULL},
+   {42,0,0,true,0xab3649166884e235ULL},{42,3,-2,true,0xa26f3f0340084572ULL},{42,-5,7,true,0x34cd218484e83e79ULL},{42,12,12,true,0x88f485db94c06915ULL},{42,0,0,false,0xaf2d160c80bb82deULL},
+   {98765,0,0,true,0x9aa9b2cc077798d9ULL}, // T1c; was U1 (unreal region, overlay density)
+   {98765,3,-2,true,0x4658e5fcde63e608ULL}, // T1c; was U1 (unreal region, overlay density)
+   {98765,-5,7,true,0x8a8d8def755f5647ULL},{98765,12,12,true,0xa1ff85ebb7e82eb2ULL},{98765,0,0,false,0x0a74d714ecd41095ULL},
   };
   for(const auto& gc:cases) {
    World w({gc.seed,128,32});

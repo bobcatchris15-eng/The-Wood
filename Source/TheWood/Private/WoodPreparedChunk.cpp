@@ -34,16 +34,20 @@ FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
  };
  // Candidate tables are immutable within the job, avoiding allocation per plant.
  TArray<TArray<int32>> Candidates;
- // Buckets: 0-3 kinds, 4 young, 5 prairie, 6+propId props.
- Candidates.SetNum(WoodKitBucketBase+WoodKitCount);
+ // Buckets (WoodGrounding.h map): 0-3 kinds, 4 young, 5 prairie, 6-9 props, 10-20 kits, 21-25 tree species, 26 deadwood.
+ Candidates.SetNum(WoodBucketCount);
  for(int32 I=0;I<Kinds.Num();++I) {
   if(!Available[I]) continue;
   const auto& Profile=Profiles[I];
   const bool PropMesh=Kinds[I]==wood::Kind::Prop&&Profile.PropId>=0&&Profile.PropId<WoodPropCount;
   // Kind::Kit (5) is not a raw bucket: kit meshes take WoodKitBucketBase+kitId, else Rock.
   const bool KitMesh=Kinds[I]==wood::Kind::Kit&&Profile.KitId>=0&&Profile.KitId<WoodKitCount;
+  // Tree meshes with a species take WoodSpeciesBucketBase+species; Kind::Deadwood (6) is not a raw bucket, it takes WoodDeadwoodBucket.
+  const bool SpeciesMesh=Kinds[I]==wood::Kind::Tree&&Profile.Species>=0&&Profile.Species<WoodSpeciesCount;
+  const bool DeadwoodMesh=Kinds[I]==wood::Kind::Deadwood;
   const int32 Raw=Kinds[I]==wood::Kind::Kit?static_cast<int32>(wood::Kind::Rock):static_cast<int32>(Kinds[I]);
-  Candidates[Profile.Prairie?5:Profile.Young?4:PropMesh?6+Profile.PropId:KitMesh?WoodKitBucketBase+Profile.KitId:Raw].Add(I);
+  Candidates[Profile.Prairie?5:Profile.Young?4:PropMesh?6+Profile.PropId:KitMesh?WoodKitBucketBase+Profile.KitId:
+   SpeciesMesh?WoodSpeciesBucketBase+Profile.Species:DeadwoodMesh?WoodDeadwoodBucket:Raw].Add(I);
  }
  for(const auto& Feature:Chunk.features) {
   int32 Bucket=Feature.young?4:static_cast<int32>(Feature.kind==wood::Kind::Prop?wood::Kind::Rock:Feature.kind);
@@ -58,6 +62,13 @@ FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
    const bool HasKit=Feature.kitId>=0&&Feature.kitId<WoodKitCount&&!Candidates[WoodKitBucketBase+Feature.kitId].IsEmpty();
    Bucket=HasKit?WoodKitBucketBase+Feature.kitId:static_cast<int32>(wood::Kind::Rock);
   }
+  // Mature trees take their species bucket; an empty species bucket keeps the Tree bucket. Saplings keep the young bucket.
+  if(Feature.kind==wood::Kind::Tree&&!Feature.young) {
+   const bool HasSpecies=Feature.species>=0&&Feature.species<WoodSpeciesCount&&!Candidates[WoodSpeciesBucketBase+Feature.species].IsEmpty();
+   if(HasSpecies) Bucket=WoodSpeciesBucketBase+Feature.species;
+  }
+  // Deadwood features take the deadwood bucket (its raw Kind value would alias the prop buckets).
+  if(Feature.kind==wood::Kind::Deadwood) Bucket=WoodDeadwoodBucket;
   const auto& Matches=Candidates[Bucket];
   if(Matches.IsEmpty()) continue;
   const int32 NumMatches=Matches.Num();
