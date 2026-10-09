@@ -804,6 +804,12 @@ KIT_SPECS = (
 )
 
 
+# Masonry pieces re-authored as individual stones by Tools/Author-StoneKit.py (Blender). Skipped here so a
+# full Prepare-Art run never overwrites them with the old box kit. Fern, monolith and talus stay procedural.
+AUTHORED_STONE_KIT = ('SM_DryStone_Wall', 'SM_DryStone_Rubble', 'SM_StonePier', 'SM_StonePier_Ruined',
+                      'SM_FoundationCourse', 'SM_MasonryDebris', 'SM_BridgeAbutment', 'SM_RiverSteppingStone')
+
+
 def build_stone_kit():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     materials = {
@@ -811,6 +817,8 @@ def build_stone_kit():
         'rock': make_stone_material('M_StoneKit_Rock', 'rustic_stone_wall'),
     }
     for index, (name, build, material_key, nominal, grammar) in enumerate(KIT_SPECS):
+        if name in AUTHORED_STONE_KIT:
+            continue
         seed = STONE_KIT_SEED + index
         rng = random.Random(seed)
         file_name = 'kit_' + name.lower() + '.glb'
