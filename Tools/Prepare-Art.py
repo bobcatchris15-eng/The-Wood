@@ -27,26 +27,84 @@ TREE_GROUPS = {
     'dead_tree_trunk_02': 'snag',
 }
 tree_counts = {}
-# LOD0 triangle ceiling for non-pine species groups (collapse decimation). Bump TREE_BUDGET_VERSION to force reprocessing.
-TREE_LOD0_MAX = 150000
-TREE_BUDGET_VERSION = 1
+# Bark ceiling for non-pine species groups. Only non-leaf material slots (bark, trunk, branches) are
+# collapse-decimated to this cap; leaf slots are never decimated. Bump TREE_BUDGET_VERSION to force reprocessing.
+TREE_BARK_MAX = 300000
+TREE_BUDGET_VERSION = 3
+# Material-name terms that mark foliage. Every other species slot is bark.
+LEAF_TERMS = ('leaves', 'twig')
 
 
-def decimate_tree(obj):
-    """Collapse-decimate a species group tree to TREE_LOD0_MAX. Whole-mesh collapse: trunk, branches and leaf geometry share one ratio.
-    Material slots and UV layers survive collapse, so the UV1 root mask is written afterwards by wind_uv.
+def is_leaf_material(name):
+    return any(term in name for term in LEAF_TERMS)
+
+
+def split_bark_leaf(obj):
+    """Split a species mesh by material slot into a bark object and a leaf object (None if no leaf faces).
+    Both parts keep every material slot and UV layer; the source object is removed."""
+    mesh = obj.data
+    names = [m.name.lower() if m else '' for m in mesh.materials]
+    leaf_slots = {i for i, n in enumerate(names) if is_leaf_material(n)}
+
+    def part(keep_leaf, label):
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+        bm.faces.ensure_lookup_table()
+        doomed = [f for f in bm.faces if (f.material_index in leaf_slots) != keep_leaf]
+        if doomed:
+            bmesh.ops.delete(bm, geom=doomed, context='FACES')
+        loose = [v for v in bm.verts if not v.link_faces]
+        if loose:
+            bmesh.ops.delete(bm, geom=loose, context='VERTS')
+        loose_edges = [e for e in bm.edges if not e.link_faces]
+        if loose_edges:
+            bmesh.ops.delete(bm, geom=loose_edges, context='EDGES')
+        part_mesh = bpy.data.meshes.new(obj.name + '_' + label)
+        bm.to_mesh(part_mesh)
+        bm.free()
+        for material in mesh.materials:
+            part_mesh.materials.append(material)
+        part_obj = bpy.data.objects.new(obj.name + '_' + label, part_mesh)
+        part_obj.matrix_world = obj.matrix_world.copy()
+        bpy.context.collection.objects.link(part_obj)
+        return part_obj
+
+    bark = part(False, 'bark')
+    leaf = part(True, 'leaf') if leaf_slots else None
+    if leaf is not None:
+        leaf.data.calc_loop_triangles()
+        if not leaf.data.loop_triangles:
+            bpy.data.objects.remove(leaf, do_unlink=True)
+            leaf = None
+    bpy.data.objects.remove(obj, do_unlink=True)
+    return bark, leaf
+
+
+def join_parts(primary, secondary):
+    """Join secondary into primary (both linked in the view layer). Returns the joined object."""
+    bpy.ops.object.select_all(action='DESELECT')
+    primary.select_set(True)
+    secondary.select_set(True)
+    bpy.context.view_layer.objects.active = primary
+    bpy.ops.object.join()
+    return bpy.context.view_layer.objects.active
+
+
+def decimate_bark(obj):
+    """Collapse-decimate a bark-only species object to TREE_BARK_MAX. Material slots and UV layers survive collapse,
+    so the UV1 root mask is written afterwards by wind_uv.
     Returns (triangles_before, triangles_after, ratios_applied)."""
     obj.data.calc_loop_triangles()
     before = len(obj.data.loop_triangles)
     ratios = []
-    while len(obj.data.loop_triangles) > TREE_LOD0_MAX and len(ratios) < 3:
+    while len(obj.data.loop_triangles) > TREE_BARK_MAX and len(ratios) < 3:
         current = len(obj.data.loop_triangles)
-        ratio = (TREE_LOD0_MAX - 5000) / current
+        ratio = (TREE_BARK_MAX - 5000) / current
         ratios.append(round(ratio, 5))
         bpy.ops.object.select_all(action='DESELECT')
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
-        modifier = obj.modifiers.new('LOD0Budget', 'DECIMATE')
+        modifier = obj.modifiers.new('BarkBudget', 'DECIMATE')
         modifier.decimate_type = 'COLLAPSE'
         modifier.ratio = ratio
         bpy.ops.object.modifier_apply(modifier=modifier.name)
@@ -182,14 +240,19 @@ def remove_soil(obj):
     return count
 
 
-def wind_uv(path, tree):
-    """Write a dedicated UV1 root mask. Vertex colors would tint glTF shading."""
+def wind_uv(path, tree, species=False):
+    """Write a dedicated UV1 root mask. Vertex colors would tint glTF shading.
+    species: species trees get leaf/twig materials OPAQUE (real geometry, no transparency) and a root weight
+    normalised over the tree's own height instead of the fixed 0.6 m pine band."""
     data = path.read_bytes()
     json_size = struct.unpack_from('<I', data, 12)[0]
     doc = json.loads(data[20:20 + json_size])
     for material in doc.get('materials',[]):
         if 'PineNeedleCards' in material.get('name',''):
             material.update(alphaMode='MASK',alphaCutoff=0.35,doubleSided=True)
+        elif species and is_leaf_material(material.get('name','').lower()):
+            material.update(alphaMode='OPAQUE',doubleSided=True)
+            material.pop('alphaCutoff', None)
     binary = bytearray(data[28 + json_size:])
     positions = []
     for mesh in doc['meshes']:
@@ -233,7 +296,9 @@ def wind_uv(path, tree):
         for height in heights:
             if tree:
                 # Smoothstep root blend: 0 at lowest vertex, 1 at 0.6 m above it (post soil removal).
-                t = max(0.0, min(1.0, (height - low) / 0.6))
+                # Species: 0 at lowest vertex, 1 at the tree's full height.
+                reach = max(span, 0.01) if species else 0.6
+                t = max(0.0, min(1.0, (height - low) / reach))
                 weight = t * t * (3.0 - 2.0 * t)
             else:
                 weight = max(0.0, min(1.0, (height - low - 0.08) / max(span - 0.08, 0.01)))
@@ -261,7 +326,7 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
     if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==7 for record in cached)) and (name not in TREE_GROUPS or all(record.get('lod0_budget_version')==TREE_BUDGET_VERSION for record in cached)) and (not rock_2k or all(record.get('texture_res')=='2k' for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
         for record in cached:
             if record.get('wind_uv_version') != 2:
-                wind_uv(output / record['file'], is_tree(name))
+                wind_uv(output / record['file'], is_tree(name), name in TREE_GROUPS)
                 record['wind_uv_version'] = 2
                 record.pop('wind_color_version', None)
                 if is_tree(name):
@@ -310,10 +375,26 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
             print(f'{variant}: removed {soil_faces} soil ground faces')
         budget = {}
         if name in TREE_GROUPS:
-            pre_tris, post_tris, ratios = decimate_tree(obj)
-            print(f'{variant}: LOD0 tris {pre_tris} -> {post_tris} ratios {ratios}')
-            budget = {'pre_decimate_triangles': pre_tris, 'decimate_ratios': ratios,
-                      'lod0_budget_max': TREE_LOD0_MAX, 'lod0_budget_version': TREE_BUDGET_VERSION}
+            # Foliage stays at full source geometry; only bark/trunk/branch slots are decimated.
+            obj.data.calc_loop_triangles()
+            pre_tris = len(obj.data.loop_triangles)
+            bark, leaf = split_bark_leaf(obj)
+            bark_before, bark_after, ratios = decimate_bark(bark)
+            leaf_tris = 0
+            if leaf is not None:
+                leaf.data.calc_loop_triangles()
+                leaf_tris = len(leaf.data.loop_triangles)
+                obj = join_parts(bark, leaf)
+            else:
+                obj = bark
+            bpy.ops.object.select_all(action='DESELECT')
+            obj.select_set(True)
+            bpy.context.view_layer.objects.active = obj
+            print(f'{variant}: bark tris {bark_before} -> {bark_after} ratios {ratios}; leaf tris {leaf_tris} untouched')
+            budget = {'pre_decimate_triangles': pre_tris, 'bark_triangles_before': bark_before,
+                      'bark_triangles_after': bark_after, 'leaf_triangles': leaf_tris,
+                      'decimate_ratios': ratios, 'bark_budget_max': TREE_BARK_MAX,
+                      'lod0_budget_version': TREE_BUDGET_VERSION}
         canopy_triangles=needle_canopy(obj,high.z-low.z,index) if name=='pine_tree_01' else 0
         obj.name = variant
         obj.data.calc_loop_triangles()
@@ -330,7 +411,7 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
                         'needle_card_triangles': canopy_triangles, **tree_fields, **budget})
         bpy.ops.export_scene.gltf(filepath=str(output / (variant + '.glb')),
                                   export_format='GLB', use_selection=True)
-        wind_uv(output / (variant + '.glb'), is_tree(name))
+        wind_uv(output / (variant + '.glb'), is_tree(name), name in TREE_GROUPS)
 def build_prairie_clumps():
     """Assemble three seeded prairie clumps from prepared grass variants, each >=0.6m across, 0.5-0.9m tall."""
     pool = [r for r in reports if r['asset'] in ('grass_medium_01', 'grass_medium_02') and 60 <= r['triangles'] <= 2500]

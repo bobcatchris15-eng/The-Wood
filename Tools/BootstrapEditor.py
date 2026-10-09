@@ -279,15 +279,17 @@ return float3(sin(T*1.1+phase),cos(T*0.83+phase)*0.38,0)*16.0*W.x*gust*S;''',{'W
 needles=explicit_needles()
 
 
-def with_wind(interface, strength):
-    """Copy each project import parent; preserve alpha, textures and shading."""
-    name=interface.get_name() + '_' + VERSION + '_Wind' + str(int(strength))
+def with_wind(interface, strength, two_sided=False, masked=False):
+    """Copy each project import parent; preserve alpha, textures and shading. two_sided sets the Material-level flag (MIC inherits it).
+    masked converts a BLEND foliage parent to BLEND_MASKED: Nanite does not draw translucent materials, so leaves must be cut out.
+    The Opacity source is re-wired to OpacityMask at the same output."""
+    name=interface.get_name() + '_' + VERSION + '_Wind' + str(int(strength)) + ('_2S' if two_sided else '') + ('_Mask' if masked else '')
     dest='/Game/Wood/FoliageWind/' + name
     if LIB.does_asset_exist(dest):
         return LIB.load_asset(dest)
     if isinstance(interface,unreal.MaterialInstanceConstant):
         parent=interface.get_editor_property('parent')
-        animated_parent=with_wind(parent,strength)
+        animated_parent=with_wind(parent,strength,two_sided,masked)
         copy=LIB.duplicate_asset(interface.get_path_name(),dest)
         MEL.set_material_instance_parent(copy,animated_parent)
         LIB.save_loaded_asset(copy)
@@ -295,6 +297,16 @@ def with_wind(interface, strength):
     if not isinstance(interface,unreal.Material):
         raise RuntimeError('Unsupported foliage material: '+interface.get_path_name())
     copy=LIB.duplicate_asset(interface.get_path_name(),dest)
+    if two_sided:
+        copy.set_editor_property('two_sided',True)
+    if masked:
+        opacity_node=MEL.get_material_property_input_node(copy,unreal.MaterialProperty.MP_OPACITY)
+        if opacity_node is None:
+            raise RuntimeError('Leaf material has no opacity input: '+interface.get_path_name())
+        opacity_output=MEL.get_material_property_input_node_output_name(copy,unreal.MaterialProperty.MP_OPACITY)
+        copy.set_editor_property('blend_mode',unreal.BlendMode.BLEND_MASKED)
+        copy.set_editor_property('opacity_mask_clip_value',0.35)
+        prop(opacity_node,opacity_output,unreal.MaterialProperty.MP_OPACITY_MASK)
     color=expr(copy,unreal.MaterialExpressionTextureCoordinate,coordinate_index=1)
     time=expr(copy,unreal.MaterialExpressionTime,ignore_pause=False)
     pos=expr(copy,unreal.MaterialExpressionWorldPosition)
@@ -543,9 +555,10 @@ for index,(name,solid) in enumerate(KIT_FILES):
     kit.append(mesh)
 palette.set_editor_property('kit',kit)
 # Species canopy and dead wood (Prepare-Art TREE_GROUPS). Forced replace-reimport; palette arrays are not yet routed at runtime.
-# Standing trees: pine-style LODs (LOD0 + 65/35/18%, screen 0.45/0.18/0.065), UV1 root mask kept, leaf/bark materials wrapped with FoliageWind.
+# Standing trees: Nanite on LOD0 only (no authored LODs; leaves kept at 100% triangles, no trim), UV1 root mask kept,
+# all materials two-sided and wrapped with FoliageWind (16 m/s WPO on the Material; bark sways with the canopy).
 # Collision: none in bootstrap for standing trees, as for pines (glTF hulls untrustworthy; trunk-only collision comes from the world adapter).
-# DeadWood: fallen logs, no collision, no wind.
+# DeadWood: fallen logs, Nanite, no collision, no wind.
 SPECIES_FILES=[
  ('broadleaf','tree_broadleaf_00'),
  ('broadleaf','tree_broadleaf_01'),
@@ -556,6 +569,8 @@ SPECIES_FILES=[
  ('snag','tree_snag_00'),
  ('snag','tree_snag_01'),
 ]
+# WPO amplitude (m) for species leaf/twig materials; bark stays at 16.
+SPECIES_LEAF_WIND=3.0
 SPECIES_PALETTE={'broadleaf':'broadleaf_trees','conifer':'conifer_trees','evergreen':'evergreen_trees','snag':'dead_wood'}
 species={key:[] for key in SPECIES_PALETTE}
 for group,name in SPECIES_FILES:
@@ -581,13 +596,22 @@ for group,name in SPECIES_FILES:
     settings=SMES.get_lod_build_settings(mesh,0)
     settings.set_editor_property('generate_lightmap_u_vs',False)
     SMES.set_lod_build_settings(mesh,0,settings)
-    author_lods(mesh,'trees')
+    # Nanite replaces authored distance LODs for species: LOD0 only. Keep 100% of triangles and no error trim so
+    # leaf geometry is not decimated by the Nanite build.
+    nanite=SMES.get_nanite_settings(mesh)
+    nanite.set_editor_property('enabled',True)
+    nanite.set_editor_property('keep_percent_triangles',1.0)
+    nanite.set_editor_property('trim_relative_error',0.0)
+    SMES.set_nanite_settings(mesh,nanite,True)
     if group!='snag':
         for i,item in enumerate(mesh.get_editor_property('static_materials')):
             interface=item.get_editor_property('material_interface')
             if interface is not None and '/Game/Wood/FoliageWind/' not in interface.get_path_name():
-                mesh.set_material(i,with_wind(interface,16.0))
+                # Leaf and twig slots are opaque real geometry (Prepare-Art sets alphaMode OPAQUE); all two-sided.
+                leaf='leaves' in interface.get_name().lower() or 'twig' in interface.get_name().lower()
+                mesh.set_material(i,with_wind(interface,SPECIES_LEAF_WIND if leaf else 16.0,True,False))
     LIB.save_loaded_asset(mesh)
+    unreal.log('SPECIES_NANITE %s enabled=%s' % (name, SMES.get_nanite_settings(mesh).get_editor_property('enabled')))
     species[group].append(mesh)
 for group,palette_slot in SPECIES_PALETTE.items():
     if not species[group]:

@@ -1178,7 +1178,7 @@
       19.15457534790039,
       19.468875885009766
     ],
-    "triangles": 145000,
+    "triangles": 2697433,
     "materials": 3,
     "pivot": "trunk_ground_center",
     "source_triangles": 3863832,
@@ -1190,11 +1190,14 @@
     "height_m": 19.469,
     "crown_width_m": 24.417,
     "pre_decimate_triangles": 3859574,
+    "bark_triangles_before": 1457140,
+    "bark_triangles_after": 294999,
+    "leaf_triangles": 2402434,
     "decimate_ratios": [
-      0.03757
+      0.20245
     ],
-    "lod0_budget_max": 150000,
-    "lod0_budget_version": 1
+    "bark_budget_max": 300000,
+    "lod0_budget_version": 3
   },
   {
     "asset": "tree_small_02",
@@ -1205,7 +1208,7 @@
       4.292477130889893,
       4.556740760803223
     ],
-    "triangles": 145000,
+    "triangles": 2062435,
     "materials": 3,
     "pivot": "trunk_ground_center",
     "source_triangles": 2062487,
@@ -1217,11 +1220,12 @@
     "height_m": 4.557,
     "crown_width_m": 4.292,
     "pre_decimate_triangles": 2062435,
-    "decimate_ratios": [
-      0.07031
-    ],
-    "lod0_budget_max": 150000,
-    "lod0_budget_version": 1
+    "bark_triangles_before": 123055,
+    "bark_triangles_after": 123055,
+    "leaf_triangles": 1939380,
+    "decimate_ratios": [],
+    "bark_budget_max": 300000,
+    "lod0_budget_version": 3
   },
   {
     "asset": "fir_tree_01",
@@ -1232,7 +1236,7 @@
       6.426823139190674,
       18.92510986328125
     ],
-    "triangles": 145000,
+    "triangles": 4168173,
     "materials": 4,
     "pivot": "trunk_ground_center",
     "source_triangles": 4176819,
@@ -1244,11 +1248,12 @@
     "height_m": 18.925,
     "crown_width_m": 6.534,
     "pre_decimate_triangles": 4168173,
-    "decimate_ratios": [
-      0.03479
-    ],
-    "lod0_budget_max": 150000,
-    "lod0_budget_version": 1
+    "bark_triangles_before": 102054,
+    "bark_triangles_after": 102054,
+    "leaf_triangles": 4066119,
+    "decimate_ratios": [],
+    "bark_budget_max": 300000,
+    "lod0_budget_version": 3
   },
   {
     "asset": "fir_tree_01",
@@ -1259,7 +1264,7 @@
       6.056670665740967,
       14.055205345153809
     ],
-    "triangles": 145000,
+    "triangles": 2294309,
     "materials": 4,
     "pivot": "trunk_ground_center",
     "source_triangles": 2300624,
@@ -1271,11 +1276,12 @@
     "height_m": 14.055,
     "crown_width_m": 6.057,
     "pre_decimate_triangles": 2294309,
-    "decimate_ratios": [
-      0.0632
-    ],
-    "lod0_budget_max": 150000,
-    "lod0_budget_version": 1
+    "bark_triangles_before": 87013,
+    "bark_triangles_after": 87013,
+    "leaf_triangles": 2207296,
+    "decimate_ratios": [],
+    "bark_budget_max": 300000,
+    "lod0_budget_version": 3
   },
   {
     "asset": "fir_tree_01",
@@ -1286,7 +1292,7 @@
       5.9662370681762695,
       14.520581245422363
     ],
-    "triangles": 145000,
+    "triangles": 503607,
     "materials": 4,
     "pivot": "trunk_ground_center",
     "source_triangles": 505494,
@@ -1298,11 +1304,12 @@
     "height_m": 14.521,
     "crown_width_m": 6.306,
     "pre_decimate_triangles": 503607,
-    "decimate_ratios": [
-      0.28792
-    ],
-    "lod0_budget_max": 150000,
-    "lod0_budget_version": 1
+    "bark_triangles_before": 57533,
+    "bark_triangles_after": 57533,
+    "leaf_triangles": 446074,
+    "decimate_ratios": [],
+    "bark_budget_max": 300000,
+    "lod0_budget_version": 3
   },
   {
     "asset": "island_tree_01",
@@ -1313,7 +1320,7 @@
       4.817679405212402,
       5.027446746826172
     ],
-    "triangles": 145000,
+    "triangles": 1355031,
     "materials": 3,
     "pivot": "trunk_ground_center",
     "source_triangles": 1599403,
@@ -1325,11 +1332,14 @@
     "height_m": 5.027,
     "crown_width_m": 4.818,
     "pre_decimate_triangles": 1598956,
+    "bark_triangles_before": 538924,
+    "bark_triangles_after": 294999,
+    "leaf_triangles": 1060032,
     "decimate_ratios": [
-      0.09068
+      0.54739
     ],
-    "lod0_budget_max": 150000,
-    "lod0_budget_version": 1
+    "bark_budget_max": 300000,
+    "lod0_budget_version": 3
   },
   {
     "asset": "dead_tree_trunk",
@@ -1352,9 +1362,12 @@
     "height_m": 0.29,
     "crown_width_m": 3.051,
     "pre_decimate_triangles": 92581,
+    "bark_triangles_before": 92581,
+    "bark_triangles_after": 92581,
+    "leaf_triangles": 0,
     "decimate_ratios": [],
-    "lod0_budget_max": 150000,
-    "lod0_budget_version": 1
+    "bark_budget_max": 300000,
+    "lod0_budget_version": 3
   },
   {
     "asset": "dead_tree_trunk_02",
@@ -1377,9 +1390,12 @@
     "height_m": 1.055,
     "crown_width_m": 4.051,
     "pre_decimate_triangles": 82326,
+    "bark_triangles_before": 82326,
+    "bark_triangles_after": 82326,
+    "leaf_triangles": 0,
     "decimate_ratios": [],
-    "lod0_budget_max": 150000,
-    "lod0_budget_version": 1
+    "bark_budget_max": 300000,
+    "lod0_budget_version": 3
   },
   {
     "asset": "prairie_clump",
