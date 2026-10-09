@@ -53,3 +53,17 @@ Take The Wood from current prototype to Docs/Specification.md v1.1 (M1–M5) via
 
 ## BLOCKED
 - T1d species foliage: 3 attempts. Blender source/prepared crowns are full (scratchpad leafdiag PNGs). UE renders sparse leaf scatter. ROOTs: (1) collapse decimation shredded leaves [fixed: bark-only]; (2) BLEND->masked rewired wrong material, leaves undrawn [fixed: opaque 2-sided]; (3) wind ruled out by bisect. Current hypothesis (untested): review renders use -RenderOffscreen and draw the Nanite FALLBACK mesh (default heavily reduced), shredding leaves. Next: check r.Nanite in render log; set fallback to 100% / FallbackRelativeError 0; or render without -RenderOffscreen.
+
+## 2026-10-09 10:53 update
+- DONE: T1f a0343a2 (render verify deferred), D1 49b6ca0, F1 eab57e4, W1 27103d0, D2 30f57b2, L1 cb64feb
+- BLOCKED(env): U-adapt wiring uncommitted in tree (WoodCreature*, WoodWeatherComponent*, WoodWorld*, WoodWorldStreaming.cpp, WoodRuntime.h). Build fails UBA FATAL 9887 shared memory, x3 + -NoUBA; WMI queries hang -> likely needs reboot.
+- Unverified: Region.temperature/moisture in [0,1]; kCanopyCeilingM=40; fauna/weather/landmark use local random copy + local salts (consolidate into WoodSalts.h later); Weather/Landmark tests only MSVC path exercised.
+- Running: A1 log meshes, A2 landmark meshes (Blender).
+
+- 2026-10-09: F3 01aa439..HEAD adapter edits (WoodCreature.cpp tint, WoodWorldStreaming unreal arg) NOT compiled - host OOM. Build-Unreal next time memory allows. Import (BootstrapEditor incremental, uncommitted) also pending.
+
+## 2026-10-09 FIRST DRAFT handed to user (HEAD 1280b56)
+- Done since: Prairie 3b843d2 (15 goldens), D3/D3b/D4 discoveries, F3 strange creatures, Q4 gallery/settings, S4 audio, W2/W3 precip+wetness, I1/I2 import+art wiring, A1-A6 authored art.
+- Renders OK on SM6 (Forest/Grassland/Ridge/Ruins). Visual issues: Forest ground flat grey; ruin walls show bark-like texture (material mixup suspect, Bark_CanopyV4_2K in RockMaterials); tree crowns still shard-like/sparse.
+- Gaps: anomaly meshes imported but not placed by discoveries; Test-Unreal printed count stale (index.json has 8); rain/snow not rendered yet; creature meshes not seen in renders.
+- Host: page file now enabled (commit limit 67 GB) — fixed OOM/UBA.

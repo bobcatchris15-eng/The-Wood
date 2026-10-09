@@ -55,3 +55,4 @@ ts	task_id	clanker	model	n_targets	wall_s	turns	attempts	outcome	returned_bytes
 2026-10-09	T1c	impl-worker	haiku	8	1576	46	1	PASS	~1800
 2026-10-09	T1d	impl-worker	haiku	5	4800	104	3	BREAKER	~3000
 2026-10-09	T1d-fa	failure-analyst	haiku	-	150	19	1	CONF:LOW	~900
+2026-10-09T10:25:35	D1	impl-worker	haiku	4	1347	23	2	PASS	300
