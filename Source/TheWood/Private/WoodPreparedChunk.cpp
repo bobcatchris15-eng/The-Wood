@@ -11,16 +11,14 @@ FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
  const int32 VertexCount=static_cast<int32>(Chunk.vertices.size());
  Result.Normals.Reserve(VertexCount);
  Result.HabitatUV.Reserve(VertexCount);
- Result.BiomeColors.Reserve(VertexCount);
- for(const auto& P:Chunk.vertices) {
+ Result.BiomeColors.Reserve(VertexCount); for(const auto& P:Chunk.vertices) {
   const auto Surface=World.sample(P.x,P.y);
   const double DX=(World.sample(P.x+.25,P.y).height-World.sample(P.x-.25,P.y).height)/.5;
   const double DY=(World.sample(P.x,P.y+.25).height-World.sample(P.x,P.y-.25).height)/.5;
   Result.Normals.Add(FVector(-DX,-DY,1).GetSafeNormal());
   Result.HabitatUV.Add(FVector2D(Surface.moisture,Surface.slope));
   const auto Ground=wood::ground::shade(Surface);
-  Result.BiomeColors.Add(FLinearColor(Ground.archetype[0],Ground.archetype[1],Ground.archetype[2],Ground.archetype[3]));
- }
+  Result.BiomeColors.Add(FLinearColor(Ground.archetype[0],Ground.archetype[1],Ground.archetype[2],Ground.archetype[3])); }
  Result.Placements.SetNum(Kinds.Num());
  if(!Details || Chunk.features.empty()) return Result;
  const double Size=World.settings().chunkSize,Step=Size/Chunk.cells;

@@ -77,11 +77,14 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
  auto& Resident=Runtime->Chunks.FindOrAdd(Key);
  if(!Resident.Ground) {
   auto* Mesh=NewObject<UProceduralMeshComponent>(this); Mesh->SetupAttachment(RootComponent);Mesh->RegisterComponent();
-  TArray<FVector> Vertices,Normals;TArray<FVector2D> UVs;TArray<FLinearColor> Colors;TArray<int32> Triangles;
+  TArray<FVector> Vertices,Normals;TArray<FVector2D> UVs,UV1,UV2;TArray<FColor> Colors;TArray<int32> Triangles;
   for(const auto& P:Chunk.vertices) Vertices.Add(FVector(P.x,P.y,P.z)*100);
-  Normals=Prepared.Normals;UVs=Prepared.HabitatUV;Colors=Prepared.BiomeColors;
+  Normals=Prepared.Normals;UVs=Prepared.HabitatUV;
+  for(const auto& C:Prepared.BiomeColors) Colors.Add(C.ToFColor(true));
+  // Step 1: tint identity (1,1,1) carried in UV1/UV2; no material edit yet.
+  UV1.Init(FVector2D(1.f,1.f),Vertices.Num());UV2.Init(FVector2D(1.f,0.f),Vertices.Num());
   for(auto I:Chunk.triangles) Triangles.Add(I);
-  Mesh->CreateMeshSection_LinearColor(0,Vertices,Triangles,Normals,UVs,Colors,TArray<FProcMeshTangent>(),true);
+  Mesh->CreateMeshSection(0,Vertices,Triangles,Normals,UVs,UV1,UV2,TArray<FVector2D>(),Colors,TArray<FProcMeshTangent>(),true);
   if(Palette) Mesh->SetMaterial(0,Palette->GroundMaterial.LoadSynchronous());
   Terrain.Add(Mesh);Resident.Ground=Mesh;
   TArray<FVector> WV,WN;TArray<FVector2D> WU;TArray<int32> WT;TArray<FLinearColor> WC;

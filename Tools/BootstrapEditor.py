@@ -125,6 +125,9 @@ if build:
         uv=custom(ground,uv_code,{'P':(pos,'')},unreal.CustomMaterialOutputType.CMOT_FLOAT2)
         samples.append((sample(ground,texture(asset,'Diffuse'),uv),sample(ground,texture(asset,'nor_dx'),uv,True),sample(ground,texture(asset,'Rough'),uv)))
     color_inputs=dict(common,P=(pos,''))
+    # Base colour only: UV1 = tint R,G; UV2 = tint B.
+    color_inputs['K']=(expr(ground,unreal.MaterialExpressionTextureCoordinate,coordinate_index=1),'')
+    color_inputs['L']=(expr(ground,unreal.MaterialExpressionTextureCoordinate,coordinate_index=2),'')
     color_inputs.update({name:(samples[index][0],'RGB') for index,name in enumerate(('A','B','C','D'))})
     color=custom(ground,weight_code+'''
     float3 temperate=A*float3(0.60,0.70,0.49);
@@ -137,7 +140,7 @@ if build:
     float3 color=temperate*b.x+grassland*b.y+highlands*b.z+taiga*b.w;
     color*=lerp(float3(1,1,1),float3(0.66,0.73,0.65),wet);
     float macro=0.91+0.09*sin(P.x/1300.0)*sin(P.y/1700.0);
-    return color*macro;''',color_inputs)
+    return color*macro*float3(K.x,K.y,L.x);''',color_inputs)
     prop(color,'',unreal.MaterialProperty.MP_BASE_COLOR)
     normal_inputs=dict(common,P=(pos,''))
     normal_inputs.update({name:(samples[index][1],'RGB') for index,name in enumerate(('A','B','C','D'))})
