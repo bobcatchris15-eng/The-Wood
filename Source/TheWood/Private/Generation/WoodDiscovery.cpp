@@ -1167,6 +1167,145 @@ DiscoveryPlan generateBrokenCrown(
     return plan;
 }
 
+// Fitted outcrop line along one fracture direction; blocks stepped at a common spacing with small jitter.
+DiscoveryPlan generateJointedStoneRidge(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::JointedStoneRidgeRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::JointedStoneRidge, Vec3{origin.x, origin.y, originZ}, 0.0);
+
+    const double theta = rng.nextDouble(0.0, 2.0 * kPi);
+    plan.yaw = theta * (180.0 / kPi);
+    const double ux = std::cos(theta);
+    const double uy = std::sin(theta);
+    const double vx = -uy;
+    const double vy = ux;
+
+    const int blockCount = rng.nextInt(4, 6);
+    const double spacing = 1.8;
+    const double total = spacing * static_cast<double>(blockCount);
+    for (int b = 0; b < blockCount; ++b) {
+        const double along = -0.5 * total + spacing * (static_cast<double>(b) + 0.5) + rng.nextDouble(-0.2, 0.2);
+        const double lat = rng.nextDouble(-0.4, 0.4);
+        const double x = origin.x + ux * along + vx * lat;
+        const double y = origin.y + uy * along + vy * lat;
+        const double yaw = plan.yaw + rng.nextDouble(-6.0, 6.0);
+        const double scale = rng.nextDouble(0.9, 1.3);
+        addGroundedPiece(plan, rng, heightFn, "ridge_joint_block", "SM_TalusRock", x, y, yaw, scale);
+    }
+
+    const double debAlong = rng.nextDouble(-0.4, 0.4) * total;
+    const double debLat = ((rng.nextDouble(0.0, 1.0) < 0.5) ? 1.0 : -1.0) * rng.nextDouble(1.8, 2.4);
+    const double debX = origin.x + ux * debAlong + vx * debLat;
+    const double debY = origin.y + uy * debAlong + vy * debLat;
+    const double debYaw = rng.nextDouble(0.0, 360.0);
+    const double debScale = rng.nextDouble(0.4, 0.6);
+    addGroundedPiece(plan, rng, heightFn, "ridge_joint_debris", "SM_MasonryDebris", debX, debY, debYaw, debScale);
+
+    const double half = 0.5 * total;
+    plan.reservation = DiscoveryReservation(DiscoveryType::JointedStoneRidge, plan.position, half + 1.5, half + 4.0);
+    plan.valid = true;
+    return plan;
+}
+
+// One isolated granite mass sitting on open ground, with smaller rocks shed around its foot.
+DiscoveryPlan generateGlacialErratic(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::GlacialErraticRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::GlacialErratic, Vec3{origin.x, origin.y, originZ}, 0.0);
+    plan.yaw = rng.nextDouble(0.0, 360.0);
+
+    const double massScale = rng.nextDouble(1.6, 2.2);
+    addGroundedPiece(plan, rng, heightFn, "erratic_mass", "SM_GraniteMonolith", origin.x, origin.y, plan.yaw, massScale);
+
+    const int chipCount = rng.nextInt(2, 3);
+    for (int c = 0; c < chipCount; ++c) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = rng.nextDouble(2.0, 3.0);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.4, 0.6);
+        addGroundedPiece(plan, rng, heightFn, "erratic_foot_rock", "SM_TalusRock", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::GlacialErratic, plan.position, 4.0, 7.0);
+    plan.valid = true;
+    return plan;
+}
+
+// Small cluster of weathered rock on a bare crest; no soil, no debris, rocks sit close together.
+DiscoveryPlan generateLichenOutcrop(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::LichenOutcropRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::LichenOutcrop, Vec3{origin.x, origin.y, originZ}, 0.0);
+    plan.yaw = rng.nextDouble(0.0, 360.0);
+
+    const int rockCount = rng.nextInt(3, 4);
+    for (int k = 0; k < rockCount; ++k) {
+        const double a = 2.0 * kPi * static_cast<double>(k) / static_cast<double>(rockCount) + rng.nextDouble(-0.4, 0.4);
+        const double dist = rng.nextDouble(0.8, 2.2);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.5, 0.9);
+        addGroundedPiece(plan, rng, heightFn, "lichen_outcrop_rock", "SM_TalusRock", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::LichenOutcrop, plan.position, 3.0, 5.5);
+    plan.valid = true;
+    return plan;
+}
+
+// Scatter of standing snags with one fallen age-cohort log lying across the grove.
+DiscoveryPlan generateDeadStandingGrove(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::DeadStandingGroveRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::DeadStandingGrove, Vec3{origin.x, origin.y, originZ}, 0.0);
+    plan.yaw = rng.nextDouble(0.0, 360.0);
+
+    const int snagCount = rng.nextInt(4, 6);
+    for (int s = 0; s < snagCount; ++s) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = rng.nextDouble(2.5, 7.0);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.8, 1.3);
+        addGroundedPiece(plan, rng, heightFn, "grove_snag", "SM_StumpSnag", x, y, yaw, scale);
+    }
+
+    // Fallen log: pivot is its start, so centre it on the sampled point using the nominal short-log length (3.0 m).
+    const double logA = rng.nextDouble(0.0, 2.0 * kPi);
+    const double logDist = rng.nextDouble(3.0, 5.0);
+    const double logYaw = rng.nextDouble(0.0, 360.0);
+    const double logCx = origin.x + logDist * std::cos(logA);
+    const double logCy = origin.y + logDist * std::sin(logA);
+    const double logUx = std::cos(logYaw * (kPi / 180.0));
+    const double logUy = std::sin(logYaw * (kPi / 180.0));
+    addGroundedPiece(plan, rng, heightFn, "grove_fallen_log", "SM_LogShort",
+        logCx - logUx * 1.5, logCy - logUy * 1.5, logYaw, 1.0);
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::DeadStandingGrove, plan.position, 6.0, 10.0);
+    plan.valid = true;
+    return plan;
+}
+
 // Unreal cells: one roll gates the cell, then one of the four unreal families is picked.
 // A chosen plan that breaches water clearance is dropped, never rerolled.
 static constexpr double kUnrealChance = 0.5;
@@ -1211,6 +1350,75 @@ static DiscoveryPlan planUnrealDiscovery(
     return plan;
 }
 
+// Geological fallback pool. Consulted only by natural cells whose primary roll missed or whose primary
+// eligibility list is empty, so primary picks and primary water drops are unchanged. Own roll and gate.
+static constexpr double kGeoChance = 0.3;
+
+static DiscoveryPlan planGeologicalDiscovery(
+    std::uint32_t seed,
+    int cellQ,
+    int cellR,
+    const Vec3& cellCenter,
+    const Surface& cellClimate,
+    const std::function<double(double, double)>& heightFn,
+    const std::function<double(double)>& streamXFn,
+    const std::function<double(double)>& streamHWFn)
+{
+    DiscoveryRng roll(hashCell(seed, cellQ, cellR) ^ Salt::NaturalGeoCell);
+    if (roll.nextDouble(0.0, 1.0) >= kGeoChance) {
+        return DiscoveryPlan{};
+    }
+
+    const bool hasStream = (streamXFn && streamHWFn);
+    const Gradient2D grad = sampleGradient(heightFn, cellCenter.x, cellCenter.y, 1.0);
+    const bool sloped = grad.len >= kSlopeMin;
+    const bool crest = localRelief(heightFn, cellCenter.x, cellCenter.y) >= kReliefMin;
+    const bool forest = cellClimate.forest >= 0.4 || cellClimate.biome[0] >= 0.4 || cellClimate.biome[3] >= 0.4;
+    const bool prairie = cellClimate.biome[1] >= 0.4;
+
+    std::vector<DiscoveryType> eligible;
+    if (crest && sloped) {
+        eligible.push_back(DiscoveryType::JointedStoneRidge);
+    }
+    if (crest && !forest) {
+        eligible.push_back(DiscoveryType::LichenOutcrop);
+    }
+    if (prairie && !sloped) {
+        eligible.push_back(DiscoveryType::GlacialErratic);
+    }
+    if (forest && (sloped || crest)) {
+        eligible.push_back(DiscoveryType::DeadStandingGrove);
+    }
+    if (eligible.empty()) {
+        return DiscoveryPlan{};
+    }
+
+    const DiscoveryType pick = eligible[static_cast<std::size_t>(roll.nextInt(0, static_cast<int>(eligible.size()) - 1))];
+
+    DiscoveryPlan plan;
+    if (pick == DiscoveryType::JointedStoneRidge) {
+        plan = generateJointedStoneRidge(seed, cellCenter, heightFn);
+    } else if (pick == DiscoveryType::LichenOutcrop) {
+        plan = generateLichenOutcrop(seed, cellCenter, heightFn);
+    } else if (pick == DiscoveryType::GlacialErratic) {
+        plan = generateGlacialErratic(seed, cellCenter, heightFn);
+    } else {
+        plan = generateDeadStandingGrove(seed, cellCenter, heightFn);
+    }
+
+    if (!plan.valid || !hasStream) {
+        return plan;
+    }
+    for (const auto& p : plan.pieces) {
+        const double pSx = streamXFn(p.position.y);
+        const double pHw = streamHWFn(p.position.y);
+        if (std::abs(p.position.x - pSx) < pHw + kWaterClear) {
+            return DiscoveryPlan{};
+        }
+    }
+    return plan;
+}
+
 static DiscoveryPlan planNaturalDiscovery(
     std::uint32_t seed,
     int cellQ,
@@ -1223,7 +1431,7 @@ static DiscoveryPlan planNaturalDiscovery(
 {
     DiscoveryRng roll(hashCell(seed, cellQ, cellR) ^ Salt::NaturalCell);
     if (roll.nextDouble(0.0, 1.0) >= kNaturalChance) {
-        return DiscoveryPlan{};
+        return planGeologicalDiscovery(seed, cellQ, cellR, cellCenter, cellClimate, heightFn, streamXFn, streamHWFn);
     }
 
     const bool hasStream = (streamXFn && streamHWFn);
@@ -1249,7 +1457,7 @@ static DiscoveryPlan planNaturalDiscovery(
         eligible.push_back(DiscoveryType::FallenLogColony);
     }
     if (eligible.empty()) {
-        return DiscoveryPlan{};
+        return planGeologicalDiscovery(seed, cellQ, cellR, cellCenter, cellClimate, heightFn, streamXFn, streamHWFn);
     }
 
     const DiscoveryType pick = eligible[static_cast<std::size_t>(roll.nextInt(0, static_cast<int>(eligible.size()) - 1))];

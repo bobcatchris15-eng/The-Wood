@@ -107,6 +107,16 @@ inline constexpr std::uint32_t RustedSwordRng=0x5A0DU;
 inline constexpr std::uint32_t StoneChessPieceRng=0xC4E5U;
 // BrokenCrown RNG seed mix (generateBrokenCrown()).
 inline constexpr std::uint32_t BrokenCrownRng=0xBC0AU;
+// Geological natural allocation roll, natural cells that miss the primary pool (planDiscovery()).
+inline constexpr std::uint32_t NaturalGeoCell=0x6E0C1U;
+// JointedStoneRidge RNG seed mix (generateJointedStoneRidge()).
+inline constexpr std::uint32_t JointedStoneRidgeRng=0x51D6U;
+// GlacialErratic RNG seed mix (generateGlacialErratic()).
+inline constexpr std::uint32_t GlacialErraticRng=0x6E1AU;
+// LichenOutcrop RNG seed mix (generateLichenOutcrop()).
+inline constexpr std::uint32_t LichenOutcropRng=0x71C4U;
+// DeadStandingGrove RNG seed mix (generateDeadStandingGrove()).
+inline constexpr std::uint32_t DeadStandingGroveRng=0xD5A9U;
 
 // Chunk placement layer base salts. Each layer adds the offsets below.
 // Tree layer base (layer spacing 8.5).

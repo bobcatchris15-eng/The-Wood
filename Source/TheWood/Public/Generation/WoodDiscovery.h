@@ -41,7 +41,11 @@ enum class DiscoveryType {
     StaircaseToNowhere,
     RustedSword,
     StoneChessPiece,
-    BrokenCrown
+    BrokenCrown,
+    JointedStoneRidge,
+    GlacialErratic,
+    LichenOutcrop,
+    DeadStandingGrove
 };
 
 struct DiscoveryReservation {
@@ -201,6 +205,26 @@ DiscoveryPlan generateStoneChessPiece(
     const std::function<double(double, double)>& heightFn);
 
 DiscoveryPlan generateBrokenCrown(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateJointedStoneRidge(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateGlacialErratic(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateLichenOutcrop(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateDeadStandingGrove(
     std::uint32_t seed,
     const Vec3& origin,
     const std::function<double(double, double)>& heightFn);

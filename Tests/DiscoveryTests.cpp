@@ -675,6 +675,19 @@ static void test_natural_discoveries_generated() {
         forestClimate, flatFn, farStreamX, farStreamHW, {20.0, 20.0, 10.0});
     check_natural_type("test_fallen_log_colony_generated", wood::DiscoveryType::FallenLogColony,
         forestClimate, flatFn, farStreamX, farStreamHW, {20.0, 20.0, 10.0});
+
+    // Geological fallback pool: each fixture satisfies its own terrain gate (crest+slope, crest+open,
+    // prairie+flat, forest+slope). Ridge fixture sits on the flank (10, 0) where both crest and slope hold.
+    check_natural_type("test_jointed_stone_ridge_generated", wood::DiscoveryType::JointedStoneRidge,
+        plainClimate, ridgeFn, farStreamX, farStreamHW, {10.0, 0.0, 26.4});
+    check_natural_type("test_lichen_outcrop_generated", wood::DiscoveryType::LichenOutcrop,
+        plainClimate, ridgeFn, farStreamX, farStreamHW, {10.0, 0.0, 26.4});
+    wood::Surface prairieClimate;
+    prairieClimate.biome[1] = 0.8; // DryGrassland
+    check_natural_type("test_glacial_erratic_generated", wood::DiscoveryType::GlacialErratic,
+        prairieClimate, flatFn, farStreamX, farStreamHW, {20.0, 20.0, 10.0});
+    check_natural_type("test_dead_standing_grove_generated", wood::DiscoveryType::DeadStandingGrove,
+        forestClimate, slopeFn, farStreamX, farStreamHW, {20.0, 20.0, 16.0});
 }
 
 static void test_natural_terrain_gates() {
