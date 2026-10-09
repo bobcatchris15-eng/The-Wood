@@ -351,7 +351,9 @@ int main() {
   const GoldenCase cases[]={
    {0,0,0,true,0x67757b2508650af7ULL},{0,3,-2,true,0xc76a569e534166adULL},{0,-5,7,true,0xcecd8eb66220e387ULL},{0,12,12,true,0xf99ce6e5d4eae079ULL},{0,0,0,false,0x5999df15b6cbaef8ULL},
    {42,0,0,true,0xc08cf1e2f1ae1fa5ULL},{42,3,-2,true,0xfd2f56462206480fULL},{42,-5,7,true,0xd422751e936420a5ULL},{42,12,12,true,0xb792a76f92d87c37ULL},{42,0,0,false,0xbc40aa921da47d78ULL},
-   {98765,0,0,true,0xfa7069009a2c2693ULL},{98765,3,-2,true,0xbafe0e19a917ee5dULL},{98765,-5,7,true,0xeaa24c98d7486d7bULL},{98765,12,12,true,0x4458cc110da81ba0ULL},{98765,0,0,false,0x893f568f384c0dbfULL},
+   {98765,0,0,true,0xeec638392fa85ba7ULL}, // changed in U1: chunk lies in an unreal region (overlay density)
+   {98765,3,-2,true,0x8fa5118bb65e0c9dULL}, // changed in U1: chunk lies in an unreal region (overlay density)
+   {98765,-5,7,true,0xeaa24c98d7486d7bULL},{98765,12,12,true,0x4458cc110da81ba0ULL},{98765,0,0,false,0x893f568f384c0dbfULL},
   };
   for(const auto& gc:cases) {
    World w({gc.seed,128,32});

@@ -5,6 +5,7 @@
 #include <functional>
 #include <optional>
 #include "WoodHex.h"
+#include "Generation/WoodUnreal.h"
 
 // Engine-independent generation coordinates are metres; the Unreal adapter converts to cm.
 namespace wood {
@@ -13,7 +14,7 @@ struct DiscoveryReservation;
 struct DiscoveryPiece;
 struct Vec3 { double x=0, y=0, z=0; };
 struct Settings { std::uint32_t seed=12345; double chunkSize=128; int cells=64; };
-enum class Biome { TemperateForest, DryGrassland, RockyHighlands, Taiga };
+enum class Biome : int { TemperateForest, DryGrassland, RockyHighlands, Taiga };
 // False for pairs that may never border (DryGrassland<->Taiga); symmetric.
 bool allowedAdjacent(Biome a, Biome b);
 // A stable regional identity on a warped 950m-radius hex lattice; extent is influence diameter.
@@ -25,6 +26,8 @@ struct Region {
  int q=0,r=0;
  // Independent per-region flags: unreal p=0.10, ruins p=1/3.
  bool unreal=false, ruins=false;
+ // Overlay for unreal regions (unreal::pick); None whenever unreal is false.
+ unreal::Overlay overlay=unreal::Overlay::None;
 };
 struct Surface {
  double height=0, forest=0, moisture=0, slope=0, waterHeight=0, depth=0;
@@ -73,6 +76,8 @@ public:
  // Nearest 25 m grid point within radius metres of (x,y) whose biome[family] weight is at least minWeight; empty if none.
  std::optional<Vec3> nearestBiomeCore(Biome family, double x, double y, double radius, double minWeight) const;
  Lighting lighting(double x, double y, double seconds) const;
+ // Hex-weighted unreal overlay multipliers at (x,y); neutral and inactive where no unreal cell has weight.
+ unreal::OverlayField overlayAt(double x, double y) const;
  const Settings& settings() const { return config; }
  // Per-region epoch source (default: always 0). Copied on set; generation only reads it.
  void setEpochs(std::function<std::uint32_t(int q,int r)> epochOf);

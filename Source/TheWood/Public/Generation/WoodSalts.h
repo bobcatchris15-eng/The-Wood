@@ -16,6 +16,8 @@ inline constexpr std::uint32_t RegionPhase=705;
 inline constexpr std::uint32_t RegionUnreal=716;
 // Region ruins flag, p=1/3 (describe()).
 inline constexpr std::uint32_t RegionRuins=717;
+// Region unreal overlay pick, unreal regions only (unreal::pick()).
+inline constexpr std::uint32_t RegionOverlay=718;
 // Region epoch seed mix; regionSeed() adds the epoch count to it (epoch>0 only).
 inline constexpr std::uint32_t RegionEpoch=0xE90C0000U;
 // Value-noise lattice corner hash (noise()).

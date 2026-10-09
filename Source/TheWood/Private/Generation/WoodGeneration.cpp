@@ -5,6 +5,7 @@
 #include "Generation/WoodDiscovery.h"
 #include "Generation/WoodEntrance.h"
 #include "Generation/WoodKit.h"
+#include "Generation/WoodUnreal.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -92,6 +93,7 @@ Region describe(const World& w,int gx,int gy) {
  r.phase=random(seed,gx,gy,Salt::RegionPhase)*2*pi;
  r.unreal=(hash(seed,gx,gy,Salt::RegionUnreal)%1000)<100;
  r.ruins=(hash(seed,gx,gy,Salt::RegionRuins)%3000)<1000;
+ r.overlay=r.unreal?unreal::pick(r.identity,r.family):unreal::Overlay::None;
  return r;
 }
 auto cellWeights(const Settings& c,double x,double y) {return hex::weights(hex::warp({x+180,y+180},c.seed));}
@@ -109,6 +111,25 @@ Surface climate(const World& world,double x,double y) {
  s.forest/=total; s.moisture/=total; s.temperature/=total;
  s.exposure/=total; s.shelter/=total; s.roughness/=total;
  return s;
+}
+// Hex-weighted overlay multipliers. Ordinary cells contribute neutral values, so the field fades across the blend band.
+unreal::OverlayField overlayField(const World& world,double x,double y) {
+ unreal::OverlayField f;
+ double total=0,featureScale=0,densityScale=0,brightness=0,kelvinShift=0;
+ bool any=false;
+ for(const auto& cell:cellWeights(world.settings(),x,y)) {
+  if(cell.weight<=0) continue;
+  const auto r=describe(world,cell.cell.q,cell.cell.r);
+  const auto p=unreal::params(r.overlay);
+  const double w=cell.weight;
+  total+=w; featureScale+=w*p.featureScale; densityScale+=w*p.densityScale;
+  brightness+=w*p.lightBrightness; kelvinShift+=w*p.lightKelvinShift;
+  any=any||r.unreal;
+ }
+ if(!any||total<=0) return f;
+ f.featureScale=featureScale/total; f.densityScale=densityScale/total;
+ f.lightBrightness=brightness/total; f.lightKelvinShift=kelvinShift/total; f.active=true;
+ return f;
 }
 double waterLevel(double y) { return 8-0.018*y; }
 double channelHalfWidth(const Settings& c,double y) {
@@ -372,13 +393,14 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
    const auto surface=sample(px,py);
    if(surface.depth>0||std::abs(px-streamX(py))<streamHalfWidth(py)+0.5) continue;
    const double choice=random(seed,gx,gy,salt+Salt::LayerChoice);
+   const auto ov=overlayField(*this,px,py);
    const double patch=0.5+0.5*noise(config.seed+Salt::PatchCover,px/38,py/38);
    const double routeDistance=std::abs(px-(streamX(py)-7));
    Kind kind; double scale; bool young=false;
    if(type==0) {
     // Dynamic groves and sunlit clearings interrupt the temperate and taiga canopies.
     const double grove=smooth((patch-0.26)/0.36);
-    const double density=surface.forest*(0.04+0.78*grove);
+    const double density=surface.forest*(0.04+0.78*grove)*ov.densityScale;
     if(surface.slope>=0.7||routeDistance<3.5||choice>density) continue;
     if(isInsideReservation(reservations,px,py,true)) continue;
     kind=Kind::Tree;
@@ -404,7 +426,7 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     // Two spatial scales form dense colonies separated by leaf-litter pockets.
     const double colony=smooth((0.5+0.5*noise(config.seed+Salt::Colony,px/11,py/11)-0.28)/0.40);
     const double habitatCover=surface.biome[0]+0.80*surface.biome[1]+0.30*surface.biome[2]+0.55*surface.biome[3];
-    const double cover=(0.10+0.84*colony)*habitatCover;
+    const double cover=(0.10+0.84*colony)*habitatCover*ov.densityScale;
     // Low plants preserve an open walking strip without emptying both banks.
     const double routeCover=routeDistance<1.2?0.20:1.0;
     if(choice>cover*routeCover) continue;
@@ -440,13 +462,13 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     const double streamDist=std::abs(px-streamX(py));
     const double halfW=streamHalfWidth(py);
     const double riparian=(streamDist>=halfW*0.65&&streamDist<=6.0&&routeDistance>2.2)?0.38*(0.6+0.4*noise(config.seed+Salt::Riparian,px/12,py/12)):0.0;
-    const double totalAbundance=std::max(abundance*smooth((rocky-0.35)/0.35),riparian);
+    const double totalAbundance=std::max(abundance*smooth((rocky-0.35)/0.35),riparian)*ov.densityScale;
     if(routeDistance<2.5||choice>totalAbundance) continue;
     kind=Kind::Rock;
     const double highlandBoost=surface.biome[2]>0.35?(1.2+1.5*surface.biome[2]):1.0;
     scale=((streamDist<=4.5)?(0.65+random(seed,gx,gy,salt+Salt::LayerSize)*1.5):(0.95+random(seed,gx,gy,salt+Salt::LayerSize)*2.6))*highlandBoost;
    }
-   habitat.features.push_back({kind,{px,py,terrainHeight(px,py)},random(seed,gx,gy,salt+Salt::LayerYaw)*360,scale,young,type==3});
+   habitat.features.push_back({kind,{px,py,terrainHeight(px,py)},random(seed,gx,gy,salt+Salt::LayerYaw)*360,scale*ov.featureScale,young,type==3});
   }
  };
  layer(8.5,Salt::TreeLayer,0);
@@ -502,10 +524,16 @@ Lighting World::lighting(double x,double y,double seconds) const {
   if(cell.weight<=0) continue;
   const auto r=describe(*this,cell.cell.q,cell.cell.r);const double w=cell.weight;
   const double day=0.5+0.5*std::sin(seconds*2*pi/(2400+700*r.roughness)+r.phase);
-  total+=w; result.brightness+=w*(0.18+0.82*day);
-  result.kelvin+=w*(4300+900*r.exposure+1500*(1-day));
+  // Ordinary cells use neutral overlay values (x*1.0, x+0.0), so their output is unchanged.
+  const auto p=r.unreal?unreal::params(r.overlay):unreal::params(unreal::Overlay::None);
+  total+=w; result.brightness+=w*(0.18+0.82*day)*p.lightBrightness;
+  result.kelvin+=w*(4300+900*r.exposure+1500*(1-day)+p.lightKelvinShift);
  }
  result.brightness/=total; result.kelvin/=total; return result;
+}
+unreal::OverlayField World::overlayAt(double x,double y) const {
+ validatePoint(x,y);
+ return overlayField(*this,x,y);
 }
 void Observation::sit(bool value) { seated=value; if(!value) accelerated=false; }
 void Observation::accelerate(bool value) { accelerated=value&&seated; }
