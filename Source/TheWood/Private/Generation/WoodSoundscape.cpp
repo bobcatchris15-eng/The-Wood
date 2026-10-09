@@ -8,6 +8,51 @@ const double Pi=3.14159265358979323846;
 double clamp01(double v) { return v<0?0:(v>1?1:v); }
 double fin(double v,double fallback) { return std::isfinite(v)?v:fallback; }
 }
+std::vector<SoundEmitter> streamEmitters(const World& world,int gx,int gy) {
+ std::vector<SoundEmitter> out;
+ const double cs=world.settings().chunkSize;
+ const double minX=gx*cs, maxX=(gx+1)*cs, minY=gy*cs, maxY=(gy+1)*cs;
+ const double spacing=12.0;
+ for(long long k=static_cast<long long>(std::ceil(minY/spacing)); k*spacing<maxY; ++k) {
+  const double y=k*spacing;
+  const double x=world.streamX(y);
+  if(!std::isfinite(x)||x<minX||x>=maxX) continue;
+  const double depth=std::max(0.,world.streamDepth(x,y));
+  const double slope=std::max(0.,fin(world.sample(x,y).slope,0));
+  const double gain=clamp01(0.35+0.65*std::min(1.0,depth))*(1-0.5*std::min(1.0,slope));
+  out.push_back(SoundEmitter{x,y,clamp01(fin(gain,0))});
+ }
+ return out;
+}
+LayerGains weatherLayers(const weather::WeatherSample& s) {
+ LayerGains g;
+ const double in=clamp01(fin(s.intensity01,0));
+ const double wet=clamp01(fin(s.wetness01,0));
+ g.wind=clamp01(fin(s.windMps,0)/12.0);
+ g.rain=s.kind==weather::Precip::Rain?in:0;
+ g.drip=(s.kind==weather::Precip::Clear||s.kind==weather::Precip::Overcast)?wet:0;
+ if(s.kind==weather::Precip::Rain) g.birdsong=1-0.6*in;
+ if(s.kind==weather::Precip::Snow) { g.birdsong=1-0.5*in; g.ambient=1-0.5*in; }
+ return g;
+}
+double faunaCallGain(const std::array<double,kFamilyCount>& w,double phase) {
+ // Biome enum order: Temperate, DryGrass, Highlands, Taiga, OldGrowth, ColdRain, Icy, Savannah, Swamp, Marsh, WarmRain, Prairie.
+ static const double kCall[kFamilyCount]={1.0,0.4,0.3,0.7,1.0,0.9,0.15,0.6,0.8,0.7,1.0,0.5};
+ double family=0, total=0;
+ for(int i=0;i<kFamilyCount;++i) {
+  const double wi=fin(w[i],0);
+  if(wi<=0) continue;
+  family+=wi*kCall[i]; total+=wi;
+ }
+ if(total<=0) return 0;
+ family/=total;
+ const double p=fin(phase,0)-std::floor(fin(phase,0));
+ const double day=0.5+0.5*std::cos(2*Pi*(p-0.5));
+ const double dawn=std::exp(-0.5*std::pow((p-0.25)/0.05,2));
+ const double dusk=std::exp(-0.5*std::pow((p-0.8)/0.05,2));
+ const double timeGain=0.15+0.85*(0.6*day+0.4*std::max(dawn,dusk));
+ return clamp01(family*timeGain);
+}
 Soundscape::Soundscape(uint32_t seed,double sampleRate) : rng(seed?seed:1u), rate(sampleRate>1000?sampleRate:48000) {}
 double Soundscape::noise() {
  rng^=rng<<13; rng^=rng>>17; rng^=rng<<5;
