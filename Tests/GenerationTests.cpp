@@ -326,7 +326,8 @@ int main() {
     if(!allowedAdjacent(fam[q*span+r],fam[nq*span+nr])) adjacentOk=false;
    }
    check(adjacentOk,"no adjacent region pair violates allowedAdjacent over 60x60 window");
-   for(std::size_t i=0;i<kFamilyCount;++i) check(shares[i]>=0.08*span*span,"each region family holds at least 8 percent of the 60x60 window");
+   // Original four families hold at least 8 percent; climate-driven OldGrowth and ColdRainforest at least 4 percent.
+   for(std::size_t i=0;i<kFamilyCount;++i) check(shares[i]>=(i<4?0.08:0.04)*span*span,"each region family holds its minimum share of the 60x60 window");
    for(const auto& f:fixed) check(world.region(f[0],f[1]).family==static_cast<Biome>(f[2]),"origin-cell families unchanged");
    std::vector<int> order(span*span);
    for(int i=0;i<span*span;++i) order[i]=i;
@@ -342,18 +343,20 @@ int main() {
   }
   check(!allowedAdjacent(Biome::DryGrassland,Biome::Taiga)&&!allowedAdjacent(Biome::Taiga,Biome::DryGrassland),"DryGrassland and Taiga are forbidden neighbours");
   check(allowedAdjacent(Biome::TemperateForest,Biome::Taiga)&&allowedAdjacent(Biome::RockyHighlands,Biome::DryGrassland),"other family pairs are allowed neighbours");
+  check(!allowedAdjacent(Biome::DryGrassland,Biome::ColdRainforest)&&!allowedAdjacent(Biome::ColdRainforest,Biome::DryGrassland),"DryGrassland and ColdRainforest are forbidden neighbours");
  }
  bool badTime=false; try { o.advance(-1); } catch(const std::invalid_argument&) { badTime=true; }
  check(badTime,"negative elapsed time rejected");
  // Golden output as of 8446d11. Update ONLY for intentional generation changes.
  {
+  // B1a-B: kFamilyCount 4->6 (+OldGrowth, ColdRainforest)
   struct GoldenCase { unsigned seed; int x,y; bool features; std::uint64_t expected; };
   const GoldenCase cases[]={
-   {0,0,0,true,0x67757b2508650af7ULL},{0,3,-2,true,0xc76a569e534166adULL},{0,-5,7,true,0xcecd8eb66220e387ULL},{0,12,12,true,0xf99ce6e5d4eae079ULL},{0,0,0,false,0x5999df15b6cbaef8ULL},
-   {42,0,0,true,0xc08cf1e2f1ae1fa5ULL},{42,3,-2,true,0xfd2f56462206480fULL},{42,-5,7,true,0xd422751e936420a5ULL},{42,12,12,true,0xb792a76f92d87c37ULL},{42,0,0,false,0xbc40aa921da47d78ULL},
-   {98765,0,0,true,0xeec638392fa85ba7ULL}, // changed in U1: chunk lies in an unreal region (overlay density)
-   {98765,3,-2,true,0x8fa5118bb65e0c9dULL}, // changed in U1: chunk lies in an unreal region (overlay density)
-   {98765,-5,7,true,0xeaa24c98d7486d7bULL},{98765,12,12,true,0x4458cc110da81ba0ULL},{98765,0,0,false,0x893f568f384c0dbfULL},
+   {0,0,0,true,0x837ddd15d5c87237ULL},{0,3,-2,true,0x83285ccaf55e66adULL},{0,-5,7,true,0x875eed77f67c0bc7ULL},{0,12,12,true,0x4872808552e31a79ULL},{0,0,0,false,0xd6232860ab6daeb8ULL},
+   {42,0,0,true,0xfcb9437ad1fa2765ULL},{42,3,-2,true,0x27a855607f2c100fULL},{42,-5,7,true,0x76a6c0dd5b7bd925ULL},{42,12,12,true,0x3f392e702173d637ULL},{42,0,0,false,0x73e9dea529b49bb8ULL},
+   {98765,0,0,true,0x99a1467ac0300c67ULL}, // changed in U1: chunk lies in an unreal region (overlay density)
+   {98765,3,-2,true,0x97e9c5c22d4b4b1dULL}, // changed in U1: chunk lies in an unreal region (overlay density)
+   {98765,-5,7,true,0x0007045b82fdfbbbULL},{98765,12,12,true,0xfc43d4f5357ccd20ULL},{98765,0,0,false,0x6678ce6e79ad1effULL},
   };
   for(const auto& gc:cases) {
    World w({gc.seed,128,32});

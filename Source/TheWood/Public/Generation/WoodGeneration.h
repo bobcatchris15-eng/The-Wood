@@ -14,11 +14,11 @@ struct DiscoveryReservation;
 struct DiscoveryPiece;
 struct Vec3 { double x=0, y=0, z=0; };
 struct Settings { std::uint32_t seed=12345; double chunkSize=128; int cells=64; };
-enum class Biome : int { TemperateForest, DryGrassland, RockyHighlands, Taiga };
+enum class Biome : int { TemperateForest, DryGrassland, RockyHighlands, Taiga, OldGrowthForest, ColdRainforest };
 // Number of biome families; every per-family table and weight array is sized by this.
-inline constexpr int kFamilyCount = 4;
-static_assert(static_cast<int>(Biome::Taiga)+1==kFamilyCount,"kFamilyCount out of sync with Biome enum");
-// False for pairs that may never border (DryGrassland<->Taiga); symmetric.
+inline constexpr int kFamilyCount = 6;
+static_assert(static_cast<int>(Biome::ColdRainforest)+1==kFamilyCount,"kFamilyCount out of sync with Biome enum");
+// False for pairs that may never border (DryGrassland<->Taiga, DryGrassland<->ColdRainforest); symmetric.
 bool allowedAdjacent(Biome a, Biome b);
 // A stable regional identity on a warped 950m-radius hex lattice; extent is influence diameter.
 struct Region {

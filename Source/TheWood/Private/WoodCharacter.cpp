@@ -88,7 +88,7 @@ void AWoodCharacter::WoodView(const FString& View) {
  FVector Position=Environment->ExplorerStart();
  const FVector Start=Position;
  FRotator Facing(-4,35,0);
- // -WoodFrameBiome=<Grassland|Taiga|Highlands> moves the camera to the nearest core of that biome family, searched from the explorer start.
+ // -WoodFrameBiome=<Grassland|Taiga|Highlands|OldGrowth|ColdRainforest> moves the camera to the nearest core of that biome family, searched from the explorer start.
  const FString Cmd=FCommandLine::Get();
  FString FrameBiome;
  FParse::Value(*Cmd,TEXT("-WoodFrameBiome="),FrameBiome);
@@ -135,9 +135,23 @@ void AWoodCharacter::WoodView(const FString& View) {
   if(FrameBiome.Equals(TEXT("Grassland"),ESearchCase::IgnoreCase)) Family=wood::Biome::DryGrassland;
   else if(FrameBiome.Equals(TEXT("Taiga"),ESearchCase::IgnoreCase)) Family=wood::Biome::Taiga;
   else if(FrameBiome.Equals(TEXT("Highlands"),ESearchCase::IgnoreCase)) Family=wood::Biome::RockyHighlands;
+  else if(FrameBiome.Equals(TEXT("OldGrowth"),ESearchCase::IgnoreCase)) Family=wood::Biome::OldGrowthForest;
+  else if(FrameBiome.Equals(TEXT("ColdRainforest"),ESearchCase::IgnoreCase)) Family=wood::Biome::ColdRainforest;
   else Known=false;
   if(!Known) {
    UE_LOG(LogTemp,Error,TEXT("Unknown -WoodFrameBiome: %s"),*FrameBiome);
+  } else if(Family==wood::Biome::OldGrowthForest||Family==wood::Biome::ColdRainforest) {
+   // Climate-driven families sit far from the start cell: take the nearest lattice region origin holding a core weight.
+   bool Found=false;
+   for(int Ring=0;Ring<=30&&!Found;++Ring) for(int Q=-Ring;Q<=Ring&&!Found;++Q) for(int R=-Ring;R<=Ring&&!Found;++R) {
+    if(FMath::Max(FMath::Abs(Q),FMath::Abs(R))!=Ring) continue;
+    const auto Reg=Landscape.region(Q,R);
+    if(Reg.family!=Family) continue;
+    if(Landscape.sample(Reg.origin.x,Reg.origin.y).biome[static_cast<std::size_t>(Family)]<0.85) continue;
+    Position=FVector(Reg.origin.x*100.0,Reg.origin.y*100.0,0);
+    Found=true;
+   }
+   if(!Found) UE_LOG(LogTemp,Warning,TEXT("No %s core within lattice ring 30; keeping fixed frame"),*FrameBiome);
   } else if(const auto Core=Landscape.nearestBiomeCore(Family,Start.X/100.0,Start.Y/100.0,2000.0,0.85)) {
    Position=FVector(Core->x*100.0,Core->y*100.0,0);
   } else {
@@ -145,7 +159,7 @@ void AWoodCharacter::WoodView(const FString& View) {
   }
  }
  const auto Here=Landscape.sample(Position.X/100.0,Position.Y/100.0);
- UE_LOG(LogTemp,Display,TEXT("WoodView biome weights: TemperateForest=%.3f DryGrassland=%.3f RockyHighlands=%.3f Taiga=%.3f"),Here.biome[0],Here.biome[1],Here.biome[2],Here.biome[3]);
+ UE_LOG(LogTemp,Display,TEXT("WoodView biome weights: TemperateForest=%.3f DryGrassland=%.3f RockyHighlands=%.3f Taiga=%.3f OldGrowth=%.3f ColdRainforest=%.3f"),Here.biome[0],Here.biome[1],Here.biome[2],Here.biome[3],Here.biome[4],Here.biome[5]);
  Position.Z=Environment->GroundAt(Position.X,Position.Y)+100;
  Environment->EnsureTerrainAround(Position);
  SetActorLocation(Position);

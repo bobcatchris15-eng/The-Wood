@@ -81,8 +81,9 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
   for(const auto& P:Chunk.vertices) Vertices.Add(FVector(P.x,P.y,P.z)*100);
   Normals=Prepared.Normals;UVs=Prepared.HabitatUV;
   for(const auto& C:Prepared.BiomeColors) Colors.Add(C.ToFColor(true));
-  // Step 1: tint identity (1,1,1) carried in UV1/UV2; no material edit yet.
+  // Per-vertex ground tint from wood::ground::shade(): UV1 = tint R,G; UV2 = tint B, 0 (identity for original families).
   UV1.Init(FVector2D(1.f,1.f),Vertices.Num());UV2.Init(FVector2D(1.f,0.f),Vertices.Num());
+  for(int32 I=0;I<Prepared.Tints.Num()&&I<Vertices.Num();++I) { UV1[I]=FVector2D(Prepared.Tints[I].R,Prepared.Tints[I].G); UV2[I]=FVector2D(Prepared.Tints[I].B,0.f); }
   for(auto I:Chunk.triangles) Triangles.Add(I);
   Mesh->CreateMeshSection(0,Vertices,Triangles,Normals,UVs,UV1,UV2,TArray<FVector2D>(),Colors,TArray<FProcMeshTangent>(),true);
   if(Palette) Mesh->SetMaterial(0,Palette->GroundMaterial.LoadSynchronous());

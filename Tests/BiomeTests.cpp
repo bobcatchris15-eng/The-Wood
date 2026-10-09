@@ -17,9 +17,10 @@ int main() {
  }
  for(unsigned seed:{0u,42u,98765u}) {
   World world({seed,128,64});
-  const int coords[kFamilyCount][2]={{0,0},{1,0},{1,1},{0,-1}};
+  // Starter neighbourhood holds the four explicit families; OldGrowth and ColdRainforest are climate-driven.
+  const int coords[4][2]={{0,0},{1,0},{1,1},{0,-1}};
   std::array<std::size_t,kFamilyCount> trees{},ferns{},rocks{},cover{};
-  for(int family=0;family<kFamilyCount;++family) {
+  for(int family=0;family<4;++family) {
    const auto r=world.region(coords[family][0],coords[family][1]);
    const auto s=world.sample(r.origin.x,r.origin.y);
    const auto again=world.region(coords[family][0],coords[family][1]);

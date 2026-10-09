@@ -48,6 +48,8 @@ std::optional<Biome> originOverride(int gx,int gy) {
 }
 Biome tableFamily(const World& w,int gx,int gy) {
  const auto f=climateAt(w,gx,gy);
+ if(f.temperature01>=0.28&&f.temperature01<0.48&&f.moisture01>=0.62) return Biome::ColdRainforest;
+ if(f.temperature01>=0.45&&f.moisture01>=0.62&&reliefAt(w,gx,gy)<=0.45) return Biome::OldGrowthForest;
  if(f.temperature01<0.30) return Biome::Taiga;
  if(f.moisture01<0.35) return Biome::DryGrassland;
  if(reliefAt(w,gx,gy)>0.62) return Biome::RockyHighlands;
@@ -75,6 +77,20 @@ Biome regionFamily(const World& w,int gx,int gy) {
  return base;
 }
 
+// Per-family multipliers in Biome order; the four original families are identity (1 or 0).
+constexpr std::array<double,kFamilyCount> kTreeDensityMul{{1,1,1,1,0.7,1}};
+constexpr std::array<double,kFamilyCount> kTreeScaleMul{{1,1,1,1,1.35,1}};
+constexpr std::array<double,kFamilyCount> kRockMul{{1,1,1,1,1.5,1}};
+constexpr std::array<double,kFamilyCount> kFernMul{{1,1,1,1,1,2.0}};
+constexpr std::array<double,kFamilyCount> kLightBrightnessMul{{1,1,1,1,0.8,1}};
+constexpr std::array<double,kFamilyCount> kLightKelvinShift{{0,0,0,0,0,-400}};
+// Weight-blended multiplier 1+sum(w*(m-1)); exactly 1 when only identity families carry weight.
+double familyMul(const std::array<double,kFamilyCount>& biome,const std::array<double,kFamilyCount>& mul) {
+ double m=1;
+ for(std::size_t i=0;i<kFamilyCount;++i) m+=biome[i]*(mul[i]-1);
+ return m;
+}
+
 Region describe(const World& w,int gx,int gy) {
  const auto seed=w.regionSeed(gx,gy);
  Region r;
@@ -83,11 +99,11 @@ Region describe(const World& w,int gx,int gy) {
  r.origin={center.x-180,center.y-180,0};r.q=gx;r.r=gy;r.extent=hex::radius*2;
  r.family=regionFamily(w,gx,gy);
  const auto i=static_cast<std::size_t>(r.family);
- constexpr std::array<double,kFamilyCount> moisture{{0.78,0.24,0.38,0.58}};
- constexpr std::array<double,kFamilyCount> roughness{{0.22,0.16,0.85,0.36}};
- constexpr std::array<double,kFamilyCount> temperature{{16,24,8,-3}};
- constexpr std::array<double,kFamilyCount> canopy{{0.96,0.055,0.09,0.70}};
- constexpr std::array<double,kFamilyCount> exposure{{0.18,0.86,0.94,0.38}};
+ constexpr std::array<double,kFamilyCount> moisture{{0.78,0.24,0.38,0.58,0.70,0.92}};
+ constexpr std::array<double,kFamilyCount> roughness{{0.22,0.16,0.85,0.36,0.28,0.30}};
+ constexpr std::array<double,kFamilyCount> temperature{{16,24,8,-3,15,6}};
+ constexpr std::array<double,kFamilyCount> canopy{{0.96,0.055,0.09,0.70,0.98,0.90}};
+ constexpr std::array<double,kFamilyCount> exposure{{0.18,0.86,0.94,0.38,0.14,0.30}};
  static_assert(moisture.size()==kFamilyCount&&roughness.size()==kFamilyCount&&temperature.size()==kFamilyCount&&canopy.size()==kFamilyCount&&exposure.size()==kFamilyCount,"per-family tables need one row per Biome value");
  r.moisture=moisture[i]; r.roughness=roughness[i]; r.temperature=temperature[i];
  r.canopy=canopy[i]; r.exposure=exposure[i]; r.shelter=1-r.exposure;
@@ -193,7 +209,8 @@ double ground(const World& world,double x,double y,double stream,const Surface* 
 }
 }
 bool allowedAdjacent(Biome a,Biome b) {
- return !((a==Biome::DryGrassland&&b==Biome::Taiga)||(a==Biome::Taiga&&b==Biome::DryGrassland));
+ const auto forbidden=[](Biome x,Biome y){return x==Biome::DryGrassland&&(y==Biome::Taiga||y==Biome::ColdRainforest);};
+ return !(forbidden(a,b)||forbidden(b,a));
 }
 World::World(Settings settings):config(settings) {
  if(!std::isfinite(config.chunkSize)||config.chunkSize<=0||config.cells<2||config.cells>256)
@@ -401,7 +418,7 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
    if(type==0) {
     // Dynamic groves and sunlit clearings interrupt the temperate and taiga canopies.
     const double grove=smooth((patch-0.26)/0.36);
-    const double density=surface.forest*(0.04+0.78*grove)*ov.densityScale;
+    const double density=surface.forest*(0.04+0.78*grove)*ov.densityScale*familyMul(surface.biome,kTreeDensityMul);
     if(surface.slope>=0.7||routeDistance<3.5||choice>density) continue;
     if(isInsideReservation(reservations,px,py,true)) continue;
     kind=Kind::Tree;
@@ -422,17 +439,19 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
      scale=1.65+(size-0.82)*4.2;
      if(surface.biome[2]>0.3) scale*=(1.0-0.35*surface.biome[2]);
     }
+    scale*=familyMul(surface.biome,kTreeScaleMul);
    } else if(type==1) {
     if(surface.slope>=0.7) continue;
     // Two spatial scales form dense colonies separated by leaf-litter pockets.
     const double colony=smooth((0.5+0.5*noise(config.seed+Salt::Colony,px/11,py/11)-0.28)/0.40);
-    const double habitatCover=surface.biome[0]+0.80*surface.biome[1]+0.30*surface.biome[2]+0.55*surface.biome[3];
+    const double habitatCover=surface.biome[0]+0.80*surface.biome[1]+0.30*surface.biome[2]+0.55*surface.biome[3]+0.90*surface.biome[4]+1.00*surface.biome[5];
     const double cover=(0.10+0.84*colony)*habitatCover*ov.densityScale;
     // Low plants preserve an open walking strip without emptying both banks.
     const double routeCover=routeDistance<1.2?0.20:1.0;
     if(choice>cover*routeCover) continue;
     const double fernChance=surface.moisture*(surface.biome[0]*(0.70+0.65*colony)+
-                                                0.04*surface.biome[1]+0.08*surface.biome[2]+0.15*surface.biome[3]);
+                                                0.04*surface.biome[1]+0.08*surface.biome[2]+0.15*surface.biome[3]+
+                                                0.10*surface.biome[4]+0.40*surface.biome[5])*familyMul(surface.biome,kFernMul);
     kind=random(seed,gx,gy,salt+Salt::LayerFernChance)<fernChance?Kind::Fern:Kind::Grass;
     const double streamDist=std::abs(px-streamX(py));
     if(streamDist>=streamHalfWidth(py)+0.6&&streamDist<=5.0&&routeDistance>2.2&&random(seed,gx,gy,salt+Salt::LayerRockChance)<0.22) {
@@ -459,11 +478,11 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
    } else {
     // Larger rock groups occur in patches, particularly on exposed highlands.
     const double rocky=0.5+0.5*noise(config.seed+Salt::Rocky,px/24,py/24);
-    const double abundance=0.045*surface.biome[0]+0.07*surface.biome[1]+0.45*surface.biome[2]+0.08*surface.biome[3];
+    const double abundance=0.045*surface.biome[0]+0.07*surface.biome[1]+0.45*surface.biome[2]+0.08*surface.biome[3]+0.05*surface.biome[4]+0.04*surface.biome[5];
     const double streamDist=std::abs(px-streamX(py));
     const double halfW=streamHalfWidth(py);
     const double riparian=(streamDist>=halfW*0.65&&streamDist<=6.0&&routeDistance>2.2)?0.38*(0.6+0.4*noise(config.seed+Salt::Riparian,px/12,py/12)):0.0;
-    const double totalAbundance=std::max(abundance*smooth((rocky-0.35)/0.35),riparian)*ov.densityScale;
+    const double totalAbundance=std::max(abundance*smooth((rocky-0.35)/0.35)*familyMul(surface.biome,kRockMul),riparian)*ov.densityScale;
     if(routeDistance<2.5||choice>totalAbundance) continue;
     kind=Kind::Rock;
     const double highlandBoost=surface.biome[2]>0.35?(1.2+1.5*surface.biome[2]):1.0;
@@ -524,11 +543,12 @@ Lighting World::lighting(double x,double y,double seconds) const {
  for(const auto& cell:cellWeights(config,x,y)) {
   if(cell.weight<=0) continue;
   const auto r=describe(*this,cell.cell.q,cell.cell.r);const double w=cell.weight;
+  const auto fam=static_cast<std::size_t>(r.family);
   const double day=0.5+0.5*std::sin(seconds*2*pi/(2400+700*r.roughness)+r.phase);
   // Ordinary cells use neutral overlay values (x*1.0, x+0.0), so their output is unchanged.
   const auto p=r.unreal?unreal::params(r.overlay):unreal::params(unreal::Overlay::None);
-  total+=w; result.brightness+=w*(0.18+0.82*day)*p.lightBrightness;
-  result.kelvin+=w*(4300+900*r.exposure+1500*(1-day)+p.lightKelvinShift);
+  total+=w; result.brightness+=w*(0.18+0.82*day)*p.lightBrightness*kLightBrightnessMul[fam];
+  result.kelvin+=w*(4300+900*r.exposure+1500*(1-day)+p.lightKelvinShift+kLightKelvinShift[fam]);
  }
  result.brightness/=total; result.kelvin/=total; return result;
 }

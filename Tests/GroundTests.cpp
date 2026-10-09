@@ -35,6 +35,18 @@ int main() {
  expectIdentity(shade(familyOnly(Biome::RockyHighlands)),2);
  expectIdentity(shade(familyOnly(Biome::Taiga)),3);
 
+ // New rows: archetype weights sum to one and carry their authored tint.
+ {
+  const GroundShade Old=shade(familyOnly(Biome::OldGrowthForest));
+  assert(near(Old.archetype[0],0.6f) && near(Old.archetype[3],0.4f) && near(Old.archetype[1],0.f) && near(Old.archetype[2],0.f));
+  assert(near(archetypeSum(Old),1.f));
+  assert(near(Old.tintR,0.85f) && near(Old.tintG,0.82f) && near(Old.tintB,0.75f));
+  const GroundShade Rain=shade(familyOnly(Biome::ColdRainforest));
+  assert(near(Rain.archetype[0],0.25f) && near(Rain.archetype[3],0.75f) && near(Rain.archetype[1],0.f) && near(Rain.archetype[2],0.f));
+  assert(near(archetypeSum(Rain),1.f));
+  assert(near(Rain.tintR,0.80f) && near(Rain.tintG,0.95f) && near(Rain.tintB,0.82f));
+ }
+
  // Blended surface: weights are sum-preserving and archetype sum equals biome sum (1).
  {
   Surface S{};
