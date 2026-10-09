@@ -455,55 +455,61 @@ def clear_scene():
 
 
 def realise(asset, parts, mats):
+    # One object, one mesh per asset: parts become material slots (one per material name).
+    # Single StaticMesh on UE import, named after the asset.
     allz = min(p[2] for part in parts for p in part.verts)
-    objs, meshes = [], []
     tris = 0
     lo = [1e18, 1e18, 1e18]
     hi = [-1e18, -1e18, -1e18]
     slots = []
+    verts = []
+    faces = []  # (index tuple, uv tuple, material slot index)
     for part in parts:
-        verts = [(x, y, z - allz) for (x, y, z) in part.verts]
-        for vv in verts:
+        if part.mat not in slots:
+            slots.append(part.mat)
+        slot = slots.index(part.mat)
+        base = len(verts)
+        for (x, y, z) in part.verts:
+            vv = (x, y, z - allz)
             for a in range(3):
                 lo[a] = min(lo[a], vv[a])
                 hi[a] = max(hi[a], vv[a])
-        me = bpy.data.meshes.new("%s__%s" % (asset, part.name))
-        me.from_pydata(verts, [], [f[0] for f in part.faces])
-        me.update()
-        if len(me.polygons) != len(part.faces):
-            raise RuntimeError("polygon count mismatch in %s/%s" % (asset, part.name))
-        uvl = me.uv_layers.new(name="UVMap")
-        for poly, (idx, uvs) in zip(me.polygons, part.faces):
-            for k in range(len(idx)):
-                loop = poly.loop_start + k
-                if me.loops[loop].vertex_index != idx[k]:
-                    raise RuntimeError("loop order mismatch in %s/%s" % (asset, part.name))
-                uvl.data[loop].uv = uvs[k]
-        bm = bmesh.new()
-        bm.from_mesh(me)
-        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
-        bm.to_mesh(me)
-        bm.free()
-        tris += sum(len(poly.vertices) - 2 for poly in me.polygons)
-        me.materials.append(mats[part.mat])
-        if part.mat not in slots:
-            slots.append(part.mat)
-        ob = bpy.data.objects.new(me.name, me)
-        bpy.context.scene.collection.objects.link(ob)
-        objs.append(ob)
-        meshes.append(me)
+            verts.append(vv)
+        for idx, uvs in part.faces:
+            faces.append((tuple(base + i for i in idx), uvs, slot))
 
+    me = bpy.data.meshes.new(asset)
+    me.from_pydata(verts, [], [f[0] for f in faces])
+    me.update()
+    if len(me.polygons) != len(faces):
+        raise RuntimeError("polygon count mismatch in %s" % asset)
+    for mat_name in slots:
+        me.materials.append(mats[mat_name])
+    uvl = me.uv_layers.new(name="UVMap")
+    for poly, (idx, uvs, slot) in zip(me.polygons, faces):
+        poly.material_index = slot
+        for k in range(len(idx)):
+            loop = poly.loop_start + k
+            if me.loops[loop].vertex_index != idx[k]:
+                raise RuntimeError("loop order mismatch in %s" % asset)
+            uvl.data[loop].uv = uvs[k]
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    bm.to_mesh(me)
+    bm.free()
+    tris = sum(len(poly.vertices) - 2 for poly in me.polygons)
+
+    ob = bpy.data.objects.new(asset, me)
+    bpy.context.scene.collection.objects.link(ob)
     bpy.ops.object.select_all(action="DESELECT")
-    for ob in objs:
-        ob.select_set(True)
-    bpy.context.view_layer.objects.active = objs[0]
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
     path = os.path.join(OUT, asset + ".glb")
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_yup=True)
 
-    for ob in objs:
-        bpy.data.objects.remove(ob, do_unlink=True)
-    for me in meshes:
-        bpy.data.meshes.remove(me)
+    bpy.data.objects.remove(ob, do_unlink=True)
+    bpy.data.meshes.remove(me)
 
     dims = (hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2])
     return {"tris": tris, "dims": dims, "slots": slots, "path": path, "minz": lo[2]}
