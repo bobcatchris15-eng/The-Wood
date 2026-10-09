@@ -8,7 +8,7 @@ namespace wood::ground {
 // Vertex RGBA channels are ground archetypes, decoupled from the biome family count.
 enum class Archetype : int { ForestLitter=0, Grass=1, RockGravel=2, MossDamp=3 };
 inline constexpr int ArchetypeCount=4;
-inline constexpr int BiomeCount=4;
+inline constexpr int BiomeCount=kFamilyCount;
 
 struct FamilyLook {
  std::array<float,ArchetypeCount> archetype;
@@ -24,7 +24,7 @@ inline constexpr std::array<FamilyLook,BiomeCount> FamilyLooks{{
 }};
 
 static_assert(FamilyLooks.size()==BiomeCount,"FamilyLooks needs one row per Biome value");
-static_assert(static_cast<int>(wood::Biome::Taiga)+1==BiomeCount,"BiomeCount out of sync with Biome enum");
+static_assert(BiomeCount==kFamilyCount,"BiomeCount out of sync with kFamilyCount");
 
 struct GroundShade {
  std::array<float,ArchetypeCount> archetype;

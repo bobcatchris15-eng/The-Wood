@@ -17,9 +17,9 @@ int main() {
  }
  for(unsigned seed:{0u,42u,98765u}) {
   World world({seed,128,64});
-  const int coords[4][2]={{0,0},{1,0},{1,1},{0,-1}};
-  std::array<std::size_t,4> trees{},ferns{},rocks{},cover{};
-  for(int family=0;family<4;++family) {
+  const int coords[kFamilyCount][2]={{0,0},{1,0},{1,1},{0,-1}};
+  std::array<std::size_t,kFamilyCount> trees{},ferns{},rocks{},cover{};
+  for(int family=0;family<kFamilyCount;++family) {
    const auto r=world.region(coords[family][0],coords[family][1]);
    const auto s=world.sample(r.origin.x,r.origin.y);
    const auto again=world.region(coords[family][0],coords[family][1]);
@@ -54,12 +54,12 @@ int main() {
   check(rocks[2]>rocks[0]*2,"rocky highlands contain denser stone groups");
   check(cover[2]<cover[0],"highland ground cover is sparser than moist woodland");
   std::cout<<"Biome seed "<<seed;
-  for(int i=0;i<4;++i) std::cout<<" ["<<trees[i]<<" trees,"<<ferns[i]<<" ferns,"<<rocks[i]<<" rocks,"<<cover[i]<<" cover]";
+  for(int i=0;i<kFamilyCount;++i) std::cout<<" ["<<trees[i]<<" trees,"<<ferns[i]<<" ferns,"<<rocks[i]<<" rocks,"<<cover[i]<<" cover]";
   std::cout<<'\n';
   for(double y:{-98000.0,-3600.0,-180.0,600.0,3300.0,97500.0}) for(double x:{-98200.0,-2400.0,-180.0,600.0,5100.0,98400.0}) {
    const auto s=world.sample(x,y),repeat=world.sample(x,y),next=world.sample(x+0.05,y+0.05);
    double sum=0;
-   for(int i=0;i<4;++i) {
+   for(int i=0;i<kFamilyCount;++i) {
     sum+=s.biome[i]; check(s.biome[i]>=0&&s.biome[i]<=1,"biome weights are bounded");
     check(s.biome[i]==repeat.biome[i],"climate queries remain deterministic at far negative and positive coordinates");
     check(std::abs(s.biome[i]-next.biome[i])<0.001,"regional weights blend continuously");

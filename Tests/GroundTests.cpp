@@ -69,6 +69,6 @@ int main() {
 
  // Table has one row per Biome value.
  static_assert(FamilyLooks.size()==static_cast<std::size_t>(BiomeCount),"row count");
- static_assert(BiomeCount==4,"Biome enum has four values");
+ static_assert(BiomeCount==kFamilyCount,"BiomeCount tracks kFamilyCount");
  return 0;
 }

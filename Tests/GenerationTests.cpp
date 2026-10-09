@@ -314,7 +314,7 @@ int main() {
   for(unsigned seed:{0u,42u,98765u}) {
    World world({seed,128,64});
    std::vector<Biome> fam(span*span);
-   std::array<std::size_t,4> shares{};
+   std::array<std::size_t,kFamilyCount> shares{};
    for(int q=0;q<span;++q) for(int r=0;r<span;++r) {
     fam[q*span+r]=world.region(q+lo,r+lo).family;
     ++shares[static_cast<std::size_t>(fam[q*span+r])];
@@ -326,7 +326,7 @@ int main() {
     if(!allowedAdjacent(fam[q*span+r],fam[nq*span+nr])) adjacentOk=false;
    }
    check(adjacentOk,"no adjacent region pair violates allowedAdjacent over 60x60 window");
-   for(std::size_t i=0;i<4;++i) check(shares[i]>=0.08*span*span,"each region family holds at least 8 percent of the 60x60 window");
+   for(std::size_t i=0;i<kFamilyCount;++i) check(shares[i]>=0.08*span*span,"each region family holds at least 8 percent of the 60x60 window");
    for(const auto& f:fixed) check(world.region(f[0],f[1]).family==static_cast<Biome>(f[2]),"origin-cell families unchanged");
    std::vector<int> order(span*span);
    for(int i=0;i<span*span;++i) order[i]=i;

@@ -83,11 +83,12 @@ Region describe(const World& w,int gx,int gy) {
  r.origin={center.x-180,center.y-180,0};r.q=gx;r.r=gy;r.extent=hex::radius*2;
  r.family=regionFamily(w,gx,gy);
  const auto i=static_cast<std::size_t>(r.family);
- constexpr double moisture[]={0.78,0.24,0.38,0.58};
- constexpr double roughness[]={0.22,0.16,0.85,0.36};
- constexpr double temperature[]={16,24,8,-3};
- constexpr double canopy[]={0.96,0.055,0.09,0.70};
- constexpr double exposure[]={0.18,0.86,0.94,0.38};
+ constexpr std::array<double,kFamilyCount> moisture{{0.78,0.24,0.38,0.58}};
+ constexpr std::array<double,kFamilyCount> roughness{{0.22,0.16,0.85,0.36}};
+ constexpr std::array<double,kFamilyCount> temperature{{16,24,8,-3}};
+ constexpr std::array<double,kFamilyCount> canopy{{0.96,0.055,0.09,0.70}};
+ constexpr std::array<double,kFamilyCount> exposure{{0.18,0.86,0.94,0.38}};
+ static_assert(moisture.size()==kFamilyCount&&roughness.size()==kFamilyCount&&temperature.size()==kFamilyCount&&canopy.size()==kFamilyCount&&exposure.size()==kFamilyCount,"per-family tables need one row per Biome value");
  r.moisture=moisture[i]; r.roughness=roughness[i]; r.temperature=temperature[i];
  r.canopy=canopy[i]; r.exposure=exposure[i]; r.shelter=1-r.exposure;
  r.phase=random(seed,gx,gy,Salt::RegionPhase)*2*pi;

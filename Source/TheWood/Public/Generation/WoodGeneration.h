@@ -15,6 +15,9 @@ struct DiscoveryPiece;
 struct Vec3 { double x=0, y=0, z=0; };
 struct Settings { std::uint32_t seed=12345; double chunkSize=128; int cells=64; };
 enum class Biome : int { TemperateForest, DryGrassland, RockyHighlands, Taiga };
+// Number of biome families; every per-family table and weight array is sized by this.
+inline constexpr int kFamilyCount = 4;
+static_assert(static_cast<int>(Biome::Taiga)+1==kFamilyCount,"kFamilyCount out of sync with Biome enum");
 // False for pairs that may never border (DryGrassland<->Taiga); symmetric.
 bool allowedAdjacent(Biome a, Biome b);
 // A stable regional identity on a warped 950m-radius hex lattice; extent is influence diameter.
@@ -32,7 +35,7 @@ struct Region {
 struct Surface {
  double height=0, forest=0, moisture=0, slope=0, waterHeight=0, depth=0;
  // Weights follow Biome's enum order and sum to one; temperature is Celsius.
- std::array<double,4> biome{};
+ std::array<double,kFamilyCount> biome{};
  double temperature=0, exposure=0, shelter=0, roughness=0;
 };
 enum class Kind { Tree, Fern, Grass, Rock, Prop, Kit };
