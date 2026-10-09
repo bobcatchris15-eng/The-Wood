@@ -59,6 +59,18 @@ int main() {
   assert(near(Sav.tintR,1.10f) && near(Sav.tintG,1.00f) && near(Sav.tintB,0.78f));
  }
 
+ // Swamp and Marsh rows: authored archetype mix and tint, weights sum to one.
+ {
+  const GroundShade Swp=shade(familyOnly(Biome::Swamp));
+  assert(near(Swp.archetype[0],0.35f) && near(Swp.archetype[1],0.10f) && near(Swp.archetype[2],0.f) && near(Swp.archetype[3],0.55f));
+  assert(near(archetypeSum(Swp),1.f));
+  assert(near(Swp.tintR,0.70f) && near(Swp.tintG,0.78f) && near(Swp.tintB,0.62f));
+  const GroundShade Mar=shade(familyOnly(Biome::Marsh));
+  assert(near(Mar.archetype[0],0.10f) && near(Mar.archetype[1],0.60f) && near(Mar.archetype[2],0.f) && near(Mar.archetype[3],0.30f));
+  assert(near(archetypeSum(Mar),1.f));
+  assert(near(Mar.tintR,0.85f) && near(Mar.tintG,0.95f) && near(Mar.tintB,0.70f));
+ }
+
  // Blended surface: weights are sum-preserving and archetype sum equals biome sum (1).
  {
   Surface S{};
