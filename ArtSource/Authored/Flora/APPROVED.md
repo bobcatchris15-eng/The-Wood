@@ -8,3 +8,4 @@ The orchestrator reviews every preview before an asset is approved. Only approve
 | shrub_a | hazel_coppice, sumac_scrub, salal_understory, heather_dwarf | willow_shrub, thorn_scrub, juniper_low | Willow is nearly bare. Thorn is sparse. Juniper looks stringy rather than dense. |
 | flower | all 9 (placeholder tier) | — | arctic_poppy is the wrong colour (grey). Lupine is sparse. |
 | canopy_b | acacia_flat, birch_pale, emergent_fig, cottonwood_river, understory_laurel | baldcypress | Bald cypress crown is clumped, not feathery; keep the older Vegetation bald_cypress_01 for now |
+| grass | prairie_bunchgrass, wet_sedge, frost_fescue, common_reed, bamboo_stand | alpine_tussock, shade_grass, horsetail | Tussock and shade grass are sparse; horsetail reads like bamboo; common reed looks a bit like papyrus |
