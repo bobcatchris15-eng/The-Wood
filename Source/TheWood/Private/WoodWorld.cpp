@@ -63,14 +63,20 @@ void AWoodWorld::BeginPlay() {
  FParse::Value(FCommandLine::Get(),TEXT("WoodTime="),Clock.seconds);
  if(!FMath::IsFinite(Clock.seconds)||Clock.seconds<0) Clock.seconds=0;
  Generator=wood::World({static_cast<uint32>(Seed),128,64});
- const bool Entrance=FString(FCommandLine::Get()).Contains(TEXT("-WoodEntrance"));
- if(Entrance) Generator.setEntered(false);
+ // Startup: (1) valid resume → as saved; (2) otherwise new journey at the lot; -WoodWild skips the entrance (dev/test).
+ const bool Wild=FString(FCommandLine::Get()).Contains(TEXT("-WoodWild"));
  wood::save::SaveState Resume;
  const bool Resuming=bResumeEnabled&&LoadResume(Resume);
  if(Resuming) ApplyResume(Resume);
+ const bool Lot=!Wild&&(!Resuming||!Resume.enteredWild);
+ if(Wild) Generator.setEntered(true);
+ else if(Lot) Generator.setEntered(false);
+ // A new journey replaces any stale resume; its first autosave rewrites the file.
+ if(!Resuming&&!Wild&&bResumeEnabled) IFileManager::Get().Delete(*ResumePath);
+ bTrailheadStart=Lot;
  if(!Palette) Palette=LoadObject<UWoodPalette>(nullptr,TEXT("/Game/Wood/DA_BenchmarkPalette.DA_BenchmarkPalette"));
  Generate();
- if(Entrance&&!Generator.entered()) SpawnTrailheadLot();
+ if(Lot&&!Generator.entered()) SpawnTrailheadLot();
  if(Resuming) PrefetchResumedChunks(Resume);
  LastAutosaveRealSeconds=FPlatformTime::Seconds();
  bResumeReady=true;
@@ -168,6 +174,7 @@ void AWoodWorld::Generate() {
 void AWoodWorld::SetEntered(bool Value) {
  // Never revert: a crossed threshold stays crossed for this journey.
  if(!Value&&bEnteredWild) return;
+ if(Value) bTrailheadStart=false;
  Generator.setEntered(Value);
  if(Value&&TrailheadLot) { TrailheadLot->DestroyComponent(); TrailheadLot=nullptr; }
 }

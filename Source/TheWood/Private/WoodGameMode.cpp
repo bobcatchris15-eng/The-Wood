@@ -27,5 +27,6 @@ void AWoodGameMode::RestartPlayer(AController* NewPlayer) {
  }
  FVector Position=Environment->ExplorerStart();
  Position.Z=Environment->GroundAt(Position.X,Position.Y)+100;
- RestartPlayerAtTransform(NewPlayer,FTransform(FRotator(0,40,0),Position));
+ // Trailhead lot faces north (+Y, yaw 90); wilderness start keeps its old heading.
+ RestartPlayerAtTransform(NewPlayer,FTransform(FRotator(0,Environment->StartsAtTrailhead()?90:40,0),Position));
 }

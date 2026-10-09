@@ -5,9 +5,10 @@ $editor='C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-C
 $review=Join-Path $taskRoot 'Saved/Review'
 New-Item -ItemType Directory -Force -Path $review | Out-Null
 $startX=-180;$startY=-180
-$frame=@(); if($View -eq 'Ruins') { $frame=@('-WoodFrameRuin') }
-if($View -eq 'Trailhead') { $frame=@('-WoodEntrance') }
-if($View -in 'Grassland','Taiga','Highlands') { $frame=@("-WoodFrameBiome=$View") }
+# Non-Trailhead views start in wilderness (-WoodWild); Trailhead is a plain new journey at the lot.
+$frame=@('-WoodWild'); if($View -eq 'Ruins') { $frame+=@('-WoodFrameRuin') }
+if($View -eq 'Trailhead') { $frame=@() }
+if($View -in 'Grassland','Taiga','Highlands') { $frame+=@("-WoodFrameBiome=$View") }
 $start=Get-Date
 $name="${Seed}-${View}-${Time}"
 $log=Join-Path $review "$name.log"

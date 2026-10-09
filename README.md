@@ -18,6 +18,13 @@ Double-click `Tools/Play.cmd` to try the prototype on this machine. The launch u
 
 This compiles the editor module and creates the benchmark map, authored materials and palette, and imports prepared CC0 models. Bootstrap regenerates owned materials and explicitly migrates the palette to the current asset version. Open `TheWood.uproject`, open `/Game/Maps/VisualBenchmark`, and press Play. Build/bootstrap were validated with Unreal 5.8.3 on 2026-10-06.
 
+## Startup modes
+
+- Plain launch (`Tools/Play.cmd`): a valid `Saved/Wood/resume.json` for this seed resumes the journey as saved; otherwise a new journey starts at the trailhead lot, facing north.
+- `-WoodFresh`: ignore and disable resume (no reads, no saves). Used by `Render-Review -View Trailhead` (new journey at the lot).
+- `-WoodWild`: skip the entrance and start in wilderness at the old explorer start. Used by `Render-Review` (non-Trailhead views) and `Test-Unreal`.
+- `-WoodEntrance`: accepted; same as the default new journey.
+
 ## Controls
 
 WASD: walk. Mouse: look. C/right-click: photograph. E: sit/stand. T: toggle 20× observation time while seated. Standing restores normal time. Current speed is 4.2m/s on land and 2.8m/s while wading. Photos exclude UI and persist in `Saved/Photos`.

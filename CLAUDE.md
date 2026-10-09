@@ -19,6 +19,7 @@ Cost: Disk per tree is about 1.0 GB (324 MB toolchain + 704 MB Content), not cou
 Notes:
 - Render-Review after -InitializeContent can show grey checker or crash (ShaderCompiler NumPendingJobs assert) on a cold shader cache; re-run once before diagnosing.
 - Test-Core compiles `WoodGeneration.cpp`, `WoodDiscovery.cpp`, and `Tests/GenerationTests.cpp` with `-Werror` and runs the generation executable. Output in `.cache/tests`.
+- Startup: valid resume → as saved; else new journey at trailhead lot. `-WoodWild` = wilderness start (dev/test; Render non-Trailhead, Test-Unreal). `-WoodFresh` = no resume (Render Trailhead, Test-Unreal). `-WoodEntrance` = accepted no-op (default).
 - Test-Unreal writes log to `.cache/unreal-tests.log` and report to `Saved/Automation`. Runs with `-nullrhi`.
 - Build-Unreal uses `-WaitMutex`. Stale build output: rerun Build-Unreal before Test-Unreal.
 - `Tools/Test-MSVC.cmd` is not part of `Tools/Test-All.sh`.

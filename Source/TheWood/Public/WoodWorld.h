@@ -42,6 +42,8 @@ public:
  void SetEntered(bool Value);
  // Irreversible threshold: once past the passage with the lot occluded, the entrance becomes wilderness.
  void CheckThreshold(FVector Position);
+ // True for a new or pre-threshold journey: the player starts at the trailhead lot, facing north.
+ bool StartsAtTrailhead() const { return bTrailheadStart; }
  bool IsSeated() const { return Clock.seated; }
  bool IsAccelerated() const { return Clock.accelerated; }
  double ObservationSeconds() const { return Clock.seconds; }
@@ -63,6 +65,7 @@ public:
 private:
  friend class FWoodThresholdTest;
  bool bEnteredWild=false;
+ bool bTrailheadStart=false;
  bool bResumeReady=false;
  bool bResumedPlayer=false;
  FVector ResumedLocation=FVector::ZeroVector;

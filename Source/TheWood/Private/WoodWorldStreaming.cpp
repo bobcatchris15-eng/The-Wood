@@ -58,6 +58,9 @@ void AWoodWorld::CheckThreshold(FVector Position) {
 }
 
 FVector AWoodWorld::ExplorerStart() const {
+ // New journey: the trailhead lot centre (metres in core, converted to cm).
+ if(bTrailheadStart) return FVector(wood::entrance::LotX*100,wood::entrance::LotY*100,0);
+ // -WoodWild / threshold crossed: wilderness start (dev/test default).
  double X=-180,Y=-180;
  FParse::Value(FCommandLine::Get(),TEXT("WoodStartX="),X);
  FParse::Value(FCommandLine::Get(),TEXT("WoodStartY="),Y);
