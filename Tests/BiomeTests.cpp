@@ -255,6 +255,63 @@ int main() {
   check(dryLogs==0,"deadwood absent from DryGrassland core");
   std::cout<<"Deadwood core logs: OldGrowth "<<oldGrowthLogs<<" over "<<oldGrowthChunks<<" chunks, DryGrassland "<<dryLogs<<" over "<<dryChunks<<" chunks\n";
  }
+ {
+  // Prairie: moister half of the DryGrassland window. Tall grass >=1.5x DryGrassland, broadleaf <=0.2x TemperateForest, continuous border.
+  // Located through hex region centres (bounded lattice scan, heap vectors only), not a dense world-sample grid.
+  const auto coreChunks=[](const World& w,Biome family) {
+   std::vector<std::pair<int,int>> out;
+   const auto index=static_cast<std::size_t>(family);
+   for(int q=-10;q<=10;++q) for(int r=-10;r<=10;++r) {
+    const auto reg=w.region(q,r);
+    if(reg.family!=family) continue;
+    const int cx=static_cast<int>(std::floor(reg.origin.x/128)),cy=static_cast<int>(std::floor(reg.origin.y/128));
+    for(int dy=-1;dy<=1;++dy) for(int dx=-1;dx<=1;++dx)
+     if(w.sample((cx+dx)*128+64.0,(cy+dy)*128+64.0).biome[index]>=0.9) { out.push_back({cx+dx,cy+dy}); dx=2; dy=2; }
+   }
+   return out;
+  };
+  const auto p=static_cast<std::size_t>(Biome::Prairie),d=static_cast<std::size_t>(Biome::DryGrassland);
+  std::size_t prairieChunks=0,prairieSampled=0,dryChunksSampled=0,temperateChunksSampled=0;
+  std::size_t prairieTall=0,dryTall=0,prairieBroad=0,temperateBroad=0,border=0;
+  for(unsigned seed:{0u,42u,98765u}) {
+   World world({seed,128,64});
+   const auto prairieCores=coreChunks(world,Biome::Prairie);
+   const auto dryCores=coreChunks(world,Biome::DryGrassland);
+   const auto temperateCores=coreChunks(world,Biome::TemperateForest);
+   prairieChunks+=prairieCores.size();
+   for(std::size_t k=0;k<prairieCores.size()&&k<12;++k) {
+    ++prairieSampled;
+    for(const auto& f:world.generate(prairieCores[k].first,prairieCores[k].second).features) {
+     prairieTall+=f.kind==Kind::Grass&&f.prairie;
+     prairieBroad+=f.kind==Kind::Tree&&f.species==static_cast<int>(Species::Broadleaf);
+    }
+   }
+   for(std::size_t k=0;k<dryCores.size()&&k<12;++k) {
+    ++dryChunksSampled;
+    for(const auto& f:world.generate(dryCores[k].first,dryCores[k].second).features) dryTall+=f.kind==Kind::Grass&&f.prairie;
+   }
+   for(std::size_t k=0;k<temperateCores.size()&&k<12;++k) {
+    ++temperateChunksSampled;
+    for(const auto& f:world.generate(temperateCores[k].first,temperateCores[k].second).features)
+     temperateBroad+=f.kind==Kind::Tree&&f.species==static_cast<int>(Species::Broadleaf);
+   }
+   for(double y=-8000;y<=8000;y+=250) for(double x=-8000;x<=8000;x+=250) {
+    const auto s=world.sample(x,y),next=world.sample(x+0.5,y);
+    if(s.biome[p]<=0.02||s.biome[d]<=0.02) continue;
+    ++border;
+    check(std::abs(s.biome[p]-next.biome[p])<0.02&&std::abs(s.biome[d]-next.biome[d])<0.02,"Prairie and DryGrassland blend weights are continuous across their border");
+   }
+  }
+  check(prairieChunks>0,"Prairie core chunks exist in the sampled window");
+  check(border>0,"Prairie and DryGrassland share a sampled border");
+  const double prairieTallPer=prairieSampled?double(prairieTall)/double(prairieSampled):0;
+  const double dryTallPer=dryChunksSampled?double(dryTall)/double(dryChunksSampled):0;
+  const double prairieBroadPer=prairieSampled?double(prairieBroad)/double(prairieSampled):0;
+  const double temperateBroadPer=temperateChunksSampled?double(temperateBroad)/double(temperateChunksSampled):0;
+  std::cout<<"Prairie tall grass per chunk "<<prairieTallPer<<" vs DryGrassland "<<dryTallPer<<"; broadleaf per chunk "<<prairieBroadPer<<" vs temperate "<<temperateBroadPer<<" (border samples "<<border<<")\n";
+  check(dryTallPer>0&&prairieTallPer>=1.5*dryTallPer,"Prairie tall grass density is at least 1.5x DryGrassland");
+  check(temperateBroadPer>0&&prairieBroadPer<=0.2*temperateBroadPer,"Prairie broadleaf trees are at most 0.2x TemperateForest");
+ }
  if(!failures) std::cout<<"PASS: regional planning, ecology, climate blends, lighting, routes and triangulated grounding\n";
  return failures?1:0;
 }

@@ -70,6 +70,7 @@ bool chooseKind(Biome family, double roll, LandmarkKind& out) {
         return true;
     case Biome::DryGrassland:
     case Biome::Savannah:
+    case Biome::Prairie:
         out = LandmarkKind::StoneRing;
         return true;
     case Biome::Marsh:

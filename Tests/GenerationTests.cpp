@@ -367,11 +367,11 @@ int main() {
   // T1c: tree species + deadwood (fingerprint hashes species and Deadwood; all 15 cases re-baselined)
   struct GoldenCase { unsigned seed; int x,y; bool features; std::uint64_t expected; };
   const GoldenCase cases[]={
-   {0,0,0,true,0x9eda86d125b4e204ULL},{0,3,-2,true,0x741dcb18fa8cbd96ULL},{0,-5,7,true,0xd8d6cfab51312237ULL},{0,12,12,true,0xab28fc6094983eafULL},{0,0,0,false,0x8a111cce6e8c38deULL},
-   {42,0,0,true,0xab3649166884e235ULL},{42,3,-2,true,0xa26f3f0340084572ULL},{42,-5,7,true,0x34cd218484e83e79ULL},{42,12,12,true,0x88f485db94c06915ULL},{42,0,0,false,0xaf2d160c80bb82deULL},
-   {98765,0,0,true,0x9aa9b2cc077798d9ULL}, // T1c; was U1 (unreal region, overlay density)
-   {98765,3,-2,true,0x4658e5fcde63e608ULL}, // T1c; was U1 (unreal region, overlay density)
-   {98765,-5,7,true,0x8a8d8def755f5647ULL},{98765,12,12,true,0xa1ff85ebb7e82eb2ULL},{98765,0,0,false,0x0a74d714ecd41095ULL},
+   {0,0,0,true,0xd23a4933a3e5cf24ULL},{0,3,-2,true,0x6ef3e9ac175c9fd6ULL},{0,-5,7,true,0xf09915047de17397ULL},{0,12,12,true,0xc0ec4b22aae013efULL},{0,0,0,false,0x675a54c2da3a3c3eULL},
+   {42,0,0,true,0x6d8446813ebec595ULL},{42,3,-2,true,0xc1f271dbb50299f2ULL},{42,-5,7,true,0xfa7522ea888d9839ULL},{42,12,12,true,0xf76aa905b3029b95ULL},{42,0,0,false,0x0f61a6ac614626beULL},
+   {98765,0,0,true,0x094dd9123ab7b6b9ULL}, // T1c; was U1 (unreal region, overlay density)
+   {98765,3,-2,true,0xda2012233f3b57c8ULL}, // T1c; was U1 (unreal region, overlay density)
+   {98765,-5,7,true,0x2325ae0bce2422e7ULL},{98765,12,12,true,0xfda1a99be6896532ULL},{98765,0,0,false,0x8c534ebf0aa6c2f5ULL},
   };
   for(const auto& gc:cases) {
    World w({gc.seed,128,32});

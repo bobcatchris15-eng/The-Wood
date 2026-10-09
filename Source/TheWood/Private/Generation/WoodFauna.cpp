@@ -39,6 +39,7 @@ std::vector<CreatureKind> familyTable(Biome family) {
     case Biome::Swamp:           return {K::Heron, K::Crow, K::Hare};
     case Biome::Marsh:           return {K::Heron, K::Crow, K::Hare, K::Deer};
     case Biome::WarmRainforest:  return {K::Owl, K::Crow, K::Heron, K::Deer};
+    case Biome::Prairie:         return {K::Hare, K::Hare, K::Fox, K::Crow, K::Crow, K::Deer};
     }
     return {};
 }

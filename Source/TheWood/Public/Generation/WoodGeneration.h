@@ -14,14 +14,15 @@ struct DiscoveryReservation;
 struct DiscoveryPiece;
 struct Vec3 { double x=0, y=0, z=0; };
 struct Settings { std::uint32_t seed=12345; double chunkSize=128; int cells=64; };
-enum class Biome : int { TemperateForest, DryGrassland, RockyHighlands, Taiga, OldGrowthForest, ColdRainforest, IcyHills, Savannah, Swamp, Marsh, WarmRainforest };
+enum class Biome : int { TemperateForest, DryGrassland, RockyHighlands, Taiga, OldGrowthForest, ColdRainforest, IcyHills, Savannah, Swamp, Marsh, WarmRainforest, Prairie };
 // Number of biome families; every per-family table and weight array is sized by this.
-inline constexpr int kFamilyCount = 11;
-static_assert(static_cast<int>(Biome::WarmRainforest)+1==kFamilyCount,"kFamilyCount out of sync with Biome enum");
+inline constexpr int kFamilyCount = 12;
+static_assert(static_cast<int>(Biome::Prairie)+1==kFamilyCount,"kFamilyCount out of sync with Biome enum");
 // False for pairs that may never border (DryGrassland<->Taiga, DryGrassland<->ColdRainforest, DryGrassland<->IcyHills,
 // Savannah<->Taiga, Savannah<->IcyHills, Savannah<->ColdRainforest, Swamp<->IcyHills, Marsh<->IcyHills,
 // Swamp<->Savannah, Marsh<->DryGrassland, WarmRainforest<->IcyHills, WarmRainforest<->Taiga,
-// WarmRainforest<->DryGrassland); symmetric.
+// WarmRainforest<->DryGrassland, Prairie<->Taiga, Prairie<->ColdRainforest, Prairie<->IcyHills, Prairie<->Marsh,
+// Prairie<->WarmRainforest); symmetric.
 bool allowedAdjacent(Biome a, Biome b);
 // A stable regional identity on a warped 950m-radius hex lattice; extent is influence diameter.
 struct Region {

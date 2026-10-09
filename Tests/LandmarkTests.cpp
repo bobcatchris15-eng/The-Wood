@@ -34,7 +34,7 @@ static bool isForest(Biome b) {
            b == Biome::WarmRainforest || b == Biome::Taiga || b == Biome::Swamp;
 }
 static bool isHighland(Biome b) { return b == Biome::RockyHighlands || b == Biome::IcyHills; }
-static bool isGrass(Biome b) { return b == Biome::DryGrassland || b == Biome::Savannah; }
+static bool isGrass(Biome b) { return b == Biome::DryGrassland || b == Biome::Savannah || b == Biome::Prairie; }
 
 static void test_determinism(const World& world) {
     std::cout << "[TEST] test_determinism...\n";
