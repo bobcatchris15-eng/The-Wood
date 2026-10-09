@@ -3,6 +3,7 @@ Creates project-local materials and imports CC0 prepared meshes. No runtime inst
 """
 import unreal
 import json
+import re
 import struct
 from pathlib import Path
 
@@ -382,17 +383,18 @@ return float3(sin(T*1.1+phase),cos(T*0.83+phase)*0.38,0)*16.0*W.x*gust*S;''',{'W
 needles=explicit_needles()
 
 
-def with_wind(interface, strength, two_sided=False, masked=False):
+def with_wind(interface, strength, two_sided=False, masked=False, tinted=False):
     """Copy each project import parent; preserve alpha, textures and shading. two_sided sets the Material-level flag (MIC inherits it).
     masked converts a BLEND foliage parent to BLEND_MASKED: Nanite does not draw translucent materials, so leaves must be cut out.
-    The Opacity source is re-wired to OpacityMask at the same output."""
-    name=interface.get_name() + '_' + VERSION + '_Wind' + str(int(strength)) + ('_2S' if two_sided else '') + ('_Mask' if masked else '')
+    The Opacity source is re-wired to OpacityMask at the same output.
+    tinted multiplies base colour by a per-instance tint index (PerInstanceCustomData 0, 0..3)."""
+    name=interface.get_name() + '_' + VERSION + '_Wind' + str(int(strength)) + ('_2S' if two_sided else '') + ('_Mask' if masked else '') + ('_Tint' if tinted else '')
     dest='/Game/Wood/FoliageWind/' + name
     if LIB.does_asset_exist(dest):
         return LIB.load_asset(dest)
     if isinstance(interface,unreal.MaterialInstanceConstant):
         parent=interface.get_editor_property('parent')
-        animated_parent=with_wind(parent,strength,two_sided,masked)
+        animated_parent=with_wind(parent,strength,two_sided,masked,tinted)
         copy=LIB.duplicate_asset(interface.get_path_name(),dest)
         MEL.set_material_instance_parent(copy,animated_parent)
         LIB.save_loaded_asset(copy)
@@ -420,6 +422,16 @@ float gust=0.58+0.42*sin(T*0.37+phase*0.15);
 return float3(sin(T*1.1+phase),cos(T*0.83+phase)*0.38,0)*A*W.x*gust*S;''',{'W':(color,''),'T':(time,''),'P':(pos,''),'A':(amplitude,''),'S':(weather_strength,'')})
     prop(offset,'',unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
     copy.set_editor_property('max_world_position_offset_displacement',strength)
+    if tinted:
+        base=MEL.get_material_property_input_node(copy,unreal.MaterialProperty.MP_BASE_COLOR)
+        if base is None:
+            raise RuntimeError('Flora material has no base colour input: '+interface.get_path_name())
+        base_output=MEL.get_material_property_input_node_output_name(copy,unreal.MaterialProperty.MP_BASE_COLOR)
+        tint_index=expr(copy,unreal.MaterialExpressionPerInstanceCustomData,data_index=0)
+        tinted_color=custom(copy,'''float k=saturate(T/3.0);
+float3 tint=lerp(float3(0.90,1.04,0.86),float3(1.10,0.97,0.84),k);
+return B*tint*lerp(0.94,1.06,k);''',{'B':(base,base_output),'T':(tint_index,'')})
+        prop(tinted_color,'',unreal.MaterialProperty.MP_BASE_COLOR)
     return finish(copy)
 
 def with_instancing(interface):
@@ -799,6 +811,73 @@ for name,palette_slot in VEGETATION_PALETTE:
         raise RuntimeError('Vegetation palette mesh missing or ambiguous: '+name)
     palette.set_editor_property(palette_slot,[found[0]])
 LIB.save_loaded_asset(palette)
+
+# Flora (ArtSource/Authored/Flora). Every approved variant imports to /Game/Art/Flora/<species>/ with LOD1/LOD2 added as
+# LODs of the LOD0 StaticMesh. Leaves are masked and two-sided with wind; bark is opaque with wind; all slots carry the tint.
+# Palette routing follows the WoodFlora.h table: only rows with approved=true (not deadwood, not unreal-only) are mapped.
+FLORA_ROW=re.compile(r'\{"([a-z0-9_]+)",Role::(\w+),\d,(?:true|false),(?:[-0-9.]+,){5}"[^"]*",-?\d+,(true|false),(true|false),(true|false)\}')
+flora_header=(ROOT/'Source/TheWood/Public/Generation/WoodFlora.h').read_text(encoding='utf-8')
+flora_rows=list(FLORA_ROW.finditer(flora_header))
+if len(flora_rows)!=69:
+    raise RuntimeError('WoodFlora.h row parse found %d rows, expected 69' % len(flora_rows))
+flora_mapped={}
+for table_index,row in enumerate(flora_rows):
+    if row.group(3)=='true' and row.group(4)=='false' and row.group(5)=='false':
+        flora_mapped[row.group(1)]=table_index
+flora_text=(ROOT/'ArtSource/Authored/Flora/APPROVED.md').read_text(encoding='utf-8')
+approved_cells=[]
+for line in flora_text.splitlines():
+    cells=[c.strip() for c in line.split('|')]
+    if len(cells)>=4 and cells[1] and cells[1] not in ('Batch','---'):
+        approved_cells.append(cells[2])
+approved_words=set(re.findall(r'[a-z][a-z0-9_]*',' '.join(approved_cells)))
+flora_files={}
+for source in sorted((ROOT/'ArtSource/Authored/Flora').glob('*/*_v[0-9][0-9].glb')):
+    stem=source.stem
+    species,variant=stem.rsplit('_',1)
+    if species in flora_mapped or species in approved_words:
+        flora_files.setdefault(species,{}).setdefault(variant,source)
+FLORA_STATS={'species':0,'variants':0,'lods':0}
+palette_flora_index=[]
+palette_flora_meshes=[]
+for species in sorted(flora_files):
+    FLORA_STATS['species']+=1
+    dest_dir='/Game/Art/Flora/'+species
+    for variant in sorted(flora_files[species]):
+        source=flora_files[species][variant]
+        name=source.stem
+        rebuild=import_unit(source,dest_dir,name)
+        found=find_meshes(dest_dir,name)
+        if len(found)!=1:
+            raise RuntimeError('Flora import produced no unique mesh: '+name)
+        mesh=found[0]
+        if rebuild:
+            mesh.set_editor_property('allow_cpu_access',False)
+            settings=SMES.get_lod_build_settings(mesh,0)
+            settings.set_editor_property('generate_lightmap_u_vs',False)
+            SMES.set_lod_build_settings(mesh,0,settings)
+            for level in (1,2):
+                lod_source=source.with_name(name+'_LOD%d.glb' % level)
+                if lod_source.exists():
+                    if unreal.EditorStaticMeshLibrary.import_lod(mesh,level,str(lod_source))>=0:
+                        FLORA_STATS['lods']+=1
+            for i,item in enumerate(mesh.get_editor_property('static_materials')):
+                interface=item.get_editor_property('material_interface')
+                if interface is None or '/Game/Wood/FoliageWind/' in interface.get_path_name():
+                    continue
+                material_name=interface.get_name().lower()
+                bark=any(key in material_name for key in ('bark','trunk','wood','stem','stalk','knee'))
+                leaf=not bark
+                mesh.set_material(i,with_wind(interface,3.0 if leaf else 16.0,True,leaf,True))
+            LIB.save_loaded_asset(mesh)
+        FLORA_STATS['variants']+=1
+        if species in flora_mapped:
+            palette_flora_index.append(flora_mapped[species])
+            palette_flora_meshes.append(mesh)
+palette.set_editor_property('flora_mesh_index',palette_flora_index)
+palette.set_editor_property('flora_meshes',palette_flora_meshes)
+LIB.save_loaded_asset(palette)
+unreal.log('FLORA_IMPORT species=%d variants=%d lods=%d mapped=%d' % (FLORA_STATS['species'],FLORA_STATS['variants'],FLORA_STATS['lods'],len(palette_flora_meshes)))
 
 map_path='/Game/Maps/VisualBenchmark'
 if not LIB.does_asset_exist(map_path):

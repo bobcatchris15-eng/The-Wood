@@ -33,6 +33,10 @@ public:
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> CattailTrees;
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> PrairieGrassTrees;
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> KrummholzTrees;
+ // Flora meshes (ArtSource/Authored/Flora, Poly Haven CC0 later). Parallel arrays: FloraMeshIndex is the WoodFlora.h table
+ // index (species), one entry per variant. Missing entries render nothing.
+ UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<int32> FloraMeshIndex;
+ UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> FloraMeshes;
  // Fallen logs (no collision, no wind).
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<TSoftObjectPtr<UStaticMesh>> DeadWood;
  UPROPERTY(EditAnywhere, BlueprintReadOnly) TSoftObjectPtr<UMaterialInterface> GroundMaterial;

@@ -11,6 +11,7 @@
 struct FWoodRuntime;
 struct FWoodPreparedChunk;
 class UStaticMeshComponent;
+class UStaticMesh;
 class UWoodPalette;
 class UProceduralMeshComponent;
 class UInstancedStaticMeshComponent;
@@ -110,6 +111,12 @@ private:
  void Stream(FVector Position);
  void UpdateForgetting();
  void Realize(const FWoodPreparedChunk& Prepared, bool Detailed=true);
+ // Flora: palette meshes to variants with wind MIDs, per-chunk instanced components (one per variant with placements), teardown.
+ void BuildFlora();
+ void SpawnFlora(FWoodResident& Resident, const FWoodPreparedChunk& Prepared);
+ void DestroyFlora(FWoodResident& Resident);
+ UPROPERTY() TArray<TObjectPtr<UInstancedStaticMeshComponent>> FloraComponents;
+ UPROPERTY() TArray<TObjectPtr<UStaticMesh>> FloraKeep;
  void SpawnTrailheadLot();
  // Per-chunk fauna (2x2 fauna cells) and once-per-region landmark placeholders.
  void SpawnFauna(FWoodResident& Resident, FIntPoint Chunk);

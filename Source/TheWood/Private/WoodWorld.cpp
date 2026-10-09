@@ -205,6 +205,7 @@ void AWoodWorld::Generate() {
   auto Profile=Asset?WoodPlacementProfile(*Asset):FWoodPlacementProfile{};Profile.Young=Young[Index];Profile.Prairie=PrairieMesh[Index];Profile.PropId=PropIds[Index];Profile.KitId=KitIds[Index];Profile.Species=SpeciesIds[Index];
   Runtime->Profiles.Add(Profile);
  }
+ BuildFlora();
  const FVector Start=ExplorerStart();
  const int32 CX=FMath::FloorToInt(Start.X/12800),CY=FMath::FloorToInt(Start.Y/12800);
  for(int32 Y=CY-1;Y<=CY+1;++Y) for(int32 X=CX-1;X<=CX+1;++X) Realize(WoodPrepareChunk(Generator,X,Y,Runtime->Kinds,Runtime->Profiles,Runtime->Available));

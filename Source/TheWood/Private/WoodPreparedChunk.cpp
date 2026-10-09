@@ -50,6 +50,8 @@ FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
    SpeciesMesh?WoodSpeciesBucketBase+Profile.Species:DeadwoodMesh?WoodDeadwoodBucket:Raw].Add(I);
  }
  for(const auto& Feature:Chunk.features) {
+  // Flora features render through the per-species flora components (WoodWorldStreaming.cpp SpawnFlora), not the buckets.
+  if(Feature.flora>=0&&Feature.floraMesh>=0) continue;
   int32 Bucket=Feature.young?4:static_cast<int32>(Feature.kind==wood::Kind::Prop?wood::Kind::Rock:Feature.kind);
   if(Feature.prairie && !Candidates[5].IsEmpty()) Bucket=5;
   // Prop features take their propId bucket; an empty bucket falls back to Rock.

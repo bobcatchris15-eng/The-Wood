@@ -1,6 +1,10 @@
 #include "WoodWorld.h"
 #include "Generation/WoodStreaming.h"
 #include "Generation/WoodLandmarks.h"
+#include "Generation/WoodFlora.h"
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -52,6 +56,7 @@ void AWoodWorld::CheckThreshold(FVector Position) {
  for(const auto& Key:Evict) {
   auto& C=Runtime->Chunks[Key];
   for(int32 I=0;I<C.Instances.Num();++I) if(!C.Instances[I].IsEmpty()) Vegetation[I]->RemoveInstancesById(C.Instances[I],false);
+  DestroyFlora(C);
   for(auto& Creature:C.Creatures) if(Creature.IsValid()) Creature->Destroy();
   Terrain.Remove(C.Ground);C.Ground->DestroyComponent();
   if(C.Water) {Water.Remove(C.Water);C.Water->DestroyComponent();}
@@ -116,9 +121,93 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
  for(int32 I=0;I<Vegetation.Num();++I) if(!Placements[I].IsEmpty()) {
   Resident.Instances[I]=Vegetation[I]->AddInstancesById(Placements[I],true,false);
  }
+ SpawnFlora(Resident,Prepared);
  Resident.Detailed=true;
  SpawnFauna(Resident,Key);
  SpawnLandmarks(Key);
+}
+void AWoodWorld::BuildFlora() {
+ Runtime->FloraVariants.Reset();
+ Runtime->FloraSpecies.Reset();
+ FloraKeep.Reset();
+ if(!Palette) return;
+ const int32 Count=FMath::Min(Palette->FloraMeshIndex.Num(),Palette->FloraMeshes.Num());
+ for(int32 I=0;I<Count;++I) {
+  const int32 Species=Palette->FloraMeshIndex[I];
+  if(Species<0||Species>=wood::flora::kFloraCount) continue;
+  UStaticMesh* Mesh=Palette->FloraMeshes[I].LoadSynchronous();
+  if(!Mesh) continue;
+  FWoodFloraVariant Variant;
+  Variant.Mesh=Mesh;
+  Variant.Species=Species;
+  Variant.Profile=WoodPlacementProfile(*Mesh);
+  for(const auto& Slot:Mesh->GetStaticMaterials()) {
+   UMaterialInstanceDynamic* Mid=Slot.MaterialInterface?UMaterialInstanceDynamic::Create(Slot.MaterialInterface,this):nullptr;
+   if(Mid) WindMaterials.Add(Mid);
+   Variant.Slots.Add(Mid);
+  }
+  FloraKeep.Add(Mesh);
+  Runtime->FloraSpecies.FindOrAdd(Species).Add(Runtime->FloraVariants.Num());
+  Runtime->FloraVariants.Add(Variant);
+ }
+}
+void AWoodWorld::SpawnFlora(FWoodResident& Resident,const FWoodPreparedChunk& Prepared) {
+ if(Runtime->FloraVariants.IsEmpty()||!GetWorld()) return;
+ // Placement: core feature positions in metres; the grounded transform is in centimetres, as for the bucket path.
+ TMap<int32,TArray<FTransform>> Placed;
+ TMap<int32,TArray<float>> Tints;
+ for(const auto& Feature:Prepared.Chunk.features) {
+  if(Feature.flora<0||Feature.floraMesh<0) continue;
+  const TArray<int32>* Ids=Runtime->FloraSpecies.Find(Feature.floraMesh);
+  if(!Ids||Ids->IsEmpty()) continue;
+  // Variant pick from yaw, as the bucket path does for its candidate tables.
+  const int32 Pick=FMath::Abs(static_cast<int32>(Feature.yaw*19))%Ids->Num();
+  const int32 Id=(*Ids)[Pick];
+  const FWoodFloraVariant& Variant=Runtime->FloraVariants[Id];
+  const FTransform Where=WoodGroundedTransform(Feature,Variant.Profile,[this](double X,double Y){return Generator.terrainHeight(X,Y);});
+  Placed.FindOrAdd(Id).Add(Where);
+  Tints.FindOrAdd(Id).Add(static_cast<float>(Feature.tint));
+ }
+ for(auto& Group:Placed) {
+  const FWoodFloraVariant& Variant=Runtime->FloraVariants[Group.Key];
+  const auto& Row=wood::flora::table()[static_cast<std::size_t>(Variant.Species)].row;
+  auto* Comp=NewObject<UInstancedStaticMeshComponent>(this);
+  Comp->SetupAttachment(RootComponent);
+  Comp->SetStaticMesh(Variant.Mesh);
+  // One float per instance: tint index 0-3, read by the flora material.
+  Comp->NumCustomDataFloats=1;
+  for(int32 S=0;S<Variant.Slots.Num();++S) if(Variant.Slots[S]) Comp->SetMaterial(S,Variant.Slots[S]);
+  const bool Understory=wood::flora::understoryRole(Row.role);
+  int32 Cull=4000;
+  switch(Row.role) {
+   case wood::flora::Role::Canopy: Cull=30000; break;
+   case wood::flora::Role::Subcanopy: Cull=15000; break;
+   case wood::flora::Role::Shrub: Cull=8000; break;
+   case wood::flora::Role::Moss:
+   case wood::flora::Role::Fungus: Cull=2500; break;
+   default: Cull=4000; break;
+  }
+  Comp->SetCullDistances(Cull*3/4,Cull);
+  Comp->SetWorldPositionOffsetDisableDistance(Understory?6000:14000);
+  Comp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+  if(Understory) Comp->SetCastShadow(false);
+  Comp->RegisterComponent();
+  Comp->AddInstances(Group.Value,false,false);
+  const TArray<float>& Values=Tints.FindChecked(Group.Key);
+  for(int32 I=0;I<Values.Num();++I) Comp->SetCustomDataValue(I,0,Values[I],false);
+  Comp->MarkRenderStateDirty();
+  FloraComponents.Add(Comp);
+  Resident.Flora.Add(Comp);
+ }
+}
+void AWoodWorld::DestroyFlora(FWoodResident& Resident) {
+ for(auto& Weak:Resident.Flora) if(auto* Comp=Weak.Get()) {
+  // Clear instance data first: observers holding the component must not still see the chunk's placements.
+  Comp->ClearInstances();
+  FloraComponents.Remove(Comp);
+  Comp->DestroyComponent();
+ }
+ Resident.Flora.Reset();
 }
 void AWoodWorld::SpawnFauna(FWoodResident& Resident,FIntPoint Chunk) {
  if(!GetWorld()) return;
@@ -245,6 +334,7 @@ void AWoodWorld::Stream(FVector Position) {
   auto& C=Runtime->Chunks[Key];for(int32 I=0;I<C.Instances.Num();++I) if(!C.Instances[I].IsEmpty()) {
    Vegetation[I]->RemoveInstancesById(C.Instances[I],false);
   }
+  DestroyFlora(C);
   for(auto& Creature:C.Creatures) if(Creature.IsValid()) Creature->Destroy();
   Terrain.Remove(C.Ground);C.Ground->DestroyComponent();if(C.Water) {Water.Remove(C.Water);C.Water->DestroyComponent();}Runtime->Chunks.Remove(Key);
  }
