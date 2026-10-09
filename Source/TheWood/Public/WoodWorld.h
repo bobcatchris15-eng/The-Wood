@@ -64,6 +64,11 @@ public:
  void RequestResumeSave();
  // Returns and consumes the player transform restored from resume.json.
  bool TakeResumedPlayer(FVector& Location,FRotator& Rotation);
+ // Audio adapter queries. Chunk keys of resident chunks; stream emitters of one chunk (cm, gains 0..1); fauna call gain at a position.
+ void GetLoadedChunks(TArray<FIntPoint>& Out) const;
+ void GetStreamEmitters(FIntPoint Chunk,TArray<FVector>& PositionsCm,TArray<float>& Gains) const;
+ double FaunaCallGainAt(FVector PositionCm,double Seconds) const;
+ const UWoodWeatherComponent* Weather() const;
 private:
  friend class FWoodThresholdTest;
  bool bEnteredWild=false;

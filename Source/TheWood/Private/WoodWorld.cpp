@@ -10,6 +10,9 @@
 #include "Generation/WoodEntrance.h"
 #include "Generation/WoodFauna.h"
 #include "Generation/WoodLandmarks.h"
+#include "Generation/WoodSoundscape.h"
+#include <array>
+#include <cmath>
 #include "ProceduralMeshComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/RectLightComponent.h"
@@ -385,6 +388,33 @@ void AWoodWorld::PollResumeWrite() {
  if(!ResumeWrite.Get()) UE_LOG(LogTemp,Error,TEXT("Resume save failed: %s"),*ResumePath);
  ResumeWrite=TFuture<bool>();
  if(bResumeQueued) { bResumeQueued=false; StartResumeWrite(std::move(QueuedResume)); }
+}
+void AWoodWorld::GetLoadedChunks(TArray<FIntPoint>& Out) const {
+ Out.Reset();
+ for(const auto& Entry:Runtime->Chunks) Out.Add(Entry.Key);
+}
+void AWoodWorld::GetStreamEmitters(FIntPoint Chunk,TArray<FVector>& PositionsCm,TArray<float>& Gains) const {
+ PositionsCm.Reset();
+ Gains.Reset();
+ // Core emitters are in metres; the lattice is chunk-indexed (chunk size from the core settings).
+ for(const auto& E:wood::streamEmitters(Generator,Chunk.X,Chunk.Y)) {
+  const double Xcm=E.x*100,Ycm=E.y*100;
+  PositionsCm.Add(FVector(Xcm,Ycm,GroundAt(Xcm,Ycm)+50.0));
+  Gains.Add(static_cast<float>(E.gain));
+ }
+}
+double AWoodWorld::FaunaCallGainAt(FVector P,double Seconds) const {
+ // One-hot family weights from the owning region. Day phase: nominal 2400 s cycle, 0 = midnight, 0.5 = noon.
+ const auto Cell=Generator.regionOwner(P.X/100.0,P.Y/100.0);
+ std::array<double,wood::kFamilyCount> Weights{};
+ const int32 Family=static_cast<int32>(Generator.region(Cell.q,Cell.r).family);
+ if(Family>=0&&Family<wood::kFamilyCount) Weights[Family]=1.0;
+ double Phase=std::fmod(Seconds/2400.0+0.25,1.0);
+ if(Phase<0) Phase+=1.0;
+ return wood::faunaCallGain(Weights,Phase);
+}
+const UWoodWeatherComponent* AWoodWorld::Weather() const {
+ return WeatherState;
 }
 bool AWoodWorld::TakeResumedPlayer(FVector& Location,FRotator& Rotation) {
  if(!bResumedPlayer) return false;

@@ -15,6 +15,7 @@
 #include "TimerManager.h"
 #include "WoodSettingsWidget.h"
 #include "WoodGalleryWidget.h"
+#include "WoodAmbience.h"
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "Kismet/GameplayStatics.h"
@@ -202,6 +203,7 @@ void AWoodCharacter::ApplyRuntimeSettings(const FWoodSettings& S) {
  MouseSensitivity=S.MouseSensitivity;
  bInvertY=S.bInvertY;
  if(Camera) Camera->FieldOfView=S.FOV;
+ WoodSetAudioVolumes(S.MasterVolume,S.AmbientVolume);
 }
 void AWoodCharacter::ToggleGallery() {
  if(Gallery) { CloseMenu(); return; }

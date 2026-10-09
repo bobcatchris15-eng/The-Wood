@@ -15,10 +15,10 @@
 namespace {
  const TCHAR* const WoodSection=TEXT("/Script/TheWood.WoodSettings");
  FString WoodIniPath() { return FPaths::Combine(FPaths::ProjectSavedDir(),TEXT("Config/WoodSettings.ini")); }
- TSharedRef<SWidget> Caption(const FString& Text,int32 Size) {
+ TSharedRef<SWidget> SettingsCaption(const FString& Text,int32 Size) {
   return SNew(STextBlock).Text(FText::FromString(Text)).Font(FCoreStyle::GetDefaultFontStyle(TEXT("Regular"),Size));
  }
- TSharedRef<SWidget> Btn(const FString& Text,TFunction<void()> Fn) {
+ TSharedRef<SWidget> SettingsBtn(const FString& Text,TFunction<void()> Fn) {
   return SNew(SButton).Text(FText::FromString(Text)).OnClicked_Lambda([Fn]{ Fn(); return FReply::Handled(); });
  }
 }
@@ -73,7 +73,7 @@ void SWoodSettings::Construct(const FArguments& InArgs) {
  OnClosedDelegate=InArgs._OnClosed;
 
  TSharedRef<SVerticalBox> Body=SNew(SVerticalBox);
- Body->AddSlot().AutoHeight().Padding(0,0,0,16)[ Caption(TEXT("Settings"),22) ];
+ Body->AddSlot().AutoHeight().Padding(0,0,0,16)[ SettingsCaption(TEXT("Settings"),22) ];
 
  Body->AddSlot().AutoHeight().Padding(0,4)[
   SNew(STextBlock).Text_Lambda([this]{ return FText::FromString(FString::Printf(TEXT("Mouse sensitivity  %.2f"),Values.MouseSensitivity)); })
@@ -88,7 +88,7 @@ void SWoodSettings::Construct(const FArguments& InArgs) {
   SNew(SCheckBox)
    .IsChecked_Lambda([this]{ return Values.bInvertY?ECheckBoxState::Checked:ECheckBoxState::Unchecked; })
    .OnCheckStateChanged_Lambda([this](ECheckBoxState S){ Values.bInvertY=(S==ECheckBoxState::Checked); Changed(); })
-  [ Caption(TEXT("Invert Y"),14) ]
+  [ SettingsCaption(TEXT("Invert Y"),14) ]
  ];
 
  Body->AddSlot().AutoHeight().Padding(0,12,0,4)[
@@ -120,20 +120,20 @@ void SWoodSettings::Construct(const FArguments& InArgs) {
    .OnValueChanged_Lambda([this](float T){ Values.AmbientVolume=FMath::Clamp(T,0.0f,1.0f); Changed(); })
  ];
 
- Body->AddSlot().AutoHeight().Padding(0,12,0,4)[ Caption(TEXT("Quality preset"),14) ];
+ Body->AddSlot().AutoHeight().Padding(0,12,0,4)[ SettingsCaption(TEXT("Quality preset"),14) ];
  TSharedRef<SHorizontalBox> QualityRow=SNew(SHorizontalBox);
  static const TCHAR* const QualityNames[]={TEXT("Low"),TEXT("Medium"),TEXT("High"),TEXT("Epic"),TEXT("Cinematic")};
  for(int32 L=0;L<5;++L) {
-  QualityRow->AddSlot().AutoWidth().Padding(2,0)[ Btn(QualityNames[L],[this,L]{ Values.ScalabilityLevel=L; Changed(); }) ];
+  QualityRow->AddSlot().AutoWidth().Padding(2,0)[ SettingsBtn(QualityNames[L],[this,L]{ Values.ScalabilityLevel=L; Changed(); }) ];
  }
  Body->AddSlot().AutoHeight()[ QualityRow ];
 
- Body->AddSlot().AutoHeight().Padding(0,12,0,4)[ Caption(TEXT("Resolution"),14) ];
+ Body->AddSlot().AutoHeight().Padding(0,12,0,4)[ SettingsCaption(TEXT("Resolution"),14) ];
  TSharedRef<SHorizontalBox> ResRow=SNew(SHorizontalBox);
  static const FIntPoint ResList[]={FIntPoint(1280,720),FIntPoint(1920,1080),FIntPoint(2560,1440)};
  static const TCHAR* const ResNames[]={TEXT("720p"),TEXT("1080p"),TEXT("1440p")};
  for(int32 R=0;R<3;++R) {
-  ResRow->AddSlot().AutoWidth().Padding(2,0)[ Btn(ResNames[R],[this,R]{ Values.ResX=ResList[R].X; Values.ResY=ResList[R].Y; Changed(); }) ];
+  ResRow->AddSlot().AutoWidth().Padding(2,0)[ SettingsBtn(ResNames[R],[this,R]{ Values.ResX=ResList[R].X; Values.ResY=ResList[R].Y; Changed(); }) ];
  }
  Body->AddSlot().AutoHeight()[ ResRow ];
 
@@ -141,10 +141,10 @@ void SWoodSettings::Construct(const FArguments& InArgs) {
   SNew(SCheckBox)
    .IsChecked_Lambda([this]{ return Values.bFullscreen?ECheckBoxState::Checked:ECheckBoxState::Unchecked; })
    .OnCheckStateChanged_Lambda([this](ECheckBoxState S){ Values.bFullscreen=(S==ECheckBoxState::Checked); Changed(); })
-  [ Caption(TEXT("Fullscreen"),14) ]
+  [ SettingsCaption(TEXT("Fullscreen"),14) ]
  ];
 
- Body->AddSlot().AutoHeight().Padding(0,20,0,0).HAlign(HAlign_Right)[ Btn(TEXT("Close"),[this]{ CloseRequested(); }) ];
+ Body->AddSlot().AutoHeight().Padding(0,20,0,0).HAlign(HAlign_Right)[ SettingsBtn(TEXT("Close"),[this]{ CloseRequested(); }) ];
 
  ChildSlot.HAlign(HAlign_Center).VAlign(VAlign_Center)[
   SNew(SBorder).BorderBackgroundColor(FLinearColor(0.0f,0.0f,0.0f,0.9f)).Padding(FMargin(32.0f))[
