@@ -504,6 +504,462 @@
         "MD5":  "802ec244c86d10888efad97737adc938"
     },
     {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/jacaranda_tree.gltf",
+        "Resolution":  "1k",
+        "MD5":  "8fed93ff7cbdaac0f5c199ef1fd0f694"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/textures/jacaranda_tree_branches_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "789084affb01f4a22290a848558f5e12"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/textures/jacaranda_tree_branches_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "e5bacbfd3e7ce397bdd34b0bac6669ca"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/textures/jacaranda_tree_branches_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "5b6f5b3838f4a8f60fea14fa3a3fef9f"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/textures/jacaranda_tree_trunk_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "af34d3a054b498f153e4793f7520a630"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/textures/jacaranda_tree_trunk_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "c3edc2e76157023e7a5c35cd13867498"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/textures/jacaranda_tree_trunk_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "7232b4514e9412725a6a8e65a69f4ed4"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/textures/jacaranda_tree_leaves_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "7cbd82c0dd4b8c8a4ab314338f50404d"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/textures/jacaranda_tree_leaves_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "8ae91737f39567629768a255817d80be"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/textures/jacaranda_tree_leaves_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "fabee050680fd173032acf003ef61191"
+    },
+    {
+        "Asset":  "jacaranda_tree",
+        "Source":  "https://polyhaven.com/a/jacaranda_tree",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/jacaranda_tree/jacaranda_tree.bin",
+        "Resolution":  "1k",
+        "MD5":  "ae25eacd5e67ea2e9bbbaa2854b6ed99"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/tree_small_02.gltf",
+        "Resolution":  "1k",
+        "MD5":  "63f42b19687332f7b3a5c8b531734d8e"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/textures/tree_small_02_branch_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "00a3eed0d4d28e7e890d9ec6ac0619af"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/textures/tree_small_02_branch_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "88b531469f5dba2fc44ca85df3776e7c"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/textures/tree_small_02_branch_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "9ec3d8428295d87ae363bf0d1e0a8288"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/textures/tree_small_02_leaves_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "b06c87e73f54d9654f66d67e9de7aa85"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/textures/tree_small_02_leaves_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "315cbc2cebfb399e649ccd39112c109a"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/textures/tree_small_02_leaves_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "3dad5bafc732f7692db32a262530bbab"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/textures/tree_small_02_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "115a20da8621cd3e034e9b1bbe574746"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/textures/tree_small_02_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "a7287a3f4e7f0d4577cb949b245f5b14"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/textures/tree_small_02_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "44b6ed4bf32d7cd67cb3e9d5faeacc38"
+    },
+    {
+        "Asset":  "tree_small_02",
+        "Source":  "https://polyhaven.com/a/tree_small_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/tree_small_02/tree_small_02.bin",
+        "Resolution":  "1k",
+        "MD5":  "7a7019a87e6fe0d7475c0fa2e08d8962"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/fir_tree_01.gltf",
+        "Resolution":  "1k",
+        "MD5":  "0a184431efdba9e4bf76900d8d56504d"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_bark_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "978d32ec721696e45b38a72411c4edf4"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_bark_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "93265c0d9fbd3cf17deabdb68aa8b5e9"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_bark_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "4e48a7fa876a1ad47401fe86277a4373"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_trunk_a_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "41b92112b3b9a48eb2e1b4b3562dd937"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_trunk_a_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "304f688bc8212f90a39a3b77f6065ee5"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_trunk_a_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "e68adf3bf077b1552b5acff7f9d7bebf"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_twig_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "1ef6c0d7c2dc74cc073a8c33f58f3795"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_twig_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "d267b1117a5d6dbbbd620bd997fb498e"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_twig_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "b0d09189350cb716533c1590fec8f8a4"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_trunk_b_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "310666823cba305dd25d1494fbe73877"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_trunk_b_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "00ad0c0643a4e6b34914b8ac05cc28cb"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/textures/fir_tree_01_trunk_b_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "2bd8df9326c28b68d8ace5d52adfd4f4"
+    },
+    {
+        "Asset":  "fir_tree_01",
+        "Source":  "https://polyhaven.com/a/fir_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/fir_tree_01/fir_tree_01.bin",
+        "Resolution":  "1k",
+        "MD5":  "26d2bf6d4d2e32d3524e8fa3760f643f"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/island_tree_01.gltf",
+        "Resolution":  "1k",
+        "MD5":  "fbc0c570ebd71ea88cedc1f9d5edb835"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/textures/island_tree_01_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "3871f67863453a16b866950202fa2b7f"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/textures/island_tree_01_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "8a67489846657df6b859d97e0b80fcf4"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/textures/island_tree_01_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "8077da7d1a001867c0da0cde6bc807f2"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/textures/island_tree_01_leaves_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "a08ffb98b5ffb7dfa682e05a1639c642"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/textures/island_tree_01_leaves_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "1356cbb5a5dd1318f9f2a01eddbf03e1"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/textures/island_tree_01_leaves_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "27b06c4a53ff115ed7d51ee94e417257"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/textures/island_tree_01_branches_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "789084affb01f4a22290a848558f5e12"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/textures/island_tree_01_branches_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "7792907fe2b2b748c129a2384192a579"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/textures/island_tree_01_branches_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "5b6f5b3838f4a8f60fea14fa3a3fef9f"
+    },
+    {
+        "Asset":  "island_tree_01",
+        "Source":  "https://polyhaven.com/a/island_tree_01",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/island_tree_01/island_tree_01.bin",
+        "Resolution":  "1k",
+        "MD5":  "8271f2d12c2727bd647ce0c242acdcec"
+    },
+    {
+        "Asset":  "dead_tree_trunk",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk/dead_tree_trunk.gltf",
+        "Resolution":  "1k",
+        "MD5":  "7bbf9fc9fdf61b50ed0495a29c03ecab"
+    },
+    {
+        "Asset":  "dead_tree_trunk",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk/textures/dead_tree_trunk_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "548a72849ce709a9f38fa06776732a07"
+    },
+    {
+        "Asset":  "dead_tree_trunk",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk/textures/dead_tree_trunk_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "28992c1123371ae1899e49360953c846"
+    },
+    {
+        "Asset":  "dead_tree_trunk",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk/textures/dead_tree_trunk_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "fe92c64532d4684d3239f6edc7733192"
+    },
+    {
+        "Asset":  "dead_tree_trunk",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk/dead_tree_trunk.bin",
+        "Resolution":  "1k",
+        "MD5":  "2a2b05e67a5c51fba5fc7591a7857957"
+    },
+    {
+        "Asset":  "dead_tree_trunk_02",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk_02/dead_tree_trunk_02.gltf",
+        "Resolution":  "1k",
+        "MD5":  "c16595a5951634914898e1eb6bb0ed3d"
+    },
+    {
+        "Asset":  "dead_tree_trunk_02",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk_02/textures/dead_tree_trunk_02_diff_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "c1d318584b077b9350477f8873821b45"
+    },
+    {
+        "Asset":  "dead_tree_trunk_02",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk_02/textures/dead_tree_trunk_02_arm_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "ce5e467040435895862245a39e295504"
+    },
+    {
+        "Asset":  "dead_tree_trunk_02",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk_02/textures/dead_tree_trunk_02_nor_gl_1k.jpg",
+        "Resolution":  "1k",
+        "MD5":  "941c7d88f2eaffd771807b3bc7f4a01f"
+    },
+    {
+        "Asset":  "dead_tree_trunk_02",
+        "Source":  "https://polyhaven.com/a/dead_tree_trunk_02",
+        "License":  "CC0-1.0",
+        "RelativePath":  "PolyHaven/dead_tree_trunk_02/dead_tree_trunk_02.bin",
+        "Resolution":  "1k",
+        "MD5":  "7848170c88b67d9e1d5e7d111db7b7ff"
+    },
+    {
         "Asset":  "forest_ground_04",
         "Source":  "https://polyhaven.com/a/forest_ground_04",
         "License":  "CC0-1.0",

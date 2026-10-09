@@ -17,6 +17,21 @@ output.mkdir(parents=True, exist_ok=True)
 reports = []
 # Rock sources come from the Poly Haven 2k glTF set (see Fetch-Art.ps1).
 ROCK_IDS = ('rock_07', 'boulder_01', 'rock_moss_set_01', 'rock_moss_set_02')
+# Species groups for the non-pine canopy (Poly Haven 1k glTF, CC0). Outputs: ArtSource/Prepared/tree_<group>_<nn>.glb.
+TREE_GROUPS = {
+    'jacaranda_tree': 'broadleaf',
+    'tree_small_02': 'broadleaf',
+    'fir_tree_01': 'conifer',
+    'island_tree_01': 'evergreen',
+    'dead_tree_trunk': 'snag',
+    'dead_tree_trunk_02': 'snag',
+}
+tree_counts = {}
+
+
+def is_tree(name):
+    """Pine and group trees share root-flare, root-mask and ground-pivot handling."""
+    return name.startswith('pine_') or name in TREE_GROUPS
 
 
 def needle_canopy(obj, high, index):
@@ -212,7 +227,7 @@ def wind_uv(path, tree):
     binary.extend(b'\0' * (-len(binary) % 4))
     path.write_bytes(struct.pack('<III', 0x46546c67, 2, 28 + len(encoded) + len(binary)) + struct.pack('<II', len(encoded), 0x4e4f534a) + encoded + struct.pack('<II', len(binary), 0x004e4942) + binary)
 
-for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_01', 'grass_medium_02', 'rock_07', 'pine_tree_01', 'boulder_01', 'rock_moss_set_01', 'rock_moss_set_02'):
+for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_01', 'grass_medium_02', 'rock_07', 'pine_tree_01', 'boulder_01', 'rock_moss_set_01', 'rock_moss_set_02', 'jacaranda_tree', 'tree_small_02', 'fir_tree_01', 'island_tree_01', 'dead_tree_trunk', 'dead_tree_trunk_02'):
     # Keep the original grounded undergrowth; only rebuild newly requested sources.
     previous = output / 'inspection.json'
     old = json.loads(previous.read_text(encoding='utf-8')) if previous.exists() else []
@@ -221,10 +236,10 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
     if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==7 for record in cached)) and (not rock_2k or all(record.get('texture_res')=='2k' for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
         for record in cached:
             if record.get('wind_uv_version') != 2:
-                wind_uv(output / record['file'], name.startswith('pine_'))
+                wind_uv(output / record['file'], is_tree(name))
                 record['wind_uv_version'] = 2
                 record.pop('wind_color_version', None)
-                if name.startswith('pine_'):
+                if is_tree(name):
                     record['pivot'] = 'trunk_ground_center'
         reports.extend(cached)
         continue
@@ -258,25 +273,33 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
         # source texture/material assignments and silhouette with collapse reduction.
         obj.data.calc_loop_triangles()
         source_triangles = len(obj.data.loop_triangles)
-        variant = f'{name}_{index:02d}'
-        soil_faces = remove_soil(obj) if name == 'pine_tree_01' else 0
-        if name == 'pine_tree_01':
+        if name in TREE_GROUPS:
+            group = TREE_GROUPS[name]
+            serial = tree_counts.get(group, 0)
+            tree_counts[group] = serial + 1
+            variant = f'tree_{group}_{serial:02d}'
+        else:
+            variant = f'{name}_{index:02d}'
+        soil_faces = remove_soil(obj) if is_tree(name) else 0
+        if is_tree(name):
             print(f'{variant}: removed {soil_faces} soil ground faces')
         canopy_triangles=needle_canopy(obj,high.z-low.z,index) if name=='pine_tree_01' else 0
         obj.name = variant
         obj.data.calc_loop_triangles()
+        dims = list(high - low)
+        tree_fields = {'height_m': round(dims[2], 3), 'crown_width_m': round(max(dims[0], dims[1]), 3)} if is_tree(name) else {}
         reports.append({'asset': name, 'variant': variant, 'file': variant + '.glb',
-                        'dimensions_m': list(high - low),
+                        'dimensions_m': dims,
                         'triangles': len(obj.data.loop_triangles),
-                        'materials': len(obj.data.materials), 'pivot': 'trunk_ground_center' if name.startswith('pine_') else 'ground_center',
+                        'materials': len(obj.data.materials), 'pivot': 'trunk_ground_center' if is_tree(name) else 'ground_center',
                         'source_triangles': source_triangles, 'wind_uv_version': 2,
                         'canopy_version': 7 if name=='pine_tree_01' else 0,
                         'soil_faces_removed': soil_faces,
                         'texture_res': '2k' if name in ROCK_IDS else '1k',
-                        'needle_card_triangles': canopy_triangles})
+                        'needle_card_triangles': canopy_triangles, **tree_fields})
         bpy.ops.export_scene.gltf(filepath=str(output / (variant + '.glb')),
                                   export_format='GLB', use_selection=True)
-        wind_uv(output / (variant + '.glb'), name.startswith('pine_'))
+        wind_uv(output / (variant + '.glb'), is_tree(name))
 def build_prairie_clumps():
     """Assemble three seeded prairie clumps from prepared grass variants, each >=0.6m across, 0.5-0.9m tall."""
     pool = [r for r in reports if r['asset'] in ('grass_medium_01', 'grass_medium_02') and 60 <= r['triangles'] <= 2500]

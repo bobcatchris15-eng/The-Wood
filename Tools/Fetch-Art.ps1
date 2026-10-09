@@ -5,7 +5,8 @@ New-Item -ItemType Directory -Force -Path $taskArtRoot | Out-Null
 $taskHeaders = @{'User-Agent'='TheWoodDevelopment/0.1 (local asset preparation)'}
 $taskRecords = @()
 # Mature canopy and boulders complement the original undergrowth.
-foreach ($taskId in @('pine_sapling_small','fern_02','grass_medium_01','grass_bermuda_01','grass_medium_02','rock_07','pine_tree_01','boulder_01','rock_moss_set_01','rock_moss_set_02')) {
+# Tree species groups for Prepare-Art.py (TREE_GROUPS): broadleaf deciduous, tall conifer, broadleaf evergreen, dead snag.
+foreach ($taskId in @('pine_sapling_small','fern_02','grass_medium_01','grass_bermuda_01','grass_medium_02','rock_07','pine_tree_01','boulder_01','rock_moss_set_01','rock_moss_set_02','jacaranda_tree','tree_small_02','fir_tree_01','island_tree_01','dead_tree_trunk','dead_tree_trunk_02')) {
  $taskFiles = Invoke-RestMethod -Uri "https://api.polyhaven.com/files/$taskId" -Headers $taskHeaders
  # Rocks use the 2k texture set so close-up surfaces stay sharp; all other assets stay 1k.
  $taskRes = if ($taskId -in @('rock_07','boulder_01','rock_moss_set_01','rock_moss_set_02')) {'2k'} else {'1k'}

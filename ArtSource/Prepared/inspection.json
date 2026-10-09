@@ -1170,6 +1170,174 @@
     "needle_card_triangles": 0
   },
   {
+    "asset": "jacaranda_tree",
+    "variant": "tree_broadleaf_00",
+    "file": "tree_broadleaf_00.glb",
+    "dimensions_m": [
+      24.417049407958984,
+      19.15457534790039,
+      19.468875885009766
+    ],
+    "triangles": 3859574,
+    "materials": 3,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 3863832,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 4258,
+    "texture_res": "1k",
+    "needle_card_triangles": 0,
+    "height_m": 19.469,
+    "crown_width_m": 24.417
+  },
+  {
+    "asset": "tree_small_02",
+    "variant": "tree_broadleaf_01",
+    "file": "tree_broadleaf_01.glb",
+    "dimensions_m": [
+      2.9166998863220215,
+      4.292477130889893,
+      4.556740760803223
+    ],
+    "triangles": 2062435,
+    "materials": 3,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 2062487,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 52,
+    "texture_res": "1k",
+    "needle_card_triangles": 0,
+    "height_m": 4.557,
+    "crown_width_m": 4.292
+  },
+  {
+    "asset": "fir_tree_01",
+    "variant": "tree_conifer_00",
+    "file": "tree_conifer_00.glb",
+    "dimensions_m": [
+      6.533779144287109,
+      6.426823139190674,
+      18.92510986328125
+    ],
+    "triangles": 4168173,
+    "materials": 4,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 4176819,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 8646,
+    "texture_res": "1k",
+    "needle_card_triangles": 0,
+    "height_m": 18.925,
+    "crown_width_m": 6.534
+  },
+  {
+    "asset": "fir_tree_01",
+    "variant": "tree_conifer_01",
+    "file": "tree_conifer_01.glb",
+    "dimensions_m": [
+      5.612586975097656,
+      6.056670665740967,
+      14.055205345153809
+    ],
+    "triangles": 2294309,
+    "materials": 4,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 2300624,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 6315,
+    "texture_res": "1k",
+    "needle_card_triangles": 0,
+    "height_m": 14.055,
+    "crown_width_m": 6.057
+  },
+  {
+    "asset": "fir_tree_01",
+    "variant": "tree_conifer_02",
+    "file": "tree_conifer_02.glb",
+    "dimensions_m": [
+      6.305938720703125,
+      5.9662370681762695,
+      14.520581245422363
+    ],
+    "triangles": 503607,
+    "materials": 4,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 505494,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 1887,
+    "texture_res": "1k",
+    "needle_card_triangles": 0,
+    "height_m": 14.521,
+    "crown_width_m": 6.306
+  },
+  {
+    "asset": "island_tree_01",
+    "variant": "tree_evergreen_00",
+    "file": "tree_evergreen_00.glb",
+    "dimensions_m": [
+      4.755149841308594,
+      4.817679405212402,
+      5.027446746826172
+    ],
+    "triangles": 1598956,
+    "materials": 3,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 1599403,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 447,
+    "texture_res": "1k",
+    "needle_card_triangles": 0,
+    "height_m": 5.027,
+    "crown_width_m": 4.818
+  },
+  {
+    "asset": "dead_tree_trunk",
+    "variant": "tree_snag_00",
+    "file": "tree_snag_00.glb",
+    "dimensions_m": [
+      3.0510149002075195,
+      0.27752751111984253,
+      0.29043155908584595
+    ],
+    "triangles": 92581,
+    "materials": 1,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 101802,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 9221,
+    "texture_res": "1k",
+    "needle_card_triangles": 0,
+    "height_m": 0.29,
+    "crown_width_m": 3.051
+  },
+  {
+    "asset": "dead_tree_trunk_02",
+    "variant": "tree_snag_01",
+    "file": "tree_snag_01.glb",
+    "dimensions_m": [
+      4.051363468170166,
+      1.056128740310669,
+      1.0550733804702759
+    ],
+    "triangles": 82326,
+    "materials": 1,
+    "pivot": "trunk_ground_center",
+    "source_triangles": 83128,
+    "wind_uv_version": 2,
+    "canopy_version": 0,
+    "soil_faces_removed": 802,
+    "texture_res": "1k",
+    "needle_card_triangles": 0,
+    "height_m": 1.055,
+    "crown_width_m": 4.051
+  },
+  {
     "asset": "prairie_clump",
     "variant": "prairie_clump_00",
     "file": "prairie_clump_00.glb",

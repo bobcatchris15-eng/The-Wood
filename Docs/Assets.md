@@ -84,3 +84,28 @@ Materials come from two CC0 Poly Haven 2k sets fetched by `Tools/Fetch-Art.ps1` 
 | SM_TalusRock | kit_sm_talusrock.glb | 0.97 x 0.89 x 0.51 | 0.31-0.96 (by ring) |
 
 These are procedural placeholders for layout and scale. They are not yet imported into Unreal.
+
+## Tree species groups (CC0, Poly Haven 1k glTF)
+
+Fetched by `Tools/Fetch-Art.ps1` into `ArtSource/PolyHaven/<id>/` (MD5-verified) and prepared by `Tools/Prepare-Art.py` (`TREE_GROUPS`) into `ArtSource/Prepared/tree_<group>_<nn>.glb`. Steps match the pine pipeline (soil-plate removal via `remove_soil`, root flare kept, UV1 root mask and wind via `wind_uv(tree=True)`, metres, origin at trunk ground centre). The needle-card conversion is pine-specific and is not applied, so these keep their source foliage geometry. Dimensions and triangle counts are in `ArtSource/Prepared/inspection.json` (`height_m`, `crown_width_m` on tree records).
+
+Candidate inventory (Poly Haven `assets?t=models`, categories `trees` or `plants`/`nature` with tree tags):
+- Broadleaf deciduous/semi-deciduous: jacaranda_tree, tree_small_02 (Burkea africana), island_tree_01/02/03 (coastal, broadleaf)
+- Conifer / fir: fir_tree_01 (tall, trunk and bark, geometry nodes), fir_sapling, fir_sapling_medium, pine_sapling_medium
+- Tropical or broadleaf evergreen: island_tree_01 (chosen), island_tree_02, island_tree_03, pachira_aquatica_01 (shrub, not a tree)
+- Dead / snag: dead_tree_trunk, dead_tree_trunk_02 (both chosen; fallen logs, not standing), dead_quiver_trunk (Karoo, not prepared), tree_stump_01, tree_stump_02, root_cluster_01/02 (not prepared)
+
+| Group | Source | Prepared files | Height (m) | Crown or span (m) | Triangles | glTF MD5 |
+|---|---|---|---|---|---|---|
+| broadleaf | [jacaranda_tree](https://polyhaven.com/a/jacaranda_tree) (CC0-1.0) | tree_broadleaf_00.glb | 19.47 | 24.42 x 19.15 | 3,859,574 | 8fed93ff7cbdaac0f5c199ef1fd0f694 |
+| broadleaf | [tree_small_02](https://polyhaven.com/a/tree_small_02) (CC0-1.0) | tree_broadleaf_01.glb | 4.56 | 4.29 x 2.92 (footprint) | 2,062,435 | 63f42b19687332f7b3a5c8b531734d8e |
+| conifer | [fir_tree_01](https://polyhaven.com/a/fir_tree_01) (CC0-1.0), 3 variants | tree_conifer_00/01/02.glb | 18.93 / 14.06 / 14.52 | 6.53 / 6.06 / 6.31 | 4,168,173 / 2,294,309 / 503,607 | 0a184431efdba9e4bf76900d8d56504d |
+| evergreen | [island_tree_01](https://polyhaven.com/a/island_tree_01) (CC0-1.0) | tree_evergreen_00.glb | 5.03 | 4.82 | 1,598,956 | fbc0c570ebd71ea88cedc1f9d5edb835 |
+| snag | [dead_tree_trunk](https://polyhaven.com/a/dead_tree_trunk) (CC0-1.0) | tree_snag_00.glb | 0.29 (lying log) | 3.05 long | 92,581 | 7bbf9fc9fdf61b50ed0495a29c03ecab |
+| snag | [dead_tree_trunk_02](https://polyhaven.com/a/dead_tree_trunk_02) (CC0-1.0) | tree_snag_01.glb | 1.06 (lying log) | 4.05 long | 82,326 | c16595a5951634914898e1eb6bb0ed3d |
+
+Notes:
+- No standing dead snag was chosen. Both dead-trunk sources are fallen logs, so the snag group is horizontal and needs a yaw or pitch decision before use as a standing snag.
+- Triangle counts are 0.5–4.2 million for the broadleaf, conifer and evergreen groups. The pine canopy is 88k–130k only because needle geometry was replaced by atlas cards. These groups still need a decimation or leaf-card pass before any Unreal import.
+- `remove_soil` removed 52–9,221 faces per tree. Those counts were not checked against root geometry visually.
+- The Blender pass was headless only, with no render review.
