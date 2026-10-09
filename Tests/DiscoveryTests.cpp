@@ -603,8 +603,18 @@ static void test_cottage_foundation_butt_joints() {
             // Same wall = identical yaw; centre spacing equals course length (1.6 m x scale).
             if (prev && prev->yaw == p.yaw) {
                 const double expected = 1.6 * p.scale;
-                const double d = std::hypot(p.position.x - prev->position.x, p.position.y - prev->position.y);
+                const double vx = p.position.x - prev->position.x;
+                const double vy = p.position.y - prev->position.y;
+                const double d = std::hypot(vx, vy);
                 EXPECT_TRUE(std::abs(d - expected) <= 0.05 * expected);
+                // Yaw convention: yaw is the edge direction and SM_FoundationCourse's 1.6 m length lies on
+                // local +X (Tools/Prepare-Art.py LENGTH_Y_TO_X). UE yaw 0 = +X, so a course at yaw runs along
+                // (cos yaw, sin yaw); consecutive courses of one straight wall must be centred along that line.
+                const double kTestPi = 3.14159265358979323846;
+                const double yawRad = p.yaw * (kTestPi / 180.0);
+                const double ux = std::cos(yawRad);
+                const double uy = std::sin(yawRad);
+                EXPECT_TRUE(d > 0.0 && std::abs(ux * vx + uy * vy) / d > 0.99);
             }
             prev = &p;
         }

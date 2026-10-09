@@ -1318,15 +1318,15 @@
     "variant": "SM_DryStone_Wall",
     "file": "kit_sm_drystone_wall.glb",
     "dimensions_m": [
-      0.6407201290130615,
       2.0063939094543457,
+      0.6407201290130615,
       0.9947209358215332
     ],
     "triangles": 420,
     "materials": 1,
     "pivot": "base_center",
     "licence": "CC0-1.0",
-    "nominal_m": "2.0 L x 0.6 T x 1.0 H (Y, X, Z); 2 courses of 0.5",
+    "nominal_m": "2.0 L x 0.6 T x 1.0 H (X, Y, Z); 2 courses of 0.5; L on +X = yaw axis",
     "grammar": "WoodDiscovery shelter ring (generateDryStoneShelter): butt-jointed arc-length runs, scale 0.55-1.0 (breach taper); top course irregular; sunk 0.10-0.25 m",
     "sources": [
       "stacked_stone_wall",
@@ -1406,15 +1406,15 @@
     "variant": "SM_FoundationCourse",
     "file": "kit_sm_foundationcourse.glb",
     "dimensions_m": [
-      0.6270626783370972,
       1.588324785232544,
+      0.6270626783370972,
       0.47110357880592346
     ],
     "triangles": 120,
     "materials": 1,
     "pivot": "base_center",
     "licence": "CC0-1.0",
-    "nominal_m": "1.6 L x 0.6 T x 0.45 H (two blocks 0.88 + 0.68 L)",
+    "nominal_m": "1.6 L x 0.6 T x 0.45 H (X, Y, Z; two blocks 0.88 + 0.68 L); L on +X = yaw axis",
     "grammar": "cottage foundation course stepped every wallLen/stepCount (~1.6 m); scale 0.9-1.1; upper wall 0.85x",
     "sources": [
       "stacked_stone_wall",

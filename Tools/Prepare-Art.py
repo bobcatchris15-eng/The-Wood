@@ -583,6 +583,13 @@ def kit_finalize(bm):
             loop[uv_layer].uv = ((p.y, p.z), (p.x, p.z), (p.x, p.y))[axis]
 
 
+# Yaw convention (WoodDiscovery.cpp wallYaw = atan2(dy, dx) in degrees; WoodGrounding.cpp FRotator(pitch, yaw, roll),
+# UE yaw 0 = +X). A kit mesh placed at yaw therefore has its local +X along (cos yaw, sin yaw).
+# Wall-run pieces build their length along Y while kit_block works in (thick X, length Y, height Z), so they are
+# rotated 90 deg CCW about Z (x, y) -> (-y, x) before finalize, putting the length on local +X.
+# Pieces not listed here are square or radially scattered, so their footprint orientation does not matter.
+# SM_BridgeAbutment is NOT rotated: its length is already on X and its yaw is the span direction (see KIT_SPECS).
+LENGTH_Y_TO_X = ('SM_DryStone_Wall', 'SM_FoundationCourse')
 DAMP_MESHES = ('SM_DryStone_Wall', 'SM_StonePier', 'SM_StonePier_Ruined', 'SM_FoundationCourse', 'SM_BridgeAbutment')
 DAMP_TINT = (0.58, 0.56, 0.52)
 
@@ -637,7 +644,7 @@ def build_fern_patch():
 
 # (mesh name, builder, material key, nominal size at scale 1.0, grammar placement and scale)
 KIT_SPECS = (
-    ('SM_DryStone_Wall', kit_wall, 'masonry', '2.0 L x 0.6 T x 1.0 H (Y, X, Z); 2 courses of 0.5',
+    ('SM_DryStone_Wall', kit_wall, 'masonry', '2.0 L x 0.6 T x 1.0 H (X, Y, Z); 2 courses of 0.5; L on +X = yaw axis',
      'WoodDiscovery shelter ring (generateDryStoneShelter): butt-jointed arc-length runs, scale 0.55-1.0 (breach taper); top course irregular; sunk 0.10-0.25 m'),
     ('SM_DryStone_Rubble', kit_rubble, 'masonry', '2.0 x 2.0 footprint, 0.35 H; 6-12 blocks within 0.9 m radius',
      'shelter ruined wall base 0.77-0.98 (0.85x seg); shelter_rubble scale 0.45-0.75'),
@@ -645,7 +652,7 @@ KIT_SPECS = (
      'cottage corner pier base 1.2, mid 1.05, top 0.9'),
     ('SM_StonePier_Ruined', kit_pier_ruined, 'masonry', '0.8 x 0.8 x 0.8 + displaced block to 0.26 H at 0.75 m',
      'cottage corner pier ruined scale 0.95'),
-    ('SM_FoundationCourse', kit_foundation, 'masonry', '1.6 L x 0.6 T x 0.45 H (two blocks 0.88 + 0.68 L)',
+    ('SM_FoundationCourse', kit_foundation, 'masonry', '1.6 L x 0.6 T x 0.45 H (X, Y, Z; two blocks 0.88 + 0.68 L); L on +X = yaw axis',
      'cottage foundation course stepped every wallLen/stepCount (~1.6 m); scale 0.9-1.1; upper wall 0.85x'),
     ('SM_MasonryDebris', kit_debris, 'masonry', '0.7 x 0.7 x 0.2 pile (5-8 chunks 0.12-0.25 m)',
      'cottage internal rubble scale 0.5-0.9'),
@@ -677,6 +684,9 @@ def build_stone_kit():
         else:
             bm = bmesh.new()
             build(bm, rng)
+            if name in LENGTH_Y_TO_X:
+                for v in bm.verts:
+                    v.co = Vector((-v.co.y, v.co.x, v.co.z))
             kit_finalize(bm)
             if name in DAMP_MESHES:
                 add_damp_band(bm)
