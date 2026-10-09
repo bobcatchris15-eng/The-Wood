@@ -47,6 +47,18 @@ int main() {
   assert(near(Rain.tintR,0.80f) && near(Rain.tintG,0.95f) && near(Rain.tintB,0.82f));
  }
 
+ // IcyHills and Savannah rows: authored archetype mix and tint, weights sum to one.
+ {
+  const GroundShade Icy=shade(familyOnly(Biome::IcyHills));
+  assert(near(Icy.archetype[0],0.f) && near(Icy.archetype[1],0.30f) && near(Icy.archetype[2],0.55f) && near(Icy.archetype[3],0.15f));
+  assert(near(archetypeSum(Icy),1.f));
+  assert(near(Icy.tintR,1.25f) && near(Icy.tintG,1.28f) && near(Icy.tintB,1.32f));
+  const GroundShade Sav=shade(familyOnly(Biome::Savannah));
+  assert(near(Sav.archetype[0],0.15f) && near(Sav.archetype[1],0.75f) && near(Sav.archetype[2],0.10f) && near(Sav.archetype[3],0.f));
+  assert(near(archetypeSum(Sav),1.f));
+  assert(near(Sav.tintR,1.10f) && near(Sav.tintG,1.00f) && near(Sav.tintB,0.78f));
+ }
+
  // Blended surface: weights are sum-preserving and archetype sum equals biome sum (1).
  {
   Surface S{};

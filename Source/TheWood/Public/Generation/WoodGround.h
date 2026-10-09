@@ -23,6 +23,8 @@ inline constexpr std::array<FamilyLook,BiomeCount> FamilyLooks{{
  {{0.f,0.f,0.f,1.f},1.f,1.f,1.f}, // Taiga           -> MossDamp
  {{0.6f,0.f,0.f,0.4f},0.85f,0.82f,0.75f}, // OldGrowthForest -> ForestLitter 0.6 / MossDamp 0.4
  {{0.25f,0.f,0.f,0.75f},0.80f,0.95f,0.82f}, // ColdRainforest  -> MossDamp 0.75 / ForestLitter 0.25
+ {{0.f,0.30f,0.55f,0.15f},1.25f,1.28f,1.32f}, // IcyHills        -> Grass 0.30 / RockGravel 0.55 / MossDamp 0.15
+ {{0.15f,0.75f,0.10f,0.f},1.10f,1.00f,0.78f}, // Savannah        -> ForestLitter 0.15 / Grass 0.75 / RockGravel 0.10
 }};
 
 static_assert(FamilyLooks.size()==BiomeCount,"FamilyLooks needs one row per Biome value");

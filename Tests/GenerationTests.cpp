@@ -326,8 +326,8 @@ int main() {
     if(!allowedAdjacent(fam[q*span+r],fam[nq*span+nr])) adjacentOk=false;
    }
    check(adjacentOk,"no adjacent region pair violates allowedAdjacent over 60x60 window");
-   // Original four families hold at least 8 percent; climate-driven OldGrowth and ColdRainforest at least 4 percent.
-   for(std::size_t i=0;i<kFamilyCount;++i) check(shares[i]>=(i<4?0.08:0.04)*span*span,"each region family holds its minimum share of the 60x60 window");
+   // Eight families: every family holds at least 4 percent of the 60x60 window.
+   for(std::size_t i=0;i<kFamilyCount;++i) check(shares[i]>=0.04*span*span,"each region family holds at least 4 percent of the 60x60 window");
    for(const auto& f:fixed) check(world.region(f[0],f[1]).family==static_cast<Biome>(f[2]),"origin-cell families unchanged");
    std::vector<int> order(span*span);
    for(int i=0;i<span*span;++i) order[i]=i;
@@ -350,13 +350,14 @@ int main() {
  // Golden output as of 8446d11. Update ONLY for intentional generation changes.
  {
   // B1a-B: kFamilyCount 4->6 (+OldGrowth, ColdRainforest)
+  // B1b: kFamilyCount 6->8 (+IcyHills, Savannah)
   struct GoldenCase { unsigned seed; int x,y; bool features; std::uint64_t expected; };
   const GoldenCase cases[]={
-   {0,0,0,true,0x837ddd15d5c87237ULL},{0,3,-2,true,0x83285ccaf55e66adULL},{0,-5,7,true,0x875eed77f67c0bc7ULL},{0,12,12,true,0x4872808552e31a79ULL},{0,0,0,false,0xd6232860ab6daeb8ULL},
-   {42,0,0,true,0xfcb9437ad1fa2765ULL},{42,3,-2,true,0x27a855607f2c100fULL},{42,-5,7,true,0x76a6c0dd5b7bd925ULL},{42,12,12,true,0x3f392e702173d637ULL},{42,0,0,false,0x73e9dea529b49bb8ULL},
-   {98765,0,0,true,0x99a1467ac0300c67ULL}, // changed in U1: chunk lies in an unreal region (overlay density)
-   {98765,3,-2,true,0x97e9c5c22d4b4b1dULL}, // changed in U1: chunk lies in an unreal region (overlay density)
-   {98765,-5,7,true,0x0007045b82fdfbbbULL},{98765,12,12,true,0xfc43d4f5357ccd20ULL},{98765,0,0,false,0x6678ce6e79ad1effULL},
+   {0,0,0,true,0xa243eb4f9baf9977ULL},{0,3,-2,true,0x51ac8e8cdf75e3adULL},{0,-5,7,true,0x3e7c4f9b76de3607ULL},{0,12,12,true,0x7fc2eaf6fdc6bd79ULL},{0,0,0,false,0x70f903ac0de24678ULL},
+   {42,0,0,true,0x5dafba1bed5fe025ULL},{42,3,-2,true,0x5c0e2a2aa5ad050fULL},{42,-5,7,true,0xf66954303bec42a5ULL},{42,12,12,true,0xe2919cb734365437ULL},{42,0,0,false,0x573d5e32b944b1f8ULL},
+   {98765,0,0,true,0xffb0e9626e03af27ULL}, // changed in U1: chunk lies in an unreal region (overlay density)
+   {98765,3,-2,true,0xc8c83bd24e4ffa9dULL}, // changed in U1: chunk lies in an unreal region (overlay density)
+   {98765,-5,7,true,0x1365b263cee07ffbULL},{98765,12,12,true,0x8abb3e7132e845a0ULL},{98765,0,0,false,0x4ec4b5ceb43c193fULL},
   };
   for(const auto& gc:cases) {
    World w({gc.seed,128,32});
