@@ -27,7 +27,7 @@ Take The Wood from current prototype to Docs/Specification.md v1.1 (M1–M5) via
 | P1 | stream banks, flow water, pine base, prairie, rocks 2K, spec tests | DONE | - | 3956cbf..ef5c51b |
 | M1 | gate fixes: ruin/biome-framed views, moss layer | DONE (visual items on human list) | - | 4bbc1d8..e236f47 |
 | G1-G9 | flags, climate families, staged pipeline, forgetting, save/resume, docs | DONE | - | 153ab73..G9 |
-| E1 | EntranceZone core | IN PROGRESS | | |
+| E1-E4 | entrance zone, props, gravel, stream-free lot, threshold, trailhead start | DONE (playtest owed) | - | 9c8c6d5..E4 |
 
 ## Unverified assumptions
 - Soundscape never heard in a running game (S1 closes this).
@@ -42,3 +42,5 @@ Take The Wood from current prototype to Docs/Specification.md v1.1 (M1–M5) via
 - Taiga floor still reads olive-brown gravel; moss carpet layer exists in core (3.6x cover) but small scale barely reads. Changing the taiga tint in BootstrapEditor.py and regenerating M_Ground_BiomeV2 produces heavy contour/chevron banding — the committed .uasset is fine. Treat ground-material regeneration as fragile: diff the graph before editing it.
 - HydrologyStage is computed but unused by habitat (off-grid y). Fold real hydrology (drainage, macro-basins) into it in a later task.
 - Perf: Test-Core now ~140 s (was 26 s at start; growth from added tests + ~15% from epoch owner lookups). Add a per-chunk generate() time budget test before Phase 6; generation cost matters for streaming.
+- Test-Unreal.ps1 counts only Succeeded; SaveResume is SucceededWithWarnings (intended corrupt-file log) so summary says 6 of 7. Fix script to report warnings bucket.
+- Threshold: resident entrance-version chunks within 40 m are kept after crossing; adjacent regenerated wilderness chunks may show a seam near the passage. Playtest: cross, turn around, look.

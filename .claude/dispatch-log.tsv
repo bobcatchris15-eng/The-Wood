@@ -29,3 +29,12 @@ ts	task_id	clanker	model	n_targets	wall_s	turns	attempts	outcome	returned_bytes
 2026-10-08	G7	impl-worker	haiku	5	?	?	1	PASS	~1500
 2026-10-08	G8	impl-worker	haiku	7	?	?	1	PASS	~1500
 2026-10-08	G9	impl-worker	haiku	3	152	35	1	PASS	~1200
+2026-10-08	E1	impl-worker	haiku	13	1335	28	1	PASS	~1500
+2026-10-08	E2-split	impl-worker	haiku	-	328	2	0	REFUSED(scope)	~800
+2026-10-08	E2a	impl-worker	haiku	4	?	?	2	PASS	~1000
+2026-10-08	E2b	impl-worker	haiku	8	?	?	1	PASS	~900
+2026-10-08	E2c	impl-worker	haiku	6	579	27	1	PASS(visual issue)	~1500
+2026-10-08	E2d	impl-worker	haiku	7	?	?	1	PASS	~1000
+2026-10-08	E3	impl-worker	haiku	7	445	31	3	BREAKER(harness)	~1500
+2026-10-08	E3b	impl-worker	haiku	1	?	?	1	PASS	~900
+2026-10-08	E4	impl-worker	haiku	9	?	?	1	PASS	~1500
