@@ -720,7 +720,7 @@ DiscoveryPlan generateWindthrowClearing(
         const double y = origin.y + uy * along + vy * lateral;
         const double yaw = plan.yaw + rng.nextDouble(-15.0, 15.0);
         const double scale = rng.nextDouble(0.8, 1.3);
-        addGroundedPiece(plan, rng, heightFn, "windthrow_root_plate", "SM_TalusRock", x, y, yaw, scale);
+        addGroundedPiece(plan, rng, heightFn, "windthrow_root_plate", "SM_StumpSnag", x, y, yaw, scale);
     }
 
     const int fernCount = rng.nextInt(5, 8);
@@ -734,13 +734,17 @@ DiscoveryPlan generateWindthrowClearing(
         addGroundedPiece(plan, rng, heightFn, "windthrow_understory_fern", "SM_FernPatch", x, y, yaw, scale);
     }
 
+    // Fallen trunk along the fall direction, centred on the origin (log meshes run from x=0 to x=L).
+    addGroundedPiece(plan, rng, heightFn, "windthrow_trunk", "SM_LogLong",
+        origin.x - ux * 3.0, origin.y - uy * 3.0, plan.yaw, 1.0);
+
     plan.reservation = DiscoveryReservation(DiscoveryType::WindthrowClearing, plan.position, 9.0, 14.0);
     plan.valid = true;
     return plan;
 }
 
-// Host-line footprint with fern colonies along it and rock anchors at each end.
-// The kit has no log mesh, so the host itself is not drawn.
+// Host-line footprint with fern colonies along it, snag stumps at each end and a
+// fallen log host (variant chosen from the seed, no extra RNG draws before the colony).
 DiscoveryPlan generateFallenLogColony(
     std::uint32_t seed,
     const Vec3& origin,
@@ -763,7 +767,7 @@ DiscoveryPlan generateFallenLogColony(
         const double x = origin.x + ux * along;
         const double y = origin.y + uy * along;
         const double scale = rng.nextDouble(0.4, 0.6);
-        addGroundedPiece(plan, rng, heightFn, "log_end_anchor", "SM_TalusRock", x, y, plan.yaw, scale);
+        addGroundedPiece(plan, rng, heightFn, "log_end_anchor", "SM_StumpSnag", x, y, plan.yaw, scale);
     }
 
     const int colonyCount = rng.nextInt(4, 6);
@@ -776,6 +780,13 @@ DiscoveryPlan generateFallenLogColony(
         const double scale = rng.nextDouble(0.5, 0.8);
         addGroundedPiece(plan, rng, heightFn, "log_colony_fern", "SM_FernPatch", x, y, yaw, scale);
     }
+
+    // Host log: variant from seed bits, centred on the origin using the nominal mesh length.
+    const std::uint32_t variant = (seed >> 7) % 3u;
+    const char* logMesh = variant == 0 ? "SM_LogLong" : (variant == 1 ? "SM_LogShort" : "SM_LogMossyRotten");
+    const double logNominal = variant == 0 ? 6.0 : (variant == 1 ? 3.0 : 4.0);
+    addGroundedPiece(plan, rng, heightFn, "log_host", logMesh,
+        origin.x - ux * 0.5 * logNominal, origin.y - uy * 0.5 * logNominal, plan.yaw, 1.0);
 
     plan.reservation = DiscoveryReservation(DiscoveryType::FallenLogColony, plan.position, 5.0, 9.0);
     plan.valid = true;

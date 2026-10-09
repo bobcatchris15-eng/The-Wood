@@ -147,15 +147,41 @@ void AWoodWorld::SpawnLandmarks(FIntPoint Chunk) {
  const auto Found=wood::landmark::placeLandmark(static_cast<uint32>(Seed),Region.q,Region.r,Generator);
  if(!Found) return;
  const auto& Lm=*Found;
- // Placeholder kit meshes: kitId 2 = SM_StonePier, kitId 9 = SM_GraniteMonolith (WoodKit.h table).
+ // Authored landmark kits (WoodKit.h table): 15 fire_lookout_tower, 16 rock_spire, 17 stone_ring_base, 18-20 standing_stone_01..03.
  auto KitMesh=[this](int32 KitId) -> UStaticMesh* {
   return Palette->Kit.IsValidIndex(KitId)?Palette->Kit[KitId].LoadSynchronous():nullptr;
  };
+ if(Lm.kind==wood::landmark::LandmarkKind::StoneRing) {
+  // Turf ring at ground pivot, three standing stones on an inner ring 120 degrees apart. Authored in metres: scale 1.
+  const FVector Centre(Lm.x*100,Lm.y*100,Lm.z*100);
+  if(UStaticMesh* Base=KitMesh(17)) {
+   auto* Part=NewObject<UStaticMeshComponent>(this);
+   Part->SetupAttachment(RootComponent);
+   Part->SetStaticMesh(Base);
+   Part->SetRelativeLocation(Centre);
+   Part->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+   Part->RegisterComponent();
+   Landmarks.Add(Part);
+  }
+  for(int32 I=0;I<3;++I) {
+   UStaticMesh* Stone=KitMesh(18+I);
+   if(!Stone) continue;
+   const double Angle=FMath::DegreesToRadians(30.0+120.0*I);
+   const FVector Offset(450.0*FMath::Cos(Angle),450.0*FMath::Sin(Angle),0.0);
+   auto* Part=NewObject<UStaticMeshComponent>(this);
+   Part->SetupAttachment(RootComponent);
+   Part->SetStaticMesh(Stone);
+   Part->SetRelativeLocation(Centre+Offset);
+   Part->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+   Part->RegisterComponent();
+   Landmarks.Add(Part);
+  }
+  return;
+ }
  UStaticMesh* Asset=nullptr;
  switch(Lm.kind) {
- case wood::landmark::LandmarkKind::Spire:
- case wood::landmark::LandmarkKind::StoneRing: Asset=KitMesh(9); break;
- case wood::landmark::LandmarkKind::Tower: Asset=KitMesh(2); break;
+ case wood::landmark::LandmarkKind::Spire: Asset=KitMesh(16); break;
+ case wood::landmark::LandmarkKind::Tower: Asset=KitMesh(15); break;
  case wood::landmark::LandmarkKind::Waterfall: if(Palette->Rocks.IsValidIndex(0)) Asset=Palette->Rocks[0].LoadSynchronous(); break;
  case wood::landmark::LandmarkKind::GiantTree: {
   // Tallest species tree across all canopy arrays.
