@@ -4,6 +4,9 @@
 #include "WoodCharacter.generated.h"
 class UCameraComponent;
 class AWoodWorld;
+class SWoodGallery;
+class SWoodSettings;
+struct FWoodSettings;
 
 UCLASS()
 class THEWOOD_API AWoodCharacter : public ACharacter {
@@ -20,6 +23,16 @@ private:
  UPROPERTY() TObjectPtr<UCameraComponent> Camera;
  UPROPERTY() TObjectPtr<AWoodWorld> Environment;
  double LastPhotoSeconds=-10;
+ TSharedPtr<SWoodGallery> Gallery;
+ TSharedPtr<SWoodSettings> SettingsMenu;
+ float MouseSensitivity=1.0f;
+ bool bInvertY=false;
+ void ToggleGallery();
+ void ToggleSettings();
+ void CloseMenu();
+ void ApplyRuntimeSettings(const FWoodSettings& S);
+ void HandleSettingsChanged(FWoodSettings S);
+ void HandleSettingsClosed(FWoodSettings S);
  void Forward(float Value);
  void Right(float Value);
  void Turn(float Value);

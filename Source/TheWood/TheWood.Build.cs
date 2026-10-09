@@ -4,6 +4,6 @@ public class TheWood : ModuleRules {
   PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
   CppStandard = CppStandardVersion.Cpp20;
   bEnableExceptions = true;
-  PublicDependencyModuleNames.AddRange(new string[] {"Core", "CoreUObject", "Engine", "InputCore", "ProceduralMeshComponent"});
+  PublicDependencyModuleNames.AddRange(new string[] {"Core", "CoreUObject", "Engine", "InputCore", "ProceduralMeshComponent", "UMG", "Slate", "SlateCore"});
  }
 }

@@ -13,6 +13,12 @@
 #include "Misc/Parse.h"
 #include "UnrealClient.h"
 #include "TimerManager.h"
+#include "WoodSettingsWidget.h"
+#include "WoodGalleryWidget.h"
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
 
 AWoodCharacter::AWoodCharacter() {
  PrimaryActorTick.bCanEverTick=true;
@@ -33,6 +39,9 @@ AWoodCharacter::AWoodCharacter() {
 }
 void AWoodCharacter::BeginPlay() {
  Super::BeginPlay();
+ const FWoodSettings Settings=FWoodSettings::Load();
+ ApplyRuntimeSettings(Settings);
+ Settings.ApplyEngine();
  for(TActorIterator<AWoodWorld> It(GetWorld());It;++It) { Environment=*It; break; }
  if(APlayerController* PC=Cast<APlayerController>(Controller)) {
   PC->bShowMouseCursor=false; PC->SetInputMode(FInputModeGameOnly());
@@ -67,11 +76,14 @@ void AWoodCharacter::SetupPlayerInputComponent(UInputComponent* Input) {
  Input->BindAction(TEXT("Accelerate"),IE_Pressed,this,&AWoodCharacter::Accelerate);
  Input->BindAction(TEXT("Jump"),IE_Pressed,this,&AWoodCharacter::StartJump);
  Input->BindAction(TEXT("Jump"),IE_Released,this,&ACharacter::StopJumping);
+ Input->BindKey(EKeys::G,IE_Pressed,this,&AWoodCharacter::ToggleGallery);
+ Input->BindKey(EKeys::Escape,IE_Pressed,this,&AWoodCharacter::ToggleSettings);
+ Input->BindKey(EKeys::F10,IE_Pressed,this,&AWoodCharacter::ToggleSettings);
 }
 void AWoodCharacter::Forward(float Value) { if(Environment&&!Environment->IsSeated()) AddMovementInput(GetActorForwardVector(),Value); }
 void AWoodCharacter::Right(float Value) { if(Environment&&!Environment->IsSeated()) AddMovementInput(GetActorRightVector(),Value); }
-void AWoodCharacter::Turn(float Value) { AddControllerYawInput(Value); }
-void AWoodCharacter::Look(float Value) { AddControllerPitchInput(Value); }
+void AWoodCharacter::Turn(float Value) { AddControllerYawInput(Value*MouseSensitivity); }
+void AWoodCharacter::Look(float Value) { AddControllerPitchInput(Value*MouseSensitivity*(bInvertY?-1.0f:1.0f)); }
 void AWoodCharacter::StartJump() {
  if(Environment&&Environment->IsSeated()) { Environment->SetSeated(false); return; }
  Jump();
@@ -185,4 +197,55 @@ void AWoodCharacter::WoodCapture(const FString& View,float Delay) {
  WoodView(View);
  FTimerHandle CaptureTimer;
  GetWorldTimerManager().SetTimer(CaptureTimer,this,&AWoodCharacter::Photograph,FMath::Max(Delay,0.1f),false);
+}
+void AWoodCharacter::ApplyRuntimeSettings(const FWoodSettings& S) {
+ MouseSensitivity=S.MouseSensitivity;
+ bInvertY=S.bInvertY;
+ if(Camera) Camera->FieldOfView=S.FOV;
+}
+void AWoodCharacter::ToggleGallery() {
+ if(Gallery) { CloseMenu(); return; }
+ if(SettingsMenu) return;
+ APlayerController* PC=Cast<APlayerController>(Controller);
+ if(!PC||!GEngine||!GEngine->GameViewport) return;
+ Gallery=SNew(SWoodGallery).OnRequestClose(FSimpleDelegate::CreateUObject(this,&AWoodCharacter::CloseMenu));
+ GEngine->GameViewport->AddViewportWidgetContent(Gallery.ToSharedRef(),100);
+ UGameplayStatics::SetGamePaused(GetWorld(),true);
+ PC->bShowMouseCursor=true;
+ PC->SetInputMode(FInputModeUIOnly().SetWidgetToFocus(Gallery));
+}
+void AWoodCharacter::ToggleSettings() {
+ if(SettingsMenu) { HandleSettingsClosed(SettingsMenu->GetValues()); return; }
+ if(Gallery) return;
+ APlayerController* PC=Cast<APlayerController>(Controller);
+ if(!PC||!GEngine||!GEngine->GameViewport) return;
+ SettingsMenu=SNew(SWoodSettings)
+  .Initial(FWoodSettings::Load())
+  .OnChanged(FOnWoodSettingsEvent::CreateUObject(this,&AWoodCharacter::HandleSettingsChanged))
+  .OnClosed(FOnWoodSettingsEvent::CreateUObject(this,&AWoodCharacter::HandleSettingsClosed));
+ GEngine->GameViewport->AddViewportWidgetContent(SettingsMenu.ToSharedRef(),100);
+ PC->bShowMouseCursor=true;
+ PC->SetInputMode(FInputModeUIOnly().SetWidgetToFocus(SettingsMenu));
+}
+void AWoodCharacter::HandleSettingsChanged(FWoodSettings S) {
+ ApplyRuntimeSettings(S);
+}
+void AWoodCharacter::HandleSettingsClosed(FWoodSettings S) {
+ S.Save();
+ S.ApplyEngine();
+ ApplyRuntimeSettings(S);
+ CloseMenu();
+}
+void AWoodCharacter::CloseMenu() {
+ if(GEngine&&GEngine->GameViewport) {
+  if(Gallery) GEngine->GameViewport->RemoveViewportWidgetContent(Gallery.ToSharedRef());
+  if(SettingsMenu) GEngine->GameViewport->RemoveViewportWidgetContent(SettingsMenu.ToSharedRef());
+ }
+ Gallery.Reset();
+ SettingsMenu.Reset();
+ UGameplayStatics::SetGamePaused(GetWorld(),false);
+ if(APlayerController* PC=Cast<APlayerController>(Controller)) {
+  PC->bShowMouseCursor=false;
+  PC->SetInputMode(FInputModeGameOnly());
+ }
 }
