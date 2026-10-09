@@ -448,11 +448,14 @@ def make_stone_material(name, source_id):
     return mat
 
 
-def kit_block(bm, rng, center, size, yaw=0.0, bevel=0.03, jitter=0.012, taper=None):
-    """One jittered, yawed, bevelled block. size = (thickness X, length Y, height Z)."""
+def kit_block(bm, rng, center, size, yaw=0.0, bevel=0.03, jitter=0.012, taper=None, lean=0.0):
+    """One jittered, yawed, bevelled block. size = (thickness X, length Y, height Z).
+    lean shears the top of the stone by up to +/-lean metres per metre of height, so no two stones are true boxes."""
     cube = bmesh.ops.create_cube(bm, size=1.0)['verts']
     sx, sy, sz = size
     c, s = math.cos(yaw), math.sin(yaw)
+    lean_x = rng.uniform(-lean, lean) if lean else 0.0
+    lean_y = rng.uniform(-lean, lean) if lean else 0.0
     for v in cube:
         x = v.co.x * sx + rng.uniform(-jitter, jitter)
         y = v.co.y * sy + rng.uniform(-jitter, jitter)
@@ -460,6 +463,8 @@ def kit_block(bm, rng, center, size, yaw=0.0, bevel=0.03, jitter=0.012, taper=No
         if taper and z > 0.0:
             x *= taper[0]
             y *= taper[1]
+        x += lean_x * z
+        y += lean_y * z
         v.co = Vector((x * c - y * s + center[0], x * s + y * c + center[1], z + center[2]))
     edges = list({e for v in cube for e in v.link_edges})
     bmesh.ops.bevel(bm, geom=edges, offset=bevel, offset_type='OFFSET', segments=2, affect='EDGES', clamp_overlap=True)
@@ -467,15 +472,27 @@ def kit_block(bm, rng, center, size, yaw=0.0, bevel=0.03, jitter=0.012, taper=No
 
 def kit_wall(bm, rng):
     # Two courses of four blocks, joints offset by independent split weights.
+    # Top course is irregular: at most one stone missing, others stepped down (broken top).
     length, thick, course = 2.0, 0.6, 0.5
     for row in range(2):
         weights = [rng.uniform(0.7, 1.3) for _ in range(4)]
         total = sum(weights)
         y = -length / 2.0
-        for w in weights:
+        missing = False
+        for index, w in enumerate(weights):
             run = length * w / total
-            kit_block(bm, rng, (rng.uniform(-0.015, 0.015), y + run / 2.0, row * course + course / 2.0),
-                      (thick, run - 0.02, course - 0.02), yaw=rng.uniform(-0.03, 0.03))
+            base = row * course + 0.01
+            height = course - 0.02
+            if row == 1:
+                roll = rng.random()
+                if roll < 0.2 and not missing and 0 < index < 3:
+                    missing = True
+                    y += run
+                    continue
+                if roll < 0.5:
+                    height *= rng.uniform(0.45, 0.75)
+            kit_block(bm, rng, (rng.uniform(-0.015, 0.015), y + run / 2.0, base + height / 2.0),
+                      (thick, run - 0.02, height), yaw=rng.uniform(-0.03, 0.03), lean=0.035)
             y += run
 
 
@@ -490,8 +507,13 @@ def kit_rubble(bm, rng):
 
 
 def kit_pier(bm, rng):
+    # Four courses; top course stepped down on one side, so the cap is not level.
     for row in range(4):
-        kit_block(bm, rng, (0.0, 0.0, row * 0.4 + 0.2), (0.8, 0.8, 0.38), yaw=rng.uniform(-0.05, 0.05), bevel=0.03)
+        height = 0.38
+        if row == 3:
+            height *= rng.uniform(0.55, 0.8)
+        kit_block(bm, rng, (0.0, 0.0, row * 0.4 + 0.01 + height / 2.0), (0.8, 0.8, height),
+                  yaw=rng.uniform(-0.05, 0.05), bevel=0.03, lean=0.03)
 
 
 def kit_pier_ruined(bm, rng):
@@ -503,8 +525,8 @@ def kit_pier_ruined(bm, rng):
 
 def kit_foundation(bm, rng):
     # One course, two blocks totalling the 1.6 m grammar step.
-    kit_block(bm, rng, (0.0, -0.35, 0.225), (0.6, 0.88, 0.45), yaw=rng.uniform(-0.02, 0.02))
-    kit_block(bm, rng, (0.0, 0.45, 0.225), (0.6, 0.68, 0.45), yaw=rng.uniform(-0.02, 0.02))
+    kit_block(bm, rng, (0.0, -0.35, 0.225), (0.6, 0.88, 0.45), yaw=rng.uniform(-0.02, 0.02), lean=0.02)
+    kit_block(bm, rng, (0.0, 0.45, 0.225), (0.6, 0.68, 0.45), yaw=rng.uniform(-0.02, 0.02), lean=0.02)
 
 
 def kit_debris(bm, rng):
@@ -561,6 +583,20 @@ def kit_finalize(bm):
             loop[uv_layer].uv = ((p.y, p.z), (p.x, p.z), (p.x, p.y))[axis]
 
 
+DAMP_MESHES = ('SM_DryStone_Wall', 'SM_StonePier', 'SM_StonePier_Ruined', 'SM_FoundationCourse', 'SM_BridgeAbutment')
+DAMP_TINT = (0.58, 0.56, 0.52)
+
+
+def add_damp_band(bm):
+    """Per-loop vertex colour 'DampBand': darker damp tint at or below 0.25 m, ramping to white by 0.35 m.
+    Exported as COLOR_0. The Unreal masonry material must multiply by it to show; until then it is inert."""
+    layer = bm.loops.layers.color.new('DampBand')
+    for face in bm.faces:
+        for loop in face.loops:
+            t = max(0.0, min(1.0, (loop.vert.co.z - 0.25) / 0.1))
+            loop[layer] = (DAMP_TINT[0] * (1.0 - t) + t, DAMP_TINT[1] * (1.0 - t) + t, DAMP_TINT[2] * (1.0 - t) + t, 1.0)
+
+
 def build_fern_patch():
     """Three fern_02 variants merged into one patch, placed on a ~1 m footprint."""
     rng = random.Random(STONE_KIT_SEED + 7)
@@ -602,7 +638,7 @@ def build_fern_patch():
 # (mesh name, builder, material key, nominal size at scale 1.0, grammar placement and scale)
 KIT_SPECS = (
     ('SM_DryStone_Wall', kit_wall, 'masonry', '2.0 L x 0.6 T x 1.0 H (Y, X, Z); 2 courses of 0.5',
-     'WoodDiscovery shelter ring (generateDryStoneShelter) base seg scale 0.9-1.15, top 0.88x; ring spacing ~2-11 m'),
+     'WoodDiscovery shelter ring (generateDryStoneShelter): butt-jointed arc-length runs, scale 0.55-1.0 (breach taper); top course irregular; sunk 0.10-0.25 m'),
     ('SM_DryStone_Rubble', kit_rubble, 'masonry', '2.0 x 2.0 footprint, 0.35 H; 6-12 blocks within 0.9 m radius',
      'shelter ruined wall base 0.77-0.98 (0.85x seg); shelter_rubble scale 0.45-0.75'),
     ('SM_StonePier', kit_pier, 'masonry', '0.8 x 0.8 x 1.6 (4 courses of 0.4)',
@@ -642,6 +678,8 @@ def build_stone_kit():
             bm = bmesh.new()
             build(bm, rng)
             kit_finalize(bm)
+            if name in DAMP_MESHES:
+                add_damp_band(bm)
             mesh = bpy.data.meshes.new(name)
             bm.to_mesh(mesh)
             bm.free()

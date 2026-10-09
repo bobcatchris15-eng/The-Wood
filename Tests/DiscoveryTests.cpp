@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 #include <algorithm>
+#include <cstdint>
 
 #if __has_include("Generation/WoodDiscovery.h")
 #include "Generation/WoodDiscovery.h"
@@ -44,6 +45,15 @@ static void check_eq(T&& a, U&& b, const char* exprA, const char* exprB, const c
 #define EXPECT_TRUE(expr) check_true((expr), #expr, __FILE__, __LINE__)
 #define EXPECT_FALSE(expr) check_false((expr), #expr, __FILE__, __LINE__)
 #define EXPECT_EQ(a, b) check_eq((a), (b), #a, #b, __FILE__, __LINE__)
+
+// Structural pieces bed 0.10-0.25 m into terrain; no piece may float above it.
+template <typename H>
+static void check_grounded(const wood::DiscoveryPiece& p, H&& heightFn, const char* file, int line) {
+    const double h = heightFn(p.position.x, p.position.y);
+    check_true(p.position.z <= h + 1e-9, "piece does not float above terrain", file, line);
+    check_true(p.position.z >= h - 0.25 - 1e-9, "piece sinks at most 0.25 m", file, line);
+}
+#define EXPECT_GROUNDED(piece, hfn) check_grounded((piece), (hfn), __FILE__, __LINE__)
 
 static void test_types_and_structs() {
     std::cout << "[TEST] test_types_and_structs...\n";
@@ -265,7 +275,7 @@ static void test_dry_stone_shelter_plan() {
     bool hasWall = false;
     bool hasRubble = false;
     for (const auto& p : plan.pieces) {
-        EXPECT_EQ(p.position.z, heightFn(p.position.x, p.position.y));
+        EXPECT_GROUNDED(p, heightFn);
         EXPECT_TRUE(wood::isInsideReservation(plan.reservation, p.position.x, p.position.y, false));
         if (p.name.find("wall") != std::string::npos) hasWall = true;
         if (p.name.find("rubble") != std::string::npos) hasRubble = true;
@@ -300,7 +310,7 @@ static void test_cottage_corner_plan() {
     bool hasFoundation = false;
     bool hasFernOrRubble = false;
     for (const auto& p : plan.pieces) {
-        EXPECT_EQ(p.position.z, heightFn(p.position.x, p.position.y));
+        EXPECT_GROUNDED(p, heightFn);
         EXPECT_TRUE(wood::isInsideReservation(plan.reservation, p.position.x, p.position.y, false));
         if (p.name.find("pier") != std::string::npos) hasPier = true;
         if (p.name.find("foundation") != std::string::npos) hasFoundation = true;
@@ -336,7 +346,7 @@ static void test_ridge_tor_plan() {
     bool hasMonolith = false;
     bool hasTalus = false;
     for (const auto& p : plan.pieces) {
-        EXPECT_EQ(p.position.z, heightFn(p.position.x, p.position.y));
+        EXPECT_GROUNDED(p, heightFn);
         EXPECT_TRUE(wood::isInsideReservation(plan.reservation, p.position.x, p.position.y, false));
         if (p.name.find("monolith") != std::string::npos) hasMonolith = true;
         if (p.name.find("talus") != std::string::npos) hasTalus = true;
@@ -375,7 +385,7 @@ static void test_stream_footbridge_plan() {
     bool hasAbutment = false;
     bool hasSteppingStone = false;
     for (const auto& p : plan.pieces) {
-        EXPECT_EQ(p.position.z, heightFn(p.position.x, p.position.y));
+        EXPECT_GROUNDED(p, heightFn);
         EXPECT_TRUE(wood::isInsideReservation(plan.reservation, p.position.x, p.position.y, false));
         if (p.name.find("abutment") != std::string::npos) hasAbutment = true;
         if (p.name.find("stepping_stone") != std::string::npos) hasSteppingStone = true;
@@ -449,7 +459,7 @@ static void test_all_four_types_heightfn_and_reservations() {
         EXPECT_TRUE(planShelter.type == wood::DiscoveryType::DryStoneShelter);
         EXPECT_FALSE(planShelter.pieces.empty());
         for (const auto& piece : planShelter.pieces) {
-            EXPECT_EQ(piece.position.z, complexHeightFn(piece.position.x, piece.position.y));
+            EXPECT_GROUNDED(piece, complexHeightFn);
             EXPECT_TRUE(wood::isInsideReservation(planShelter.reservation, piece.position.x, piece.position.y, false));
         }
 
@@ -462,7 +472,7 @@ static void test_all_four_types_heightfn_and_reservations() {
         EXPECT_TRUE(planCottage.type == wood::DiscoveryType::CottageCorner);
         EXPECT_FALSE(planCottage.pieces.empty());
         for (const auto& piece : planCottage.pieces) {
-            EXPECT_EQ(piece.position.z, complexHeightFn(piece.position.x, piece.position.y));
+            EXPECT_GROUNDED(piece, complexHeightFn);
             EXPECT_TRUE(wood::isInsideReservation(planCottage.reservation, piece.position.x, piece.position.y, false));
         }
 
@@ -475,7 +485,7 @@ static void test_all_four_types_heightfn_and_reservations() {
         EXPECT_TRUE(planTor.type == wood::DiscoveryType::RidgeTor);
         EXPECT_FALSE(planTor.pieces.empty());
         for (const auto& piece : planTor.pieces) {
-            EXPECT_EQ(piece.position.z, complexHeightFn(piece.position.x, piece.position.y));
+            EXPECT_GROUNDED(piece, complexHeightFn);
             EXPECT_TRUE(wood::isInsideReservation(planTor.reservation, piece.position.x, piece.position.y, false));
         }
 
@@ -490,8 +500,113 @@ static void test_all_four_types_heightfn_and_reservations() {
         EXPECT_TRUE(planBridge.type == wood::DiscoveryType::StreamFootbridge);
         EXPECT_FALSE(planBridge.pieces.empty());
         for (const auto& piece : planBridge.pieces) {
-            EXPECT_EQ(piece.position.z, complexHeightFn(piece.position.x, piece.position.y));
+            EXPECT_GROUNDED(piece, complexHeightFn);
             EXPECT_TRUE(wood::isInsideReservation(planBridge.reservation, piece.position.x, piece.position.y, false));
+        }
+    }
+}
+
+static void test_shelter_walls_contiguous() {
+    std::cout << "[TEST] test_shelter_walls_contiguous...\n";
+    auto heightFn = [](double x, double y) -> double {
+        return 12.0 + 3.0 * std::sin(x * 0.08) + 2.0 * std::cos(y * 0.06);
+    };
+    auto streamXFn = [](double y) -> double { return 1000.0 + y * 0.1; };
+    auto streamHWFn = [](double) -> double { return 4.0; };
+
+    wood::Surface climate;
+    climate.forest = 0.1;
+    climate.biome[1] = 0.9;
+    const wood::Vec3 center{0.0, 0.0, 12.0};
+
+    for (std::uint32_t seed = 1; seed <= 40; ++seed) {
+        const auto plan = wood::planDiscovery(seed, 0, 0, center, climate, heightFn, streamXFn, streamHWFn, true);
+        EXPECT_TRUE(plan.valid);
+
+        std::vector<const wood::DiscoveryPiece*> walls;
+        for (const auto& p : plan.pieces) {
+            EXPECT_GROUNDED(p, heightFn);
+            if (p.mesh == "SM_DryStone_Wall") walls.push_back(&p);
+        }
+        EXPECT_TRUE(walls.size() >= 4);
+        if (walls.size() < 2) continue;
+
+        // Consecutive walls, plus the closing pair, butt end-to-end: centre spacing = mean segment length
+        // (2.0 m x scale each). Any other spacing must be a deliberate gap (doorway or collapse breach).
+        int gapPairs = 0;
+        for (std::size_t i = 0; i < walls.size(); ++i) {
+            const wood::DiscoveryPiece& a = *walls[i];
+            const wood::DiscoveryPiece& b = *walls[(i + 1) % walls.size()];
+            const double expected = a.scale + b.scale;
+            const double d = std::hypot(b.position.x - a.position.x, b.position.y - a.position.y);
+            const bool butt = std::abs(d - expected) <= 0.05 * expected;
+            if (!butt) {
+                ++gapPairs;
+                const double gap = d - expected;
+                EXPECT_TRUE(gap >= 0.9 && gap <= 2.8);
+            }
+        }
+        EXPECT_EQ(gapPairs, 2);
+    }
+}
+
+static void test_discovery_deterministic() {
+    std::cout << "[TEST] test_discovery_deterministic...\n";
+    auto heightFn = [](double x, double y) -> double {
+        return 33.7 + 4.8 * std::sin(x * 0.033 + 0.5) - 3.2 * std::cos(y * 0.041 - 0.2) + 0.02 * (x + y);
+    };
+    auto streamXFn = [](double y) -> double { return 120.0 + 3.5 * std::cos(y * 0.015); };
+    auto streamHWFn = [](double) -> double { return 5.2; };
+
+    wood::Surface dryClimate;
+    dryClimate.biome[1] = 1.0;
+    wood::Surface forestClimate;
+    forestClimate.forest = 0.8;
+    forestClimate.biome[0] = 0.8;
+    const wood::Surface* climates[2] = { &dryClimate, &forestClimate };
+
+    for (std::uint32_t seed : { 42U, 12345U }) {
+        for (const wood::Surface* climate : climates) {
+            const auto a = wood::planDiscovery(seed, 0, 0, {0, 0, 0}, *climate, heightFn, streamXFn, streamHWFn, true);
+            const auto b = wood::planDiscovery(seed, 0, 0, {0, 0, 0}, *climate, heightFn, streamXFn, streamHWFn, true);
+            EXPECT_EQ(a.pieces.size(), b.pieces.size());
+            if (a.pieces.size() != b.pieces.size()) continue;
+            for (std::size_t i = 0; i < a.pieces.size(); ++i) {
+                EXPECT_TRUE(a.pieces[i].position.x == b.pieces[i].position.x);
+                EXPECT_TRUE(a.pieces[i].position.y == b.pieces[i].position.y);
+                EXPECT_TRUE(a.pieces[i].position.z == b.pieces[i].position.z);
+                EXPECT_TRUE(a.pieces[i].yaw == b.pieces[i].yaw);
+                EXPECT_TRUE(a.pieces[i].scale == b.pieces[i].scale);
+            }
+        }
+    }
+}
+
+static void test_cottage_foundation_butt_joints() {
+    std::cout << "[TEST] test_cottage_foundation_butt_joints...\n";
+    auto heightFn = [](double x, double y) -> double {
+        return 8.0 + 1.5 * std::cos(x * 0.05) + 2.2 * std::sin(y * 0.07);
+    };
+    auto streamXFn = [](double y) -> double { return 500.0 + y * 0.05; };
+    auto streamHWFn = [](double) -> double { return 3.5; };
+
+    wood::Surface climate;
+    climate.forest = 0.85;
+    climate.biome[0] = 0.85;
+
+    for (std::uint32_t seed = 1; seed <= 20; ++seed) {
+        const auto plan = wood::planDiscovery(seed, 0, 0, {0, 0, 8}, climate, heightFn, streamXFn, streamHWFn, true);
+        const wood::DiscoveryPiece* prev = nullptr;
+        for (const auto& p : plan.pieces) {
+            EXPECT_GROUNDED(p, heightFn);
+            if (p.name != "cottage_foundation_course") { prev = nullptr; continue; }
+            // Same wall = identical yaw; centre spacing equals course length (1.6 m x scale).
+            if (prev && prev->yaw == p.yaw) {
+                const double expected = 1.6 * p.scale;
+                const double d = std::hypot(p.position.x - prev->position.x, p.position.y - prev->position.y);
+                EXPECT_TRUE(std::abs(d - expected) <= 0.05 * expected);
+            }
+            prev = &p;
         }
     }
 }
@@ -514,6 +629,9 @@ int main() {
     test_guaranteed_sites();
     test_wilderness_cell_untouched();
     test_all_four_types_heightfn_and_reservations();
+    test_shelter_walls_contiguous();
+    test_discovery_deterministic();
+    test_cottage_foundation_butt_joints();
 
     std::cout << "\nTest Summary: " << (gTestCount - gFailures) << "/" << gTestCount << " passed.\n";
 

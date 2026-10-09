@@ -36,7 +36,15 @@ int main() {
    for(std::size_t i=0;i<chunk.features.size();++i) {
     const auto& f=chunk.features[i]; const auto& other=repeat.features[i];
     check(f.kind==other.kind&&f.position.x==other.position.x&&f.position.y==other.position.y&&f.position.z==other.position.z,"far regional feature records remain deterministic");
-    check(std::abs(f.position.z-world.terrainHeight(f.position.x,f.position.y))<1e-9,"every ecological layer meets realized terrain");
+    {
+     const double terrainZ=world.terrainHeight(f.position.x,f.position.y);
+     if(f.kind==Kind::Kit) {
+      // Structural kit pieces bed 0.10-0.25 m into terrain; they may not float above it.
+      check(f.position.z<=terrainZ+1e-6 && terrainZ-f.position.z<=0.25,"structural kit meets realized terrain (bedded, not floating)");
+     } else {
+      check(std::abs(f.position.z-terrainZ)<1e-9,"every ecological layer meets realized terrain");
+     }
+    }
     trees[family]+=f.kind==Kind::Tree; ferns[family]+=f.kind==Kind::Fern;
     rocks[family]+=f.kind==Kind::Rock; cover[family]+=f.kind==Kind::Grass||f.kind==Kind::Fern;
    }

@@ -10,6 +10,9 @@
 #include "WoodSalts.h"
 #endif
 
+#include <algorithm>
+#include <vector>
+
 namespace wood {
 
 bool isInsideReservation(const DiscoveryReservation& reservation, double x, double y, bool innerOnly) {
@@ -32,6 +35,13 @@ bool isInsideReservation(const std::vector<DiscoveryReservation>& reservations, 
 }
 
 static constexpr double kPi = 3.14159265358979323846;
+
+// Structural pieces bed into the terrain by this depth (metres); they never float above it.
+static constexpr double kBedMin = 0.10;
+static constexpr double kBedMax = 0.25;
+// Mesh lengths at grammar scale 1.0 (Tools/Prepare-Art.py KIT_SPECS).
+static constexpr double kDryStoneWallLen = 2.0;
+static constexpr double kFoundationLen = 1.6;
 
 struct DiscoveryRng {
     std::uint32_t state;
@@ -80,6 +90,10 @@ std::uint32_t hashCell(std::uint32_t seed, int q, int r) {
     return h ^ (h >> 16);
 }
 
+// Shelter walls follow an ellipse parameterised by arc length. Gaps are fixed-width
+// (one doorway on the leeward side, one collapse breach), and each run is filled
+// with butt-jointed SM_DryStone_Wall pieces. Pieces beside a breach are shorter,
+// giving a stepped-down top toward the gap. Rubble sits at the breach foot, downslope.
 DiscoveryPlan generateDryStoneShelter(
     std::uint32_t seed,
     const Vec3& origin,
@@ -99,14 +113,14 @@ DiscoveryPlan generateDryStoneShelter(
     const double theta0 = rng.nextDouble(0.0, 2.0 * kPi);
     plan.yaw = theta0 * (180.0 / kPi);
 
-    const int segCount = rng.nextInt(8, 16);
-
     double windAngle = rng.nextDouble(0.0, 2.0 * kPi);
     if (climate.exposure > 0.1) {
         windAngle = theta0 + kPi * 0.25;
     }
     const double leewardAngle = std::fmod(windAngle + kPi, 2.0 * kPi);
-    const double gapHalfAngle = (rng.nextDouble(30.0, 60.0) * 0.5) * (kPi / 180.0);
+    const double doorWidth = rng.nextDouble(1.0, 1.4);
+    const double breachWidth = rng.nextDouble(1.6, 2.6);
+    const double breachFrac = rng.nextDouble(0.35, 0.65);
 
     const Gradient2D centerGrad = sampleGradient(heightFn, origin.x, origin.y, 1.0);
     double downhillX = -centerGrad.dx;
@@ -125,70 +139,151 @@ DiscoveryPlan generateDryStoneShelter(
     const double rInner = 0.85 * spanR;
     const double rOuter = 1.30 * spanR;
 
-    for (int i = 0; i < segCount; ++i) {
-        const double t = 2.0 * kPi * static_cast<double>(i) / static_cast<double>(segCount);
+    // Arc-length table over the ellipse.
+    const int kTable = 720;
+    std::vector<double> tAt(kTable + 1);
+    std::vector<double> arcAt(kTable + 1, 0.0);
+    auto ringXY = [&](double t, double& x, double& y) {
         const double lx = semiMajor * std::cos(t);
         const double ly = semiMinor * std::sin(t);
+        x = origin.x + lx * cosTh - ly * sinTh;
+        y = origin.y + lx * sinTh + ly * cosTh;
+    };
+    for (int i = 0; i <= kTable; ++i) {
+        tAt[i] = 2.0 * kPi * static_cast<double>(i) / static_cast<double>(kTable);
+    }
+    double prevX = 0.0;
+    double prevY = 0.0;
+    ringXY(tAt[0], prevX, prevY);
+    for (int i = 1; i <= kTable; ++i) {
+        double x = 0.0;
+        double y = 0.0;
+        ringXY(tAt[i], x, y);
+        arcAt[i] = arcAt[i - 1] + std::hypot(x - prevX, y - prevY);
+        prevX = x;
+        prevY = y;
+    }
+    const double perimeter = arcAt[kTable];
+    auto paramAt = [&](double s) {
+        double w = std::fmod(s, perimeter);
+        if (w < 0.0) w += perimeter;
+        const auto it = std::upper_bound(arcAt.begin() + 1, arcAt.end(), w);
+        int hi = static_cast<int>(it - arcAt.begin());
+        if (hi > kTable) hi = kTable;
+        const int lo = hi - 1;
+        const double seg = arcAt[hi] - arcAt[lo];
+        const double f = seg > 1e-12 ? (w - arcAt[lo]) / seg : 0.0;
+        return tAt[lo] + f * (tAt[hi] - tAt[lo]);
+    };
 
-        const double px = origin.x + lx * cosTh - ly * sinTh;
-        const double py = origin.y + lx * sinTh + ly * cosTh;
+    // Doorway sits at the leeward point of the ring.
+    double sLee = 0.0;
+    double bestDiff = 1e9;
+    for (int i = 0; i < kTable; ++i) {
+        double x = 0.0;
+        double y = 0.0;
+        ringXY(tAt[i], x, y);
+        double a = std::atan2(y - origin.y, x - origin.x);
+        if (a < 0.0) a += 2.0 * kPi;
+        double d = std::abs(a - leewardAngle);
+        if (d > kPi) d = 2.0 * kPi - d;
+        if (d < bestDiff) {
+            bestDiff = d;
+            sLee = arcAt[i];
+        }
+    }
 
-        double segAngle = std::atan2(py - origin.y, px - origin.x);
-        if (segAngle < 0.0) segAngle += 2.0 * kPi;
-        double angDiff = std::abs(segAngle - leewardAngle);
-        if (angDiff > kPi) angDiff = 2.0 * kPi - angDiff;
+    const double walkStart = sLee + doorWidth * 0.5;
+    const double walkEnd = sLee + perimeter - doorWidth * 0.5;
+    const double run1Len = (perimeter - doorWidth - breachWidth) * breachFrac;
+    const double breachStart = walkStart + run1Len;
+    const double breachEnd = breachStart + breachWidth;
+    const double run2Len = walkEnd - breachEnd;
 
-        if (angDiff < gapHalfAngle) {
-            continue;
+    const double taperNear = 0.55;
+    const double taperFar = 0.8;
+
+    // Scale sequence for one run. Length budget: each piece spans kDryStoneWallLen * scale.
+    // taperFirst: the run starts at a breach (taper leads). Otherwise the taper closes the run.
+    auto buildRun = [&](double runLen, bool taperFirst) {
+        const double taperTotal = kDryStoneWallLen * (taperNear + taperFar);
+        const double bodyTotal = runLen - taperTotal;
+        const int n = std::max(1, static_cast<int>(std::lround(bodyTotal / kDryStoneWallLen)));
+        const double bodyScale = bodyTotal / (kDryStoneWallLen * static_cast<double>(n));
+        std::vector<double> seq;
+        if (taperFirst) {
+            seq.push_back(taperNear);
+            seq.push_back(taperFar);
+        }
+        for (int k = 0; k < n; ++k) {
+            seq.push_back(bodyScale);
+        }
+        if (!taperFirst) {
+            seq.push_back(taperFar);
+            seq.push_back(taperNear);
+        }
+        return seq;
+    };
+
+    auto placeRun = [&](double startS, const std::vector<double>& seq) {
+        double s = startS;
+        for (double sc : seq) {
+            const double len = kDryStoneWallLen * sc;
+            const double t = paramAt(s + 0.5 * len);
+
+            const double tlx = -semiMajor * std::sin(t);
+            const double tly = semiMinor * std::cos(t);
+            const double tx0 = tlx * cosTh - tly * sinTh;
+            const double ty0 = tlx * sinTh + tly * cosTh;
+            const double tlen = std::hypot(tx0, ty0);
+            const double tx = tx0 / tlen;
+            const double ty = ty0 / tlen;
+            const double nx = -ty;
+            const double ny = tx;
+
+            double x = 0.0;
+            double y = 0.0;
+            ringXY(t, x, y);
+            const double off = rng.nextDouble(-0.03, 0.03);
+            const double wx = x + nx * off;
+            const double wy = y + ny * off;
+            const double wz = (heightFn ? heightFn(wx, wy) : 0.0) - rng.nextDouble(kBedMin, kBedMax);
+            const double wYaw = std::atan2(ty, tx) * (180.0 / kPi) + rng.nextDouble(-3.0, 3.0);
+
+            const bool lowCourse = sc < 0.9;
+            plan.pieces.emplace_back(lowCourse ? "shelter_wall_low" : "shelter_wall_base", "SM_DryStone_Wall",
+                Vec3{wx, wy, wz}, wYaw, 0.0, 0.0, sc);
+            s += len;
+        }
+    };
+
+    placeRun(walkStart, buildRun(run1Len, false));
+    placeRun(breachEnd, buildRun(run2Len, true));
+
+    double bx = 0.0;
+    double by = 0.0;
+    ringXY(paramAt(breachStart + 0.5 * breachWidth), bx, by);
+    const int rubbleCount = rng.nextInt(2, 3);
+    for (int r = 0; r < rubbleCount; ++r) {
+        const double dist = 0.6 + 0.6 * static_cast<double>(r) + rng.nextDouble(0.0, 0.3);
+        const double jit = rng.nextDouble(-0.5, 0.5);
+        double rx = bx + downhillX * dist - downhillY * jit;
+        double ry = by + downhillY * dist + downhillX * jit;
+
+        const double dx = rx - origin.x;
+        const double dy = ry - origin.y;
+        const double rdist = std::sqrt(dx * dx + dy * dy);
+        if (rdist > rOuter - 0.2) {
+            const double factor = (rOuter - 0.4) / (rdist > 1e-4 ? rdist : 1.0);
+            rx = origin.x + dx * factor;
+            ry = origin.y + dy * factor;
         }
 
-        const double pz = heightFn ? heightFn(px, py) : 0.0;
-
-        const double tlx = -semiMajor * std::sin(t);
-        const double tly = semiMinor * std::cos(t);
-        const double tx = tlx * cosTh - tly * sinTh;
-        const double ty = tlx * sinTh + tly * cosTh;
-        const double segYaw = std::atan2(ty, tx) * (180.0 / kPi);
-
-        const Gradient2D segGrad = sampleGradient(heightFn, px, py, 0.5);
-        const double segPitch = std::atan(segGrad.dx) * (180.0 / kPi) * 0.3;
-        const double segRoll = std::atan(segGrad.dy) * (180.0 / kPi) * 0.3;
-        const double segScale = rng.nextDouble(0.9, 1.15);
-
-        const bool collapsed = (rng.nextDouble(0.0, 1.0) < 0.30);
-
-        if (collapsed) {
-            plan.pieces.emplace_back("shelter_wall_ruined", "SM_DryStone_Rubble",
-                Vec3{px, py, pz}, segYaw, segPitch, segRoll, segScale * 0.85);
-
-            const int rubbleCount = rng.nextInt(2, 3);
-            for (int r = 1; r <= rubbleCount; ++r) {
-                const double rDist = spanR * 0.08 * static_cast<double>(r);
-                const double rJitter = rng.nextDouble(-0.5, 0.5);
-                double rx = px + downhillX * rDist - downhillY * rJitter;
-                double ry = py + downhillY * rDist + downhillX * rJitter;
-
-                const double dx = rx - origin.x;
-                const double dy = ry - origin.y;
-                const double dist = std::sqrt(dx * dx + dy * dy);
-                if (dist > rOuter - 0.2) {
-                    const double factor = (rOuter - 0.4) / (dist > 1e-4 ? dist : 1.0);
-                    rx = origin.x + dx * factor;
-                    ry = origin.y + dy * factor;
-                }
-
-                const double rz = heightFn ? heightFn(rx, ry) : 0.0;
-                const double rYaw = rng.nextDouble(0.0, 360.0);
-                const double rScale = rng.nextDouble(0.45, 0.75);
-                plan.pieces.emplace_back("shelter_rubble", "SM_DryStone_Rubble",
-                    Vec3{rx, ry, rz}, rYaw, 0.0, 0.0, rScale);
-            }
-        } else {
-            plan.pieces.emplace_back("shelter_wall_base", "SM_DryStone_Wall",
-                Vec3{px, py, pz}, segYaw, segPitch, segRoll, segScale);
-            plan.pieces.emplace_back("shelter_wall_top", "SM_DryStone_Wall",
-                Vec3{px, py, pz}, segYaw, segPitch, segRoll, segScale * 0.88);
-        }
+        const double rz = heightFn ? heightFn(rx, ry) : 0.0;
+        const double rYaw = rng.nextDouble(0.0, 360.0);
+        const double rScale = rng.nextDouble(0.45, 0.75);
+        plan.pieces.emplace_back("shelter_rubble", "SM_DryStone_Rubble",
+            Vec3{rx, ry, rz}, rYaw, 0.0, 0.0, rScale);
     }
 
     plan.reservation = DiscoveryReservation(DiscoveryType::DryStoneShelter, shelterOrigin, rInner, rOuter);
@@ -238,7 +333,8 @@ DiscoveryPlan generateCottageCorner(
     const int survivingCornerB = (rng.nextDouble(0.0, 1.0) < 0.5) ? ((survivingCornerA + 1) % 4) : -1;
 
     for (int c = 0; c < 4; ++c) {
-        const double cz = heightFn ? heightFn(cx[c], cy[c]) : 0.0;
+        const double bed = rng.nextDouble(kBedMin, kBedMax);
+        const double cz = (heightFn ? heightFn(cx[c], cy[c]) : 0.0) - bed;
         const double cornerYaw = (theta + static_cast<double>(c) * (kPi * 0.5)) * (180.0 / kPi);
 
         if (c == survivingCornerA || c == survivingCornerB) {
@@ -254,6 +350,8 @@ DiscoveryPlan generateCottageCorner(
         }
     }
 
+    // Each wall is n butt-jointed foundation courses spanning corner to corner.
+    // Piece scale is set so the mesh length equals the centre spacing exactly.
     for (int wall = 0; wall < 4; ++wall) {
         const int nextCorner = (wall + 1) % 4;
         const double wx0 = cx[wall];
@@ -261,25 +359,24 @@ DiscoveryPlan generateCottageCorner(
         const double wx1 = cx[nextCorner];
         const double wy1 = cy[nextCorner];
         const double wallLen = (wall % 2 == 0) ? lx : ly;
-        const int stepCount = std::max(2, static_cast<int>(wallLen / 1.6));
+        const int courseCount = std::max(2, static_cast<int>(std::lround(wallLen / kFoundationLen)));
+        const double spacing = wallLen / static_cast<double>(courseCount);
+        const double courseScale = spacing / kFoundationLen;
         const double wallYaw = std::atan2(wy1 - wy0, wx1 - wx0) * (180.0 / kPi);
+        const double tx = (wx1 - wx0) / wallLen;
+        const double ty = (wy1 - wy0) / wallLen;
+        const double nx = -ty;
+        const double ny = tx;
 
-        const bool isSurvivingWall = (wall == survivingCornerA || ((wall + 3) % 4) == survivingCornerA);
-
-        for (int s = 1; s < stepCount; ++s) {
-            const double frac = static_cast<double>(s) / static_cast<double>(stepCount);
-            const double sx = wx0 + frac * (wx1 - wx0);
-            const double sy = wy0 + frac * (wy1 - wy0);
-            const double sz = heightFn ? heightFn(sx, sy) : 0.0;
-            const double stoneScale = rng.nextDouble(0.9, 1.1);
+        for (int s = 0; s < courseCount; ++s) {
+            const double frac = (static_cast<double>(s) + 0.5) / static_cast<double>(courseCount);
+            const double off = rng.nextDouble(-0.03, 0.03);
+            const double sx = wx0 + frac * (wx1 - wx0) + nx * off;
+            const double sy = wy0 + frac * (wy1 - wy0) + ny * off;
+            const double sz = (heightFn ? heightFn(sx, sy) : 0.0) - rng.nextDouble(kBedMin, kBedMax);
 
             plan.pieces.emplace_back("cottage_foundation_course", "SM_FoundationCourse",
-                Vec3{sx, sy, sz}, wallYaw, 0.0, 0.0, stoneScale);
-
-            if (isSurvivingWall && (s <= stepCount / 2)) {
-                plan.pieces.emplace_back("cottage_wall_upper", "SM_FoundationCourse",
-                    Vec3{sx, sy, sz}, wallYaw, 0.0, 0.0, stoneScale * 0.85);
-            }
+                Vec3{sx, sy, sz}, wallYaw, 0.0, 0.0, courseScale);
         }
     }
 
@@ -351,18 +448,18 @@ DiscoveryPlan generateStreamFootbridge(
     const double bankDist = hw + 1.2;
     const double leftX = xc - nx * bankDist;
     const double leftY = yc - ny * bankDist;
-    const double leftZ = heightFn ? heightFn(leftX, leftY) : 0.0;
+    const double leftZ = (heightFn ? heightFn(leftX, leftY) : 0.0) - rng.nextDouble(kBedMin, kBedMax);
 
     const double rightX = xc + nx * bankDist;
     const double rightY = yc + ny * bankDist;
-    const double rightZ = heightFn ? heightFn(rightX, rightY) : 0.0;
+    const double rightZ = (heightFn ? heightFn(rightX, rightY) : 0.0) - rng.nextDouble(kBedMin, kBedMax);
 
     plan.pieces.emplace_back("bridge_abutment_left_base", "SM_BridgeAbutment",
         Vec3{leftX, leftY, leftZ}, bridgeYaw, 0.0, 0.0, 1.35);
 
     const double leftInX = xc - nx * (hw * 0.65);
     const double leftInY = yc - ny * (hw * 0.65);
-    const double leftInZ = heightFn ? heightFn(leftInX, leftInY) : 0.0;
+    const double leftInZ = (heightFn ? heightFn(leftInX, leftInY) : 0.0) - rng.nextDouble(kBedMin, kBedMax);
     plan.pieces.emplace_back("bridge_abutment_left_inward", "SM_BridgeAbutment",
         Vec3{leftInX, leftInY, leftInZ}, bridgeYaw, 0.0, 0.0, 1.1);
 
@@ -371,7 +468,7 @@ DiscoveryPlan generateStreamFootbridge(
 
     const double rightInX = xc + nx * (hw * 0.65);
     const double rightInY = yc + ny * (hw * 0.65);
-    const double rightInZ = heightFn ? heightFn(rightInX, rightInY) : 0.0;
+    const double rightInZ = (heightFn ? heightFn(rightInX, rightInY) : 0.0) - rng.nextDouble(kBedMin, kBedMax);
     plan.pieces.emplace_back("bridge_abutment_right_inward", "SM_BridgeAbutment",
         Vec3{rightInX, rightInY, rightInZ}, bridgeYaw + 180.0, 0.0, 0.0, 1.05);
 

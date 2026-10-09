@@ -1318,16 +1318,16 @@
     "variant": "SM_DryStone_Wall",
     "file": "kit_sm_drystone_wall.glb",
     "dimensions_m": [
-      0.643323540687561,
-      2.005394458770752,
-      0.9983943700790405
+      0.6407201290130615,
+      2.0063939094543457,
+      0.9947209358215332
     ],
-    "triangles": 480,
+    "triangles": 420,
     "materials": 1,
     "pivot": "base_center",
     "licence": "CC0-1.0",
     "nominal_m": "2.0 L x 0.6 T x 1.0 H (Y, X, Z); 2 courses of 0.5",
-    "grammar": "WoodDiscovery shelter ring (generateDryStoneShelter) base seg scale 0.9-1.15, top 0.88x; ring spacing ~2-11 m",
+    "grammar": "WoodDiscovery shelter ring (generateDryStoneShelter): butt-jointed arc-length runs, scale 0.55-1.0 (breach taper); top course irregular; sunk 0.10-0.25 m",
     "sources": [
       "stacked_stone_wall",
       "procedural"
@@ -1362,9 +1362,9 @@
     "variant": "SM_StonePier",
     "file": "kit_sm_stonepier.glb",
     "dimensions_m": [
-      0.8311715722084045,
-      0.8304811716079712,
-      1.5924103260040283
+      0.8362327218055725,
+      0.8360332250595093,
+      1.469007968902588
     ],
     "triangles": 240,
     "materials": 1,
@@ -1406,9 +1406,9 @@
     "variant": "SM_FoundationCourse",
     "file": "kit_sm_foundationcourse.glb",
     "dimensions_m": [
-      0.6134511232376099,
-      1.5988478660583496,
-      0.4669936001300812
+      0.6270626783370972,
+      1.588324785232544,
+      0.47110357880592346
     ],
     "triangles": 120,
     "materials": 1,
