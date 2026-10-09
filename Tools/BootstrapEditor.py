@@ -602,6 +602,10 @@ for group,name in SPECIES_FILES:
     nanite.set_editor_property('enabled',True)
     nanite.set_editor_property('keep_percent_triangles',1.0)
     nanite.set_editor_property('trim_relative_error',0.0)
+    # Fallback mesh renders only when Nanite is inactive (non-SM6 RHI). Project targets D3D12 SM6 so Nanite is active;
+    # a light relative-error fallback keeps the content build fast. Nanite LOD0 is unaffected by fallback settings.
+    nanite.set_editor_property('fallback_target',unreal.NaniteFallbackTarget.RELATIVE_ERROR)
+    nanite.set_editor_property('fallback_relative_error',1.0)
     SMES.set_nanite_settings(mesh,nanite,True)
     if group!='snag':
         for i,item in enumerate(mesh.get_editor_property('static_materials')):

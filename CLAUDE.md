@@ -18,6 +18,7 @@ Seed: `.cache/toolchain/ziglang` (zig 0.13.0, 323 MB; install with `python -m pi
 Cost: Disk per tree is about 1.0 GB (324 MB toolchain + 704 MB Content), not counting Saved/ and Intermediate/. Provisioning time not measured.
 Notes:
 - Render-Review after -InitializeContent can show grey checker or crash (ShaderCompiler NumPendingJobs assert) on a cold shader cache; re-run once before diagnosing.
+- Nanite (species trees) requires D3D12 SM6 (`+D3D12TargetedShaderFormats=PCD3D_SM6` in DefaultEngine.ini); on SM5 the Nanite fallback renders. First SM6 run compiles shaders cold: expect slowness and the NumPendingJobs assert, so re-run before judging.
 - Test-Core compiles `WoodGeneration.cpp`, `WoodDiscovery.cpp`, and `Tests/GenerationTests.cpp` with `-Werror` and runs the generation executable. Output in `.cache/tests`.
 - Startup: valid resume → as saved; else new journey at trailhead lot. `-WoodWild` = wilderness start (dev/test; Render non-Trailhead, Test-Unreal). `-WoodFresh` = no resume (Render Trailhead, Test-Unreal). `-WoodEntrance` = accepted no-op (default).
 - Test-Unreal writes log to `.cache/unreal-tests.log` and report to `Saved/Automation`. Runs with `-nullrhi`.
