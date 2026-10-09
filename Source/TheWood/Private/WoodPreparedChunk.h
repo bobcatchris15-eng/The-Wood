@@ -7,7 +7,7 @@ struct FWoodPreparedChunk {
  wood::Chunk Chunk;
  TArray<FVector> Normals;
  TArray<FVector2D> HabitatUV;
- TArray<FLinearColor> BiomeColors;
+ TArray<FLinearColor> BiomeColors; // RGBA = ground archetype weights (wood::ground::shade)
  TArray<TArray<FTransform>> Placements;
 };
 

@@ -1,4 +1,5 @@
 #include "WoodPreparedChunk.h"
+#include "Generation/WoodGround.h"
 
 FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
  const TArray<wood::Kind>& Kinds,const TArray<FWoodPlacementProfile>& Profiles,
@@ -17,8 +18,8 @@ FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
   const double DY=(World.sample(P.x,P.y+.25).height-World.sample(P.x,P.y-.25).height)/.5;
   Result.Normals.Add(FVector(-DX,-DY,1).GetSafeNormal());
   Result.HabitatUV.Add(FVector2D(Surface.moisture,Surface.slope));
-  Result.BiomeColors.Add(FLinearColor(static_cast<float>(Surface.biome[0]),static_cast<float>(Surface.biome[1]),
-   static_cast<float>(Surface.biome[2]),static_cast<float>(Surface.biome[3])));
+  const auto Ground=wood::ground::shade(Surface);
+  Result.BiomeColors.Add(FLinearColor(Ground.archetype[0],Ground.archetype[1],Ground.archetype[2],Ground.archetype[3]));
  }
  Result.Placements.SetNum(Kinds.Num());
  if(!Details || Chunk.features.empty()) return Result;
