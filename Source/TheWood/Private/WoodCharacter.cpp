@@ -62,7 +62,16 @@ void AWoodCharacter::Tick(float DeltaSeconds) {
  }
  const FVector P=GetActorLocation();
  Environment->EnsureTerrainAround(P);
- GetCharacterMovement()->MaxWalkSpeed=Seated?0:(Environment->DepthAt(P.X,P.Y)>0.05?280:420);
+ // Sprint: no sprint while wading or seated. Ramp 0->1 over 0.5 s; speed lerps 420->700, wade cap 280 is immediate.
+ const bool Wading=Environment->DepthAt(P.X,P.Y)>0.05;
+ const bool Sprinting=bSprintHeld&&!Seated&&!Wading;
+ constexpr float SprintRampPerSecond=2.0f;
+ SprintAlpha=FMath::Clamp(SprintAlpha+(Sprinting?1.0f:-1.0f)*DeltaSeconds*SprintRampPerSecond,0.0f,1.0f);
+ GetCharacterMovement()->MaxWalkSpeed=Seated?0.0f:(Wading?280.0f:FMath::Lerp(420.0f,700.0f,SprintAlpha));
+ if(Camera) {
+  const float Ease=SprintAlpha*SprintAlpha*(3.0f-2.0f*SprintAlpha); // smoothstep
+  Camera->FieldOfView=BaseFOV+5.0f*Ease;
+ }
  const FVector Goal(0,0,Seated?-20:65);
  Camera->SetRelativeLocation(FMath::VInterpTo(Camera->GetRelativeLocation(),Goal,DeltaSeconds,5));
 }
@@ -77,6 +86,8 @@ void AWoodCharacter::SetupPlayerInputComponent(UInputComponent* Input) {
  Input->BindAction(TEXT("Accelerate"),IE_Pressed,this,&AWoodCharacter::Accelerate);
  Input->BindAction(TEXT("Jump"),IE_Pressed,this,&AWoodCharacter::StartJump);
  Input->BindAction(TEXT("Jump"),IE_Released,this,&ACharacter::StopJumping);
+ Input->BindAction(TEXT("Sprint"),IE_Pressed,this,&AWoodCharacter::StartSprint);
+ Input->BindAction(TEXT("Sprint"),IE_Released,this,&AWoodCharacter::StopSprint);
  Input->BindKey(EKeys::G,IE_Pressed,this,&AWoodCharacter::ToggleGallery);
  Input->BindKey(EKeys::Escape,IE_Pressed,this,&AWoodCharacter::ToggleSettings);
  Input->BindKey(EKeys::F10,IE_Pressed,this,&AWoodCharacter::ToggleSettings);
@@ -89,6 +100,9 @@ void AWoodCharacter::StartJump() {
  if(Environment&&Environment->IsSeated()) { Environment->SetSeated(false); return; }
  Jump();
 }
+void AWoodCharacter::StartSprint() { SetSprintHeld(true); }
+void AWoodCharacter::StopSprint() { SetSprintHeld(false); }
+void AWoodCharacter::SetSprintHeld(bool bHeld) { bSprintHeld=bHeld; }
 void AWoodCharacter::Sit() {
  if(Environment&&GetCharacterMovement()->IsMovingOnGround()) {
   Environment->SetSeated(!Environment->IsSeated()); GetCharacterMovement()->StopMovementImmediately();
@@ -202,6 +216,7 @@ void AWoodCharacter::WoodCapture(const FString& View,float Delay) {
 void AWoodCharacter::ApplyRuntimeSettings(const FWoodSettings& S) {
  MouseSensitivity=S.MouseSensitivity;
  bInvertY=S.bInvertY;
+ BaseFOV=S.FOV;
  if(Camera) Camera->FieldOfView=S.FOV;
  WoodSetAudioVolumes(S.MasterVolume,S.AmbientVolume);
 }

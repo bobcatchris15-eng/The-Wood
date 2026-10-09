@@ -96,6 +96,23 @@ bool FWoodSpecMovementTest::RunTest(const FString& Parameters) {
  const double Depth=Environment->DepthAt(StreamX,StreamY);
  TestTrue(TEXT("Stream centreline depth exceeds 0.05 wading threshold"),Depth>0.05);
  TestTrue(TEXT("Wading walk speed is 280 over stream"),FMath::Abs(Movement->MaxWalkSpeed-280.0f)<=0.01f);
+ // Sprint on dry land: 700 cm/s after the ramp, FOV kick +5 over base 80.
+ Character->SetActorLocation(FVector(DryX,StreamY,Environment->GroundAt(DryX,StreamY)+100));
+ Character->SetSprintHeld(true);
+ for(int Frame=0;Frame<100;++Frame) Fixture.TickTestWorld(0.01f);
+ TestTrue(TEXT("Sprint speed is 700 on dry land"),FMath::Abs(Movement->MaxWalkSpeed-700.0f)<=0.01f);
+ if(Camera) TestTrue(TEXT("Sprint FOV kick is +5 (85)"),FMath::Abs(Camera->FieldOfView-85.0f)<=0.01f);
+ // Sprint held over stream: wade cap 280 still applies.
+ Character->SetActorLocation(FVector(StreamX,StreamY,Environment->GroundAt(StreamX,StreamY)+100));
+ for(int Frame=0;Frame<100;++Frame) Fixture.TickTestWorld(0.01f);
+ TestTrue(TEXT("Wade cap 280 holds while sprinting"),FMath::Abs(Movement->MaxWalkSpeed-280.0f)<=0.01f);
+ // Seated: locomotion blocked even with sprint held.
+ Character->SetActorLocation(FVector(DryX,StreamY,Environment->GroundAt(DryX,StreamY)+100));
+ Environment->SetSeated(true);
+ for(int Frame=0;Frame<100;++Frame) Fixture.TickTestWorld(0.01f);
+ TestTrue(TEXT("Seated blocks movement (walk speed 0)"),FMath::Abs(Movement->MaxWalkSpeed)<=0.01f);
+ Environment->SetSeated(false);
+ Character->SetSprintHeld(false);
  Fixture.EndPlayInTestWorld(); Fixture.ForwardErrorMessages(this);
  return !HasAnyErrors();
 }

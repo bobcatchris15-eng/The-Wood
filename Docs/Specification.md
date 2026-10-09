@@ -38,6 +38,7 @@ Current tuning uses 420 cm/s on dry ground and 280 cm/s while wading. These are 
 | Action | Current default | Required behavior |
 | --- | --- | --- |
 | Walk | W, A, S, D | Move relative to facing without a required stamina system. |
+| Sprint | Hold Left Shift | Run at 700 cm/s on dry ground (walk 420, wading 280); ramps smoothly and widens FOV slightly. No sprint while wading or seated. |
 | Look | Mouse | Free first-person look while walking or seated. |
 | Photograph | C or right mouse button | One action captures the current view without interface elements. |
 | Sit / stand | E | Sit on suitable ground; retain free look and photography. Standing restores ordinary time. |

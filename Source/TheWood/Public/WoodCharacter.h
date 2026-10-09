@@ -19,7 +19,12 @@ public:
  UFUNCTION(Exec) void WoodView(const FString& View);
  UFUNCTION(Exec) void WoodCapture(const FString& View,float Delay=1.0f);
  UFUNCTION(Exec) void Photograph();
+ // Sprint hold state (Left Shift). Public so automation can drive it without input.
+ void SetSprintHeld(bool bHeld);
 private:
+ bool bSprintHeld=false;
+ float SprintAlpha=0.0f; // 0 = walk, 1 = full sprint; linear ramp, eased into FOV kick
+ float BaseFOV=80.0f;    // settings FOV; sprint adds a kick on top
  UPROPERTY() TObjectPtr<UCameraComponent> Camera;
  UPROPERTY() TObjectPtr<AWoodWorld> Environment;
  double LastPhotoSeconds=-10;
@@ -40,4 +45,6 @@ private:
  void Sit();
  void Accelerate();
  void StartJump();
+ void StartSprint();
+ void StopSprint();
 };
