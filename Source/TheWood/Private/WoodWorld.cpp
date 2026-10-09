@@ -70,7 +70,7 @@ void AWoodWorld::BeginPlay() {
  if(Resuming) ApplyResume(Resume);
  if(!Palette) Palette=LoadObject<UWoodPalette>(nullptr,TEXT("/Game/Wood/DA_BenchmarkPalette.DA_BenchmarkPalette"));
  Generate();
- if(Entrance) SpawnTrailheadLot();
+ if(Entrance&&!Generator.entered()) SpawnTrailheadLot();
  if(Resuming) PrefetchResumedChunks(Resume);
  LastAutosaveRealSeconds=FPlatformTime::Seconds();
  bResumeReady=true;
@@ -166,6 +166,8 @@ void AWoodWorld::Generate() {
  Stream(Start);
 }
 void AWoodWorld::SetEntered(bool Value) {
+ // Never revert: a crossed threshold stays crossed for this journey.
+ if(!Value&&bEnteredWild) return;
  Generator.setEntered(Value);
  if(Value&&TrailheadLot) { TrailheadLot->DestroyComponent(); TrailheadLot=nullptr; }
 }
@@ -215,6 +217,7 @@ void AWoodWorld::Tick(float DeltaSeconds) {
  Clock.advance(DeltaSeconds/Clock.rate());
  const APawn* Viewer=GetWorld()->GetFirstPlayerController()?GetWorld()->GetFirstPlayerController()->GetPawn():nullptr;
  const FVector Position=Viewer?Viewer->GetActorLocation():FVector::ZeroVector;
+ CheckThreshold(Position);
  Stream(Position);
  if(SkyComponent) SkyComponent->SetWorldLocation(Position);
  const auto Habitat=Generator.sample(Position.X/100,Position.Y/100);
@@ -290,6 +293,8 @@ void AWoodWorld::ApplyResume(const wood::save::SaveState& Saved) {
  Clock.accelerate(Saved.accelerated);
  Clock.seconds=FMath::Max(0.0,Saved.clockSeconds);
  UGameplayStatics::SetGlobalTimeDilation(GetWorld(),static_cast<float>(Clock.rate()));
+ // Threshold restored before first generation: resumed wild entrance has no lot and no zone features.
+ if(Saved.enteredWild) { bEnteredWild=true; Generator.setEntered(true); }
  Memory.restore(Saved.epochs);
  auto Snapshot=std::make_shared<std::map<wood::memory::RegionKey,std::uint32_t>>();
  for(const auto& Epoch:Saved.epochs) Snapshot->insert(Epoch);
@@ -319,6 +324,7 @@ wood::save::SaveState AWoodWorld::CaptureResume() const {
  State.clockSeconds=Clock.seconds;
  State.seated=Clock.seated;
  State.accelerated=Clock.accelerated;
+ State.enteredWild=bEnteredWild;
  for(const auto& Entry:Runtime->Chunks) State.retainedChunks.push_back({Entry.Key.X,Entry.Key.Y});
  State.epochs=Memory.epochs();
  return State;

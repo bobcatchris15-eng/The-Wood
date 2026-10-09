@@ -12,6 +12,50 @@
 #include "Engine/World.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "Generation/WoodEntrance.h"
+#include <cmath>
+
+namespace {
+// True if any sample of the 128 m chunk footprint (metres) lies inside the entrance zone.
+bool chunkTouchesZone(FIntPoint Chunk) {
+ const double X0=Chunk.X*128.0,Y0=Chunk.Y*128.0;
+ for(int I=0;I<=16;++I) for(int J=0;J<=16;++J) if(wood::entrance::inZone(X0+I*8.0,Y0+J*8.0)) return true;
+ return false;
+}
+// Distance in metres from (X,Y) to the chunk footprint; zero inside.
+double chunkDistance(FIntPoint Chunk,double X,double Y) {
+ const double X0=Chunk.X*128.0,Y0=Chunk.Y*128.0;
+ const double Dx=FMath::Max3(X0-X,0.0,X-(X0+128.0)),Dy=FMath::Max3(Y0-Y,0.0,Y-(Y0+128.0));
+ return std::sqrt(Dx*Dx+Dy*Dy);
+}
+}
+
+// Threshold: past the passage (north of CrossY) with the lot occluded, the entrance silently becomes wilderness.
+void AWoodWorld::CheckThreshold(FVector Position) {
+ if(Generator.entered()) return;
+ const wood::Vec3 Player{Position.X/100,Position.Y/100,Position.Z/100};
+ const wood::Vec3 Eye{Player.x,Player.y,Player.z+1.7};
+ const wood::Vec3 LotCentre{wood::entrance::LotX,wood::entrance::LotY,0};
+ if(!wood::entrance::crossed(Player)||!wood::entrance::lineOfSightBlocked(Eye,LotCentre)) return;
+ bEnteredWild=true;
+ SetEntered(true);
+ // Cancel in-flight jobs for zone chunks: they were built with the entrance present.
+ TArray<FIntPoint> Stale;
+ for(const auto& Job:Runtime->Jobs) if(chunkTouchesZone(Job.Key)) Stale.Add(Job.Key);
+ for(const auto& Key:Stale) Runtime->Jobs.Remove(Key);
+ // Zone chunks behind the occluder are evicted; they regenerate as wilderness on the next Stream.
+ // Chunks within 40 m of the player are kept as-is so immediate geometry is preserved.
+ TArray<FIntPoint> Evict;
+ for(const auto& Entry:Runtime->Chunks) if(chunkTouchesZone(Entry.Key)&&chunkDistance(Entry.Key,Player.x,Player.y)>40.0) Evict.Add(Entry.Key);
+ for(const auto& Key:Evict) {
+  auto& C=Runtime->Chunks[Key];
+  for(int32 I=0;I<C.Instances.Num();++I) if(!C.Instances[I].IsEmpty()) Vegetation[I]->RemoveInstancesById(C.Instances[I],false);
+  Terrain.Remove(C.Ground);C.Ground->DestroyComponent();
+  if(C.Water) {Water.Remove(C.Water);C.Water->DestroyComponent();}
+  Runtime->Chunks.Remove(Key);
+ }
+ RequestResumeSave();
+}
 
 FVector AWoodWorld::ExplorerStart() const {
  double X=-180,Y=-180;

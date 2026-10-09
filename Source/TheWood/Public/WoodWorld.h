@@ -40,6 +40,8 @@ public:
  void ToggleAcceleration();
  // Entrance gate: Value=false keeps the trailhead lot up; true clears it.
  void SetEntered(bool Value);
+ // Irreversible threshold: once past the passage with the lot occluded, the entrance becomes wilderness.
+ void CheckThreshold(FVector Position);
  bool IsSeated() const { return Clock.seated; }
  bool IsAccelerated() const { return Clock.accelerated; }
  double ObservationSeconds() const { return Clock.seconds; }
@@ -59,6 +61,8 @@ public:
  // Returns and consumes the player transform restored from resume.json.
  bool TakeResumedPlayer(FVector& Location,FRotator& Rotation);
 private:
+ friend class FWoodThresholdTest;
+ bool bEnteredWild=false;
  bool bResumeReady=false;
  bool bResumedPlayer=false;
  FVector ResumedLocation=FVector::ZeroVector;

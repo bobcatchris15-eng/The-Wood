@@ -15,6 +15,8 @@ inline constexpr double LotPadSkirt=6;
 inline constexpr double PathHalfWidth=1.2, PathSink=0.08, PathMargin=3;
 // Zone = lot rectangle union 60 m around the path, cut off at y = ZoneEndY.
 inline constexpr double ZoneMargin=60, ZoneEndY=-200;
+// Threshold: north of this y (metres), past the passage, the entrance is irreversibly crossed.
+inline constexpr double CrossY=-195;
 
 // Distance from (x,y) to the lot rectangle; zero inside.
 double lotDistance(double x,double y);
@@ -29,6 +31,8 @@ double blend(double x,double y);
 double shapedHeight(double x,double y,double base,double lotHeight);
 // Approximate line of sight in the xy plane: the passage screen circles (trees and outcrops) occlude.
 bool lineOfSightBlocked(Vec3 from,Vec3 to);
+// True once the player (metres) is north of the passage: player.y > CrossY.
+bool crossed(Vec3 player);
 // Constant-seed entrance features: path forest, understory, rocks, passage screen, lot bollards and props.
 std::vector<Feature> fixedFeatures();
 }

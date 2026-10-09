@@ -99,6 +99,13 @@ void testLineOfSight() {
  check(!wood::entrance::lineOfSightBlocked(Vec3{0,-500,1.7},Vec3{0,-560,0}),"lot visible from y=-500 on path");
 }
 
+void testCrossed() {
+ check(!wood::entrance::crossed(Vec3{0,-560,1.7}),"lot is not crossed");
+ check(!wood::entrance::crossed(Vec3{0,-230,1.7}),"passage is not crossed");
+ check(!wood::entrance::crossed(Vec3{0,-195,1.7}),"crossed is strict at y=-195");
+ check(wood::entrance::crossed(Vec3{0,-194,1.7}),"north of y=-195 is crossed");
+}
+
 void testOutsideZoneIdentical() {
  World entered(Settings{42});
  World closed(Settings{42});
@@ -156,6 +163,7 @@ int main() {
  testLotFlat();
  testPathMargin();
  testLineOfSight();
+ testCrossed();
  testOutsideZoneIdentical();
  testEnteredIsWilderness();
  testNotEnteredLightingAndTrees();

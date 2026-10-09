@@ -115,6 +115,9 @@ bool lineOfSightBlocked(Vec3 from,Vec3 to) {
  }
  return false;
 }
+bool crossed(Vec3 player) {
+ return player.y>CrossY;
+}
 std::vector<Feature> fixedFeatures() {
  std::vector<Feature> out;
  // Mature path forest, then understory and rocks.
