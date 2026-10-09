@@ -19,3 +19,8 @@ graphify-out/*
 Source/graphify-out/
 Tests/graphify-out/
 ArtSource/AmbientCG/
+.oc-proxy-scratch/
+Tools/oc-proxy/proxy.log
+
+# StatefulClanker orchestration state (tasks, receipts, event log, worktrees)
+.statefulclanker/

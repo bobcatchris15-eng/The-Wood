@@ -1,0 +1,54 @@
+{
+  "_comment": "Wave 4. Pool narrowed to the 8 opencode-go models after 0/15 receipts from free-tier models across two fleets. Every task below is unpinned so selection chooses from the pool; use whichever responds.",
+  "workers": [
+    {
+      "key": "vivarium-flora-map",
+      "title": "Vivarium flora to Wood climate mapping",
+      "profile": "architecture",
+      "worktree": false,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first, then Docs/Specification.md sections 4, 5 and 10, and Docs/BiomeCatalog.md.\n\nE:\\Vivarium has 34 procedurally generated plant species and NO mesh files. Read E:\\Vivarium\\src\\Vivarium.Sim\\Geometry\\OrganismMeshes.cs, OrganismMeshes.VisualBreakFlora.cs, FloraLeaf.cs, FloraVisualCompiler.cs and E:\\Vivarium\\src\\Vivarium.Sim\\Flora\\Flora.cs.\n\nProduce a mapping table: Vivarium species -> the The Wood climate family or unreal-variant role it could serve -> what the port would actually require (algorithm to lift vs asset to export). Note explicitly which species fit Specification.md section 5's unreal character (excessive fungi, implausible canopy, unusual colour) versus ordinary biome cover.\n\nThen state the single highest-value port: which algorithm gives The Wood the most believable new plant forms per unit of work, and why. Cite file:line for both sides. Do not edit any file."
+    },
+    {
+      "key": "generator-gap-vs-brief",
+      "title": "Spec and plan drift audit",
+      "profile": "review",
+      "worktree": false,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first.\n\nDocs/Status.md, README.md, Docs/BiomeGeneration.md, Docs/BiomeCatalog.md, Docs/DiscoveryCatalog.md and the two plans in Docs/superpowers/plans/ were written across several passes. Some describe work that later passes superseded; some plans describe a hex migration that Docs/Status.md says has only a geometric foundation.\n\nBuild a drift table: document and section -> what it claims -> what Source/ and Tests/ actually contain -> still accurate / superseded / aspirational / wrong. Flag every place a future specification is presented as though implemented, and every place an implemented change was never folded back into the older document. Cite file:line. Do not edit any file."
+    },
+    {
+      "key": "asset-provenance",
+      "title": "Asset provenance and licence audit",
+      "profile": "review",
+      "worktree": false,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first, then Docs/Specification.md section 10 and Docs/Assets.md.\n\nSection 10 requires that assets have suitable redistribution rights and that source URLs, licence records and checksums are preserved.\n\nAudit the actual Content/Art tree and ArtSource/ against Docs/Assets.md. For each asset group: is it documented, does it have a recorded source and licence, is there a checksum, and is it still present on disk. Report undocumented assets, missing provenance fields, and records pointing at files that no longer exist. Also assess whether the current palette (three pine variants, four ferns, ten grass variants, fourteen rocks) satisfies the four-biome claim in Docs/Status.md, given that Docs/Status.md itself calls it a limited library shared across four families. Cite paths. Do not edit any file."
+    },
+    {
+      "key": "blender-plant-prep",
+      "title": "Blender plant asset preparation pipeline",
+      "profile": "implementation",
+      "worktree": true,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first. Blender 5.2 is at C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe. Unreal is reinstalling, so do not attempt engine work.\n\nDocs/Specification.md section 10 requires the asset pipeline to verify scale, ground-contact pivots, normals, alpha masking, wind weights, collision, material compatibility with instancing, and distance detail.\n\nRead Tools/Prepare-Art.py and Tools/Inspect-TreeRoots.py to learn the existing conventions. Then write Tools/Prepare-Plant.py, a Blender background script that takes a source plant mesh and emits the pipeline's required outputs: a ground-contact pivot at the true base rather than the object origin, a wind-weight attribute separating rooted base from moving canopy, alpha-ready material naming, and a distance LOD stage. It must run headless via blender --background --python and follow the argument and error-handling style of the existing Tools scripts.\n\nWrite that one file plus a short section appended to a NEW file Docs/Assets-PlantPipeline.md. Do not modify source or existing Tools scripts."
+    },
+    {
+      "key": "squad-machinery-review",
+      "title": "Orchestration machinery post-mortem",
+      "profile": "review",
+      "worktree": false,
+      "assignment": "Read Docs/clanker/WorkerBrief.md, then Docs/clanker/ModelDossier.md and Tools/clanker-fleet/squadron.mjs plus Tools/clanker-fleet/squadron-op.mjs.\n\nThe fleet harness has hard-won operational knowledge baked in as comments. Produce a short operations review covering: the constraints that actually bite (operator must outlive its launcher because session_shutdown stops workers; prompts need streamingBehavior followUp or they are silently dropped; git worktree add checks out ~777 files and dominates spawn latency; a pinned model is a request not a guarantee), anything in the harness that is fragile or would surprise a new operator, and the two concrete defects already found in the StatefulClanker extension itself - the single-sample rating nudge in catalog/profiles.ts resolveProfile that rewrites a curated rating without updating its source tag, and that a receipt only exists if the worker calls worker_finish so a silent give-up loses the task entirely.\n\nWrite the review to Docs/clanker/OperationsReview.md. Cite file:line. Do not modify the harness."
+    },
+    {
+      "key": "streaming-fix-h2",
+      "title": "Design fix for H2 sync generation",
+      "profile": "architecture",
+      "worktree": true,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first. UE is reinstalling and no C++ compiler is present, so this is a design task: write the fix as a document, do not attempt a build.\n\nAn audit found defect H2 in Source/TheWood/Private/WoodWorldStreaming.cpp:22 - `EnsureTerrainAround` calls `WoodPrepareChunk` synchronously on the game thread with Details=false, costing roughly 21,000 heavy samples per chunk (a 65x65 heightfield plus four World.sample() calls per vertex for finite-difference normals), on every chunk-boundary crossing and once at BeginPlay. Docs/Status.md claims \"Runtime object realization stays separate from background value generation\", which this contradicts.\n\nRelated: H3 (the background job recomputes mesh attributes that line 49 then discards) and M1 (a deep copy of the whole placement-profile table inside the per-coordinate scheduling loop, paid per frame).\n\nWrite Docs/superpowers/specs/2026-10-07-streaming-h2-h3-fix.md proposing a concrete fix: what moves to the background task, what must stay on the game thread and why, how the terrain-under-player protection is preserved without a synchronous generate, and how H3's wasted work is avoided. Respect the existing metres-core/centimetres-adapter boundary and the determinism requirement. Cite file:line. Write that one file; do not modify source."
+    },
+    {
+      "key": "streaming-fix-h4",
+      "title": "Design fix for H4 crash loop",
+      "profile": "architecture",
+      "worktree": true,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first. UE is reinstalling and no C++ compiler is present: design task, write a document, do not attempt a build.\n\nAn audit found defect H4 in Source/TheWood/Private/WoodWorldStreaming.cpp:63. `Runtime->Jobs[Key].Get()` is called BEFORE `Runtime->Jobs.Remove(Key)`. If the background task throws, the exception escapes Get(), propagates out of Stream() and out of AWoodWorld::Tick, and the key is never removed from Runtime->Jobs. Every later tick re-selects the same never-removed entry, re-throws and crashes again - a permanent crash loop that also leaves both job slots permanently occupied. There is no try/catch anywhere in WoodWorldStreaming.cpp.\n\nThe trigger is reachable because two layers disagree on the legal coordinate range: WoodStreaming.cpp:18-19 only rejects chunk indices beyond INT_MAX minus the retain radius, while WoodGeneration.cpp:151-152 rejects coordinates beyond 999000 metres (about chunk index 7804) by throwing std::invalid_argument from inside the background task.\n\nWrite Docs/superpowers/specs/2026-10-07-streaming-h4-fix.md covering: the exception-safety fix and why the Remove must precede or accompany the Get, where error isolation belongs so a single bad chunk cannot kill Tick, and how the streaming layer should be made aware of the generator's real coordinate limit so it stops enqueueing work guaranteed to throw. Consider M2's related finding that there is no cancellation path for queued work. Cite file:line. Write that one file; do not modify source."
+    }
+  ]
+}

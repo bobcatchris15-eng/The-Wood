@@ -1,0 +1,74 @@
+{
+  "_comment": "Wave 3. Free-tier tasks are deliberately BOUNDED to a single file read. Evidence from two prior fleets: exo-free and space-bunny-free complete a 1-2 tool-call task and produce excellent output, but never finish anything needing 20+ tool calls, because each tool call blocks on a full OpenCode session turn (2-40s) and the cost multiplies. So: free models get canary tasks whose answers are verifiable against ground truth; paid models get the heavy multi-file work. Every free-model answer is scored by hand against the real file.",
+  "workers": [
+    {
+      "key": "canary-hex",
+      "title": "Canary WoodHex",
+      "profile": "fast",
+      "worktree": false,
+      "model": "opencode-free/exo-free",
+      "assignment": "Read exactly one file: Source/TheWood/Public/Generation/WoodHex.h. Then stop and report, as a short list of fact/value pairs:\n1. the namespace\n2. the value of `radius`\n3. the value of `halfWidth`\n4. the element count of the array returned by weights()\n5. the bound past which owner() throws, as a number\n6. what the edge() function guarantees\n\nRead that one file only. Do not read any other file, do not search, do not run commands. If a value is not in the file, say ABSENT."
+    },
+    {
+      "key": "canary-streaming",
+      "title": "Canary WoodStreaming",
+      "profile": "fast",
+      "worktree": false,
+      "model": "opencode-free/space-bunny-free",
+      "assignment": "Read exactly one file: Source/TheWood/Public/Generation/WoodStreaming.h. Then stop and report, as fact/value pairs:\n1. the default chunk radius declared in the header\n2. the name of the pure function that plans work\n3. what plan() returns (list the fields)\n4. the type of Settings::maxConcurrentJobs\n5. what retained() returns\n\nRead that one file only. Do not read any other file, do not search, do not run commands. If something is not in the file, say ABSENT."
+    },
+    {
+      "key": "canary-discovery",
+      "title": "Canary WoodDiscovery",
+      "profile": "fast",
+      "worktree": false,
+      "model": "opencode-free/exo-free",
+      "assignment": "Read exactly one file: Source/TheWood/Public/Generation/WoodDiscovery.h. Then stop and report:\n1. every enumerator in the DiscoveryType enum, in declaration order\n2. the fields of DiscoveryReservation and their default values\n3. what function computes ground contact, and what it is called\n\nRead that one file only. Do not read any other file, do not search, do not run commands. If something is not in the file, say ABSENT."
+    },
+    {
+      "key": "canary-grounding",
+      "title": "Canary WoodGrounding",
+      "profile": "fast",
+      "worktree": false,
+      "model": "opencode-go/space-bunny-free",
+      "assignment": "Read exactly one file: Source/TheWood/Public/WoodGrounding.h. Then stop and report:\n1. what FWoodPlacementProfile contains, with field names\n2. what the root-contact extraction function is called and its return type\n3. any threading assertion or guard present\n\nRead that one file only. Do not read any other file, do not search, do not run commands. If something is not in the file, say ABSENT."
+    },
+    {
+      "key": "canary-hardware",
+      "title": "Canary HardwareDoc",
+      "profile": "fast",
+      "worktree": false,
+      "model": "opencode-free/exo-free",
+      "assignment": "Read exactly one file: Docs/Hardware.md. Then stop and report:\n1. the CPU model\n2. the GPU model\n3. the RAM capacity\n4. whether the document states the machine is a certified performance reference\n\nRead that one file only. Do not read any other file, do not search, do not run commands."
+    },
+    {
+      "key": "streaming-fix-h2",
+      "title": "Design fix for H2 sync generation",
+      "profile": "architecture",
+      "worktree": true,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first. UE is reinstalling and no C++ compiler is present, so this is a design task: write the fix as a document, do not attempt a build.\n\nAn audit found defect H2 in Source/TheWood/Private/WoodWorldStreaming.cpp:22 - `EnsureTerrainAround` calls `WoodPrepareChunk` synchronously on the game thread with Details=false, costing roughly 21,000 heavy samples per chunk (a 65x65 heightfield plus four World.sample() calls per vertex for finite-difference normals), on every chunk-boundary crossing and once at BeginPlay. Docs/Status.md claims \"Runtime object realization stays separate from background value generation\", which this contradicts.\n\nRelated: H3 (the background job recomputes mesh attributes that line 49 then discards) and M1 (a deep copy of the whole placement-profile table inside the per-coordinate scheduling loop, paid per frame).\n\nWrite Docs/superpowers/specs/2026-10-07-streaming-h2-h3-fix.md proposing a concrete fix: what moves to the background task, what must stay on the game thread and why, how the terrain-under-player protection is preserved without a synchronous generate, and how H3's wasted work is avoided. Respect the existing metres-core/centimetres-adapter boundary and the determinism requirement. Cite file:line. Write that one file; do not modify source."
+    },
+    {
+      "key": "streaming-fix-h4",
+      "title": "Design fix for H4 crash loop",
+      "profile": "architecture",
+      "worktree": true,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first. UE is reinstalling and no C++ compiler is present: design task, write a document, do not attempt a build.\n\nAn audit found defect H4 in Source/TheWood/Private/WoodWorldStreaming.cpp:63. `Runtime->Jobs[Key].Get()` is called BEFORE `Runtime->Jobs.Remove(Key)`. If the background task throws, the exception escapes Get(), propagates out of Stream() and out of AWoodWorld::Tick, and the key is never removed from Runtime->Jobs. Every later tick re-selects the same never-removed entry, re-throws and crashes again - a permanent crash loop that also leaves both job slots permanently occupied. There is no try/catch anywhere in WoodWorldStreaming.cpp.\n\nThe trigger is reachable because two layers disagree on the legal coordinate range: WoodStreaming.cpp:18-19 only rejects chunk indices beyond INT_MAX minus the retain radius, while WoodGeneration.cpp:151-152 rejects coordinates beyond 999000 metres (about chunk index 7804) by throwing std::invalid_argument from inside the background task.\n\nWrite Docs/superpowers/specs/2026-10-07-streaming-h4-fix.md covering: the exception-safety fix and why the Remove must precede or accompany the Get, where error isolation belongs so a single bad chunk cannot kill Tick, and how the streaming layer should be made aware of the generator's real coordinate limit so it stops enqueueing work guaranteed to throw. Consider M2's related finding that there is no cancellation path for queued work. Cite file:line. Write that one file; do not modify source."
+    },
+    {
+      "key": "streaming-defect-triage",
+      "title": "Triage and prioritise the audit defects",
+      "profile": "review",
+      "worktree": false,
+      "assignment": "Read Docs/clanker/WorkerBrief.md first.\n\nThree separate worker audits produced findings about Source/TheWood/Private/WoodWorldStreaming.cpp, WoodStreaming.cpp and related files: H1 (null pawn collapses the streaming window to the world origin and unloads everything in one tick), H2 (synchronous ~21k-sample generation on the game thread), H3 (background jobs compute mesh attributes that are discarded), H4 (a throwing background job wedges into a permanent crash loop), M1 (per-frame deep copy of the placement profile table), M2 (no cancellation path for queued work), M3 (one chunk realised per tick in non-deterministic map order), M4 (the retained()/Plan.removed/maxConcurrentJobs contract has no runtime caller and chunk size is duplicated as three literals), M5 (Plan.removed cannot cover terrain-only chunks), L1 (instance identity is an array slot, not a stable feature identity), L3 (LoadedChunkCount over-reports), L4 (invariants enforced by exceptions out of Tick).\n\nVerify each against the code yourself - do not trust this list. Then write Docs/superpowers/specs/2026-10-07-streaming-defect-triage.md: which findings are real, which are wrong or overstated, a severity ordering justified by the Specification.md section 12 performance gate and section 7 continuity requirement, which fixes are safe to do together, and an explicit dependency order. Flag any finding that contradicts another worker's. Cite file:line. Write that one file; do not modify source."
+    },
+    {
+      "key": "quota-burner",
+      "title": "Idle reference reading",
+      "profile": "research",
+      "worktree": false,
+      "model": "opencode-go/space-bunny",
+      "assignment": "Read Docs/clanker/WorkerBrief.md, then Docs/BiomeCatalog.md and Docs/DiscoveryCatalog.md.\n\nThese are future specifications: full climate-driven family selection, complete edge contracts, macro-catchments, and ruin/unreal placement are NOT implemented (Docs/Status.md is explicit about this).\n\nProduce a short, concrete gap list: for each major capability these catalogs describe, state whether it is spec-only, partially implemented, or implemented, citing the code that decides it. Then rank the top five by how much they would move Milestone 1's photographic gate, with one sentence each on why. Be careful to distinguish 'the catalog describes it' from 'the code does it'. Cite file:line. Write that one file to Docs/clanker/CatalogGapRank.md; do not modify source."
+    }
+  ]
+}

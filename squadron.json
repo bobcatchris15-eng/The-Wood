@@ -1,0 +1,52 @@
+{
+  "workers": [
+    {
+      "key": "streaming-audit",
+      "title": "Streaming correctness audit",
+      "profile": "implementation",
+      "worktree": false,
+      "assignment": "Audit Source/TheWood/Private/Generation/WoodStreaming.cpp, Source/TheWood/Private/WoodWorldStreaming.cpp and Source/TheWood/Public/Generation/WoodStreaming.h against Docs/Specification.md sections 7 and 13 and Docs/Status.md. Hunt real defects: chunk-order determinism, retention-buffer correctness, cancellation safety of background tasks, stable instance identity across unload/reload, and the \"terrain under the player is protected\" claim. Docs/Status.md admits unloaded places regenerate reproducibly, which is a documented deferral - do not report that as a bug. Cite file:line for every finding. Do NOT edit any source file.",
+      "model": "opencode-free/exo-free"
+    },
+    {
+      "key": "test-coverage",
+      "title": "Test coverage vs acceptance gates",
+      "profile": "review",
+      "worktree": false,
+      "assignment": "Map what is actually tested against what is claimed. Read Tests/*.cpp (GenerationTests, BiomeTests, HexTests, DiscoveryTests, StreamingTests, AtmosphereTests, SoundscapeTests), Source/TheWood/Private/Tests/*.cpp, and Docs/Status.md. Produce a table: claim in Status.md -> covering test -> genuinely covered / partially / NOT covered. Be adversarial about the \"photographic gate remains open\" and packaged-performance items: name which Status.md sentences have no corresponding test. Cite file:line. Do not edit source.",
+      "model": "opencode-free/space-bunny-free"
+    },
+    {
+      "key": "docs-honesty",
+      "title": "Documentation honesty audit",
+      "profile": "review",
+      "worktree": false,
+      "assignment": "This project's specification makes an explicit demand: it must never overstate what is built. README.md and Docs/Specification.md repeatedly forbid representing the repo as the completed game or as achieving 60fps. Check every quantitative and status claim in README.md, Docs/Status.md and Docs/Design.md against Source/ and Tests/. Report any claim that overstates, any internal contradiction between documents, and any claim with no supporting evidence. Also confirm the README does not present Docs/BiomeGeneration.md, Docs/BiomeCatalog.md and Docs/DiscoveryCatalog.md as implemented when they are future specifications. Do not edit any file. Cite file:line.",
+      "model": "opencode-free/exo-free"
+    },
+    {
+      "key": "probability-audit",
+      "title": "Ruin and unreal probability audit",
+      "profile": "research",
+      "worktree": false,
+      "assignment": "Docs/Specification.md section 5 states approximately one tenth of regions may receive unreal character and approximately one third may contain a ruin, as INDEPENDENT assignments, explicitly generation defaults across many regions rather than a quota forcing exactly one ruin per three adjacent regions. Read Source/TheWood/Public/Generation/WoodDiscovery.h, Source/TheWood/Private/Generation/WoodDiscovery.cpp and the hex ownership code, and determine what the implementation actually does with those probabilities. Report measured or nominal rates, whether the two assignments are truly independent, and whether the implementation is per-cell or per-chunk. Do not edit source. Cite file:line and state plainly if spec and code disagree.",
+      "model": "opencode-free/space-bunny-free"
+    },
+    {
+      "key": "persistence-design",
+      "title": "Save/resume and forgetting design",
+      "profile": "architecture",
+      "worktree": true,
+      "assignment": "Milestone 2 in Docs/Specification.md section 11 requires generating ahead asynchronously, retaining nearby geography, discarding distant regions beyond the backtracking buffer, saving retained state and pending identities, and resuming an interrupted generation task without creating a different seam. Read Source/TheWood/Public/Generation/WoodStreaming.h, WoodWorld.h, WoodHex.h and the streaming implementation, then write a concrete design to Docs/superpowers/specs/2026-10-06-save-resume-design.md covering: the on-disk save format, what \"fresh identity\" means for a forgotten region so it cannot be regenerated from the same seed, how pending generation jobs are journalled, and how resume guarantees the same landmark. Match existing code conventions and the metres-vs-centimetres unit boundary. Write that one file; do not modify source.",
+      "model": "opencode-go/space-bunny"
+    },
+    {
+      "key": "perf-harness",
+      "title": "Packaged performance harness",
+      "profile": "implementation",
+      "worktree": true,
+      "assignment": "Docs/Specification.md section 12 requires acceptance on packaged builds at 1920x1080/60fps with recorded CPU, GPU, RAM, driver, engine patch, resolution and scalability settings, and states average frame rate alone is insufficient - stalls during generation and photo capture must be measured. Read Tools/Test-Unreal.ps1, Tools/Build-Unreal.ps1 and Tools/Render-Review.ps1 to learn the existing PowerShell conventions, then write Tools/Profile-Performance.ps1 that: builds the packaged 1080p client, records machine and driver metadata, walks a fixed route, and reports frame-time percentiles (p50/p95/p99) plus explicit stall-event counts for chunk realisation and photo capture, separated from steady state. Follow the argument and error-handling style of the existing scripts. Write that one file; do not modify source.",
+      "model": "opencode-go/space-bunny"
+    }
+  ]
+}
