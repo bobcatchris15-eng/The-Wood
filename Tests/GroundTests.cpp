@@ -71,6 +71,14 @@ int main() {
   assert(near(Mar.tintR,0.85f) && near(Mar.tintG,0.95f) && near(Mar.tintB,0.70f));
  }
 
+ // WarmRainforest row: authored archetype mix and tint, weights sum to one.
+ {
+  const GroundShade Warm=shade(familyOnly(Biome::WarmRainforest));
+  assert(near(Warm.archetype[0],0.5f) && near(Warm.archetype[1],0.f) && near(Warm.archetype[2],0.f) && near(Warm.archetype[3],0.5f));
+  assert(near(archetypeSum(Warm),1.f));
+  assert(near(Warm.tintR,0.72f) && near(Warm.tintG,0.90f) && near(Warm.tintB,0.66f));
+ }
+
  // Blended surface: weights are sum-preserving and archetype sum equals biome sum (1).
  {
   Surface S{};

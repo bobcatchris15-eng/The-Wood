@@ -327,7 +327,7 @@ int main() {
    }
    check(adjacentOk,"no adjacent region pair violates allowedAdjacent over 60x60 window");
    // Ten families: every family holds at least 3 percent of the 60x60 window.
-   for(std::size_t i=0;i<kFamilyCount;++i) check(shares[i]>=0.015*span*span,"each region family holds at least 1.5 percent of the 60x60 window (10 families; rare biomes are acceptable)");
+   for(std::size_t i=0;i<kFamilyCount;++i) check(shares[i]>=0.015*span*span,"each region family holds at least 1.5 percent of the 60x60 window (11 families; rare biomes are acceptable)");
    for(const auto& f:fixed) check(world.region(f[0],f[1]).family==static_cast<Biome>(f[2]),"origin-cell families unchanged");
    std::vector<int> order(span*span);
    for(int i=0;i<span*span;++i) order[i]=i;
@@ -348,6 +348,9 @@ int main() {
   check(!allowedAdjacent(Biome::Marsh,Biome::IcyHills)&&!allowedAdjacent(Biome::IcyHills,Biome::Marsh),"Marsh and IcyHills are forbidden neighbours");
   check(!allowedAdjacent(Biome::Swamp,Biome::Savannah)&&!allowedAdjacent(Biome::Savannah,Biome::Swamp),"Swamp and Savannah are forbidden neighbours");
   check(!allowedAdjacent(Biome::Marsh,Biome::DryGrassland)&&!allowedAdjacent(Biome::DryGrassland,Biome::Marsh),"Marsh and DryGrassland are forbidden neighbours");
+  check(!allowedAdjacent(Biome::WarmRainforest,Biome::IcyHills)&&!allowedAdjacent(Biome::IcyHills,Biome::WarmRainforest),"WarmRainforest and IcyHills are forbidden neighbours");
+  check(!allowedAdjacent(Biome::WarmRainforest,Biome::Taiga)&&!allowedAdjacent(Biome::Taiga,Biome::WarmRainforest),"WarmRainforest and Taiga are forbidden neighbours");
+  check(!allowedAdjacent(Biome::WarmRainforest,Biome::DryGrassland)&&!allowedAdjacent(Biome::DryGrassland,Biome::WarmRainforest),"WarmRainforest and DryGrassland are forbidden neighbours");
  }
  bool badTime=false; try { o.advance(-1); } catch(const std::invalid_argument&) { badTime=true; }
  check(badTime,"negative elapsed time rejected");
@@ -356,13 +359,14 @@ int main() {
   // B1a-B: kFamilyCount 4->6 (+OldGrowth, ColdRainforest)
   // B1b: kFamilyCount 6->8 (+IcyHills, Savannah)
   // B1c: kFamilyCount 8->10 (+Swamp, Marsh)
+  // B1d: kFamilyCount 10->11 (+WarmRainforest)
   struct GoldenCase { unsigned seed; int x,y; bool features; std::uint64_t expected; };
   const GoldenCase cases[]={
-   {0,0,0,true,0x94639364fc4b30b7ULL},{0,3,-2,true,0xbb614373b42041adULL},{0,-5,7,true,0x4b447d711df49447ULL},{0,12,12,true,0x6cc70619da157579ULL},{0,0,0,false,0xa0789ddeac521a38ULL},
-   {42,0,0,true,0x61d8a47c8fa875e5ULL},{42,3,-2,true,0x5ad6cadaf3625d0fULL},{42,-5,7,true,0x6b74242ea2db3725ULL},{42,12,12,true,0x4016679be05cd637ULL},{42,0,0,false,0xa45e4bf427759a38ULL},
-   {98765,0,0,true,0x0c204047742b2be7ULL}, // changed in U1: chunk lies in an unreal region (overlay density)
-   {98765,3,-2,true,0x7d71f652bfe9851dULL}, // changed in U1: chunk lies in an unreal region (overlay density)
-   {98765,-5,7,true,0x95fd83c00ddee23bULL},{98765,12,12,true,0xb80c5228712cdd20ULL},{98765,0,0,false,0xda94c09941b6427fULL},
+   {0,0,0,true,0x338cb5e83b249e17ULL},{0,3,-2,true,0xaf85087e30dc82edULL},{0,-5,7,true,0xab78e9b16d4612e7ULL},{0,12,12,true,0xfeed981d523be5b9ULL},{0,0,0,false,0x3ea0252fe7ec6318ULL},
+   {42,0,0,true,0xdfa2056accec3f05ULL},{42,3,-2,true,0x896b503b10a5cf8fULL},{42,-5,7,true,0x44ff7bda12fe3ce5ULL},{42,12,12,true,0xd70bc11a084283b7ULL},{42,0,0,false,0xe1d20fb53bf66d18ULL},
+   {98765,0,0,true,0x16cde6e759bf9387ULL}, // changed in U1: chunk lies in an unreal region (overlay density)
+   {98765,3,-2,true,0xd16057461051355dULL}, // changed in U1: chunk lies in an unreal region (overlay density)
+   {98765,-5,7,true,0x5f088fb68466bfdbULL},{98765,12,12,true,0x1359bd81ed86a120ULL},{98765,0,0,false,0x6f9734feeb9274dfULL},
   };
   for(const auto& gc:cases) {
    World w({gc.seed,128,32});

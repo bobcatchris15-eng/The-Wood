@@ -59,6 +59,7 @@ Biome tableFamily(const World& w,int gx,int gy) {
  if(f.temperature01>=0.45&&f.moisture01>=0.62&&reliefAt(w,gx,gy)<=0.45) return Biome::OldGrowthForest;
  if(f.temperature01<0.20&&reliefAt(w,gx,gy)>0.50) return Biome::IcyHills;
  if(f.temperature01<0.30) return Biome::Taiga;
+ if(f.temperature01>=0.62&&f.moisture01>=0.68) return Biome::WarmRainforest;
  if(f.temperature01>=0.66&&f.moisture01>=0.25&&f.moisture01<0.45) return Biome::Savannah;
  if(f.moisture01<0.35) return Biome::DryGrassland;
  if(reliefAt(w,gx,gy)>0.62) return Biome::RockyHighlands;
@@ -87,14 +88,14 @@ Biome regionFamily(const World& w,int gx,int gy) {
 }
 
 // Per-family multipliers in Biome order; the four original families are identity (1 or 0).
-constexpr std::array<double,kFamilyCount> kTreeDensityMul{{1,1,1,1,0.7,1,0.25,0.15,0.8,0.05}};
-constexpr std::array<double,kFamilyCount> kTreeScaleMul{{1,1,1,1,1.35,1,0.6,1.2,1.1,1}};
-constexpr std::array<double,kFamilyCount> kRockMul{{1,1,1,1,1.5,1,2.0,1,0.3,0.2}};
-constexpr std::array<double,kFamilyCount> kFernMul{{1,1,1,1,1,2.0,0.05,0.4,1.5,0.3}};
-constexpr std::array<double,kFamilyCount> kLightBrightnessMul{{1,1,1,1,0.8,1,1.15,1.10,0.75,1.0}};
-constexpr std::array<double,kFamilyCount> kLightKelvinShift{{0,0,0,0,0,-400,900,500,-300,-100}};
+constexpr std::array<double,kFamilyCount> kTreeDensityMul{{1,1,1,1,0.7,1,0.25,0.15,0.8,0.05,1.3}};
+constexpr std::array<double,kFamilyCount> kTreeScaleMul{{1,1,1,1,1.35,1,0.6,1.2,1.1,1,1.25}};
+constexpr std::array<double,kFamilyCount> kRockMul{{1,1,1,1,1.5,1,2.0,1,0.3,0.2,0.4}};
+constexpr std::array<double,kFamilyCount> kFernMul{{1,1,1,1,1,2.0,0.05,0.4,1.5,0.3,2.5}};
+constexpr std::array<double,kFamilyCount> kLightBrightnessMul{{1,1,1,1,0.8,1,1.15,1.10,0.75,1.0,0.7}};
+constexpr std::array<double,kFamilyCount> kLightKelvinShift{{0,0,0,0,0,-400,900,500,-300,-100,200}};
 // Terrain relief multiplier per family: wet basins flatten local relief.
-constexpr std::array<double,kFamilyCount> kReliefMul{{1,1,1,1,1,1,1,1,0.35,0.35}};
+constexpr std::array<double,kFamilyCount> kReliefMul{{1,1,1,1,1,1,1,1,0.35,0.35,1}};
 // Weight-blended multiplier 1+sum(w*(m-1)); exactly 1 when only identity families carry weight.
 double familyMul(const std::array<double,kFamilyCount>& biome,const std::array<double,kFamilyCount>& mul) {
  double m=1;
@@ -110,11 +111,11 @@ Region describe(const World& w,int gx,int gy) {
  r.origin={center.x-180,center.y-180,0};r.q=gx;r.r=gy;r.extent=hex::radius*2;
  r.family=regionFamily(w,gx,gy);
  const auto i=static_cast<std::size_t>(r.family);
- constexpr std::array<double,kFamilyCount> moisture{{0.78,0.24,0.38,0.58,0.70,0.92,0.30,0.32,0.88,0.84}};
- constexpr std::array<double,kFamilyCount> roughness{{0.22,0.16,0.85,0.36,0.28,0.30,0.80,0.20,0.10,0.08}};
- constexpr std::array<double,kFamilyCount> temperature{{16,24,8,-3,15,6,-6,24,14,4}};
- constexpr std::array<double,kFamilyCount> canopy{{0.96,0.055,0.09,0.70,0.98,0.90,0.30,0.22,0.78,0.15}};
- constexpr std::array<double,kFamilyCount> exposure{{0.18,0.86,0.94,0.38,0.14,0.30,0.82,0.40,0.22,0.66}};
+ constexpr std::array<double,kFamilyCount> moisture{{0.78,0.24,0.38,0.58,0.70,0.92,0.30,0.32,0.88,0.84,0.95}};
+ constexpr std::array<double,kFamilyCount> roughness{{0.22,0.16,0.85,0.36,0.28,0.30,0.80,0.20,0.10,0.08,0.30}};
+ constexpr std::array<double,kFamilyCount> temperature{{16,24,8,-3,15,6,-6,24,14,4,26}};
+ constexpr std::array<double,kFamilyCount> canopy{{0.96,0.055,0.09,0.70,0.98,0.90,0.30,0.22,0.78,0.15,0.97}};
+ constexpr std::array<double,kFamilyCount> exposure{{0.18,0.86,0.94,0.38,0.14,0.30,0.82,0.40,0.22,0.66,0.12}};
  static_assert(moisture.size()==kFamilyCount&&roughness.size()==kFamilyCount&&temperature.size()==kFamilyCount&&canopy.size()==kFamilyCount&&exposure.size()==kFamilyCount,"per-family tables need one row per Biome value");
  r.moisture=moisture[i]; r.roughness=roughness[i]; r.temperature=temperature[i];
  r.canopy=canopy[i]; r.exposure=exposure[i]; r.shelter=1-r.exposure;
@@ -223,7 +224,8 @@ double ground(const World& world,double x,double y,double stream,const Surface* 
 }
 bool allowedAdjacent(Biome a,Biome b) {
  const auto forbidden=[](Biome x,Biome y){
-  return (x==Biome::DryGrassland&&(y==Biome::Taiga||y==Biome::ColdRainforest||y==Biome::IcyHills))||
+  return (x==Biome::WarmRainforest&&(y==Biome::IcyHills||y==Biome::Taiga||y==Biome::DryGrassland))||
+         (x==Biome::DryGrassland&&(y==Biome::Taiga||y==Biome::ColdRainforest||y==Biome::IcyHills))||
          (x==Biome::Savannah&&(y==Biome::Taiga||y==Biome::IcyHills||y==Biome::ColdRainforest||y==Biome::Swamp))||
          (x==Biome::Swamp&&(y==Biome::IcyHills)) ||
          (x==Biome::Marsh&&(y==Biome::IcyHills||y==Biome::DryGrassland));
@@ -462,7 +464,7 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     if(surface.slope>=0.7) continue;
     // Two spatial scales form dense colonies separated by leaf-litter pockets.
     const double colony=smooth((0.5+0.5*noise(config.seed+Salt::Colony,px/11,py/11)-0.28)/0.40);
-    const double habitatCover=surface.biome[0]+0.80*surface.biome[1]+0.30*surface.biome[2]+0.55*surface.biome[3]+0.90*surface.biome[4]+1.00*surface.biome[5]+0.20*surface.biome[6]+1.00*surface.biome[7]+1.00*surface.biome[8];
+    const double habitatCover=surface.biome[0]+0.80*surface.biome[1]+0.30*surface.biome[2]+0.55*surface.biome[3]+0.90*surface.biome[4]+1.00*surface.biome[5]+0.20*surface.biome[6]+1.00*surface.biome[7]+1.00*surface.biome[8]+1.00*surface.biome[10];
     const double cover=(0.10+0.84*colony)*habitatCover*ov.densityScale;
     // Low plants preserve an open walking strip without emptying both banks.
     const double routeCover=routeDistance<1.2?0.20:1.0;

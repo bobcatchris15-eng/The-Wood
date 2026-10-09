@@ -1,4 +1,4 @@
-param([int]$Seed=12345,[ValidateSet('Forest','Stream','Ridge','Grassland','Taiga','Highlands','OldGrowth','ColdRainforest','IcyHills','Savannah','Swamp','Marsh','Roots','Ruins','Trailhead')][string]$View='Forest',[double]$Time=0)
+param([int]$Seed=12345,[ValidateSet('Forest','Stream','Ridge','Grassland','Taiga','Highlands','OldGrowth','ColdRainforest','IcyHills','Savannah','Swamp','Marsh','WarmRainforest','Roots','Ruins','Trailhead')][string]$View='Forest',[double]$Time=0)
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path $PSScriptRoot -Parent
 $editor='C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe'
@@ -8,7 +8,7 @@ $startX=-180;$startY=-180
 # Non-Trailhead views start in wilderness (-WoodWild); Trailhead is a plain new journey at the lot.
 $frame=@('-WoodWild'); if($View -eq 'Ruins') { $frame+=@('-WoodFrameRuin') }
 if($View -eq 'Trailhead') { $frame=@() }
-if($View -in 'Grassland','Taiga','Highlands','OldGrowth','ColdRainforest','IcyHills','Savannah','Swamp','Marsh') { $frame+=@("-WoodFrameBiome=$View") }
+if($View -in 'Grassland','Taiga','Highlands','OldGrowth','ColdRainforest','IcyHills','Savannah','Swamp','Marsh','WarmRainforest') { $frame+=@("-WoodFrameBiome=$View") }
 $start=Get-Date
 $name="${Seed}-${View}-${Time}"
 $log=Join-Path $review "$name.log"
