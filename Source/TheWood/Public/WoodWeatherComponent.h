@@ -26,6 +26,10 @@ public:
  float FogDensityBoost() const { return 0.02f*Intensity; }
  // Multiplier for ambient sky light intensity.
  float AmbientScale() const { return 1.0f-0.3f*Intensity; }
+ // Test/render override (console WoodWeather). While forced, Advance holds the state and stops sampling.
+ void Force(EWoodPrecip Kind, float Level);
+ void ClearForce();
 private:
  float Accumulator=1.0f; // starts full so the first Advance samples immediately
+ bool bForced=false;
 };

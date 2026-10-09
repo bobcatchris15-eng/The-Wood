@@ -138,6 +138,58 @@ def sample(mat, tex, uv, normal=False):
     return node
 
 
+# Precipitation (ArtSource/Authored/Precip, Author-Precip.py output): atlas textures, the weather
+# parameter collection (scalar Wetness, pushed once a second by AWoodWorld), and unlit translucent sprites.
+PRECIP_DIR='/Game/Art/Authored/Precip'
+precip_textures={}
+for source in sorted((ROOT/'ArtSource/Authored/Precip').glob('*.png')):
+    import_unit(source,PRECIP_DIR,source.stem)
+    tex=LIB.load_asset(PRECIP_DIR+'/'+source.stem)
+    if tex is None:
+        raise RuntimeError('Precip texture import failed: '+source.stem)
+    tex.set_editor_property('srgb',True)
+    tex.set_editor_property('compression_no_alpha',False)
+    LIB.save_loaded_asset(tex)
+    precip_textures[source.stem]=tex
+mpc_path='/Game/Wood/MPC_Weather'
+if LIB.does_asset_exist(mpc_path):
+    mpc=LIB.load_asset(mpc_path)
+else:
+    mpc=TOOLS.create_asset('MPC_Weather','/Game/Wood',unreal.MaterialParameterCollection,unreal.MaterialParameterCollectionFactoryNew())
+if not any(str(p.get_editor_property('parameter_name'))=='Wetness' for p in mpc.get_editor_property('scalar_parameters')):
+    wetness=unreal.CollectionScalarParameter()
+    wetness.set_editor_property('parameter_name','Wetness')
+    wetness.set_editor_property('default_value',0.0)
+    mpc.set_editor_property('scalar_parameters',list(mpc.get_editor_property('scalar_parameters'))+[wetness])
+LIB.save_loaded_asset(mpc)
+
+
+def precip_sprite(name, tex, tint, opacity_scale):
+    """Unlit translucent two-sided atlas sprite for instanced quads. Custom data 0/1 = atlas column/row (4x4)."""
+    path = '/Game/Wood/' + name
+    if LIB.does_asset_exist(path):
+        return LIB.load_asset(path)
+    mat = TOOLS.create_asset(name, '/Game/Wood', unreal.Material, unreal.MaterialFactoryNew())
+    mat.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_UNLIT)
+    mat.set_editor_property('blend_mode', unreal.BlendMode.BLEND_TRANSLUCENT)
+    mat.set_editor_property('two_sided', True)
+    uv = expr(mat, unreal.MaterialExpressionTextureCoordinate, coordinate_index=0)
+    col = expr(mat, unreal.MaterialExpressionPerInstanceCustomData, data_index=0)
+    row = expr(mat, unreal.MaterialExpressionPerInstanceCustomData, data_index=1)
+    atlas_uv = custom(mat, 'return (UV+float2(CX,RY))/4.0;', {'UV': (uv, ''), 'CX': (col, ''), 'RY': (row, '')}, unreal.CustomMaterialOutputType.CMOT_FLOAT2)
+    atlas = sample(mat, tex, atlas_uv)
+    colored = custom(mat, 'return C*T;', {'C': (atlas, 'RGB'), 'T': (vector(mat, tint), '')})
+    prop(colored, '', unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+    alpha = custom(mat, 'return saturate(A*S);', {'A': (atlas, 'A'), 'S': (constant(mat, opacity_scale), '')}, unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    prop(alpha, '', unreal.MaterialProperty.MP_OPACITY)
+    return finish(mat)
+
+
+if 'rain_streak_atlas' not in precip_textures or 'snowflake_atlas' not in precip_textures:
+    raise RuntimeError('Missing precip atlas textures in ArtSource/Authored/Precip')
+precip_sprite('M_Rain', precip_textures['rain_streak_atlas'], (0.72, 0.80, 0.88), 0.55)
+precip_sprite('M_Snow', precip_textures['snowflake_atlas'], (0.97, 0.98, 1.0), 0.90)
+
 GROUND_VERSION='BiomeV2'
 ground, build = fresh('M_Ground_' + GROUND_VERSION)
 if build:
@@ -170,6 +222,9 @@ if build:
     # Base colour only: UV1 = tint R,G; UV2 = tint B.
     color_inputs['K']=(expr(ground,unreal.MaterialExpressionTextureCoordinate,coordinate_index=1),'')
     color_inputs['L']=(expr(ground,unreal.MaterialExpressionTextureCoordinate,coordinate_index=2),'')
+    # Wetness 0..1 from MPC_Weather: darkens albedo and lowers roughness on wet ground.
+    weather_wet=expr(ground,unreal.MaterialExpressionCollectionParameter,collection=mpc,parameter_name='Wetness')
+    color_inputs['WT']=(weather_wet,'')
     color_inputs.update({name:(samples[index][0],'RGB') for index,name in enumerate(('A','B','C','D'))})
     color=custom(ground,weight_code+'''
     float3 temperate=A*float3(0.60,0.70,0.49);
@@ -182,6 +237,7 @@ if build:
     float3 color=temperate*b.x+grassland*b.y+highlands*b.z+taiga*b.w;
     color*=lerp(float3(1,1,1),float3(0.66,0.73,0.65),wet);
     float macro=0.91+0.09*sin(P.x/1300.0)*sin(P.y/1700.0);
+    color*=lerp(1.0,0.62,WT);
     return color*macro*float3(K.x,K.y,L.x);''',color_inputs)
     prop(color,'',unreal.MaterialProperty.MP_BASE_COLOR)
     normal_inputs=dict(common,P=(pos,''))
@@ -201,9 +257,10 @@ if build:
     prop(normal,'',unreal.MaterialProperty.MP_NORMAL)
     rough_inputs=dict(common)
     rough_inputs.update({name:(samples[index][2],'R') for index,name in enumerate(('A','B','C','D'))})
+    rough_inputs['WT']=(weather_wet,'')
     rough=custom(ground,weight_code+'''
     float base=clamp(A*b.x+B*b.y+C*b.z+D*b.w,0.79,1.0);
-    return lerp(base,0.30,wet*0.85);''',rough_inputs,unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    return lerp(base,0.30,wet*0.85)*lerp(1.0,0.45,WT);''',rough_inputs,unreal.CustomMaterialOutputType.CMOT_FLOAT1)
     prop(rough,'',unreal.MaterialProperty.MP_ROUGHNESS)
     prop(constant(ground,0.22),'',unreal.MaterialProperty.MP_SPECULAR)
     finish(ground)

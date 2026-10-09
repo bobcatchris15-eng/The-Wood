@@ -7,7 +7,20 @@ UWoodWeatherComponent::UWoodWeatherComponent() {
  PrimaryComponentTick.bCanEverTick=false;
 }
 
+void UWoodWeatherComponent::Force(EWoodPrecip Kind, float Level) {
+ bForced=true;
+ Precip=Kind;
+ Intensity=Kind==EWoodPrecip::Clear?0.0f:FMath::Clamp(Level,0.0f,1.0f);
+ Wetness=Kind==EWoodPrecip::Rain?Intensity:0.0f;
+}
+
+void UWoodWeatherComponent::ClearForce() {
+ bForced=false;
+ Accumulator=1.0f; // resample on the next Advance
+}
+
 void UWoodWeatherComponent::Advance(float DeltaSeconds, const wood::World& World, FVector Position, double WorldClockSeconds) {
+ if(bForced) return;
  Accumulator+=DeltaSeconds;
  if(Accumulator<1.0f) return;
  Accumulator-=1.0f;

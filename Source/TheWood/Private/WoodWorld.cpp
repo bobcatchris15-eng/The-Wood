@@ -6,6 +6,9 @@
 #include "WoodPalette.h"
 #include "WoodCreature.h"
 #include "WoodWeatherComponent.h"
+#include "WoodPrecipitation.h"
+#include "Materials/MaterialParameterCollection.h"
+#include "Materials/MaterialParameterCollectionInstance.h"
 #include "Generation/WoodAtmosphere.h"
 #include "Generation/WoodEntrance.h"
 #include "Generation/WoodFauna.h"
@@ -83,6 +86,7 @@ void AWoodWorld::BeginPlay() {
  if(!Resuming&&!Wild&&bResumeEnabled) IFileManager::Get().Delete(*ResumePath);
  bTrailheadStart=Lot;
  if(!Palette) Palette=LoadObject<UWoodPalette>(nullptr,TEXT("/Game/Wood/DA_BenchmarkPalette.DA_BenchmarkPalette"));
+ WeatherParameters=LoadObject<UMaterialParameterCollection>(nullptr,TEXT("/Game/Wood/MPC_Weather.MPC_Weather"));
  Generate();
  if(Lot&&!Generator.entered()) SpawnTrailheadLot();
  if(Resuming) PrefetchResumedChunks(Resume);
@@ -117,6 +121,7 @@ void AWoodWorld::BeginPlay() {
   Fog->GetComponent()->SetFogInscatteringColor(FLinearColor(0.16f,0.22f,0.25f));
   Fog->GetComponent()->SetVolumetricFog(true);
  }
+ Precipitation=GetWorld()->SpawnActor<AWoodPrecipitation>();
  UE_LOG(LogTemp,Display,TEXT("Wood seed %d: %d terrain chunks. Diagnostic art until palette approval."),Seed,Terrain.Num());
 }
 void AWoodWorld::Generate() {
@@ -255,6 +260,16 @@ void AWoodWorld::Tick(float DeltaSeconds) {
  CheckThreshold(Position);
  Stream(Position);
  if(WeatherState) WeatherState->Advance(DeltaSeconds,Generator,Position,Clock.seconds);
+ if(Precipitation&&WeatherState) {
+  const float CameraYaw=Viewer?Viewer->GetControlRotation().Yaw:0.0f;
+  Precipitation->Drive(DeltaSeconds,Position,WeatherState->Precip,WeatherState->Intensity,WeatherState->Wind,CameraYaw);
+ }
+ // Ground wetness reaches the ground material through MPC_Weather, once a second.
+ WetnessClock+=DeltaSeconds;
+ if(WetnessClock>=1.0f&&WeatherState&&WeatherParameters) {
+  WetnessClock=0.0f;
+  if(auto* Instance=GetWorld()->GetParameterCollectionInstance(WeatherParameters)) Instance->SetScalarParameterValue(TEXT("Wetness"),WeatherState->Wetness);
+ }
  if(SkyComponent) SkyComponent->SetWorldLocation(Position);
  const auto Habitat=Generator.sample(Position.X/100,Position.Y/100);
  const auto Weather=wood::atmosphere(Habitat.forest,Position.X/100,Position.Y/100,Clock.seconds);
@@ -415,6 +430,12 @@ double AWoodWorld::FaunaCallGainAt(FVector P,double Seconds) const {
 }
 const UWoodWeatherComponent* AWoodWorld::Weather() const {
  return WeatherState;
+}
+void AWoodWorld::ForceWeather(EWoodPrecip Kind,float Level) {
+ if(WeatherState) WeatherState->Force(Kind,Level);
+}
+void AWoodWorld::ClearForcedWeather() {
+ if(WeatherState) WeatherState->ClearForce();
 }
 bool AWoodWorld::TakeResumedPlayer(FVector& Location,FRotator& Rotation) {
  if(!bResumedPlayer) return false;

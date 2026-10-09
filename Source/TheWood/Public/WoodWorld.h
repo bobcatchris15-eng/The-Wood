@@ -4,6 +4,7 @@
 #include "Generation/WoodGeneration.h"
 #include "Generation/WoodMemory.h"
 #include "Generation/WoodSave.h"
+#include "WoodWeatherComponent.h"
 #include "Async/Future.h"
 #include <string>
 #include "WoodWorld.generated.h"
@@ -18,6 +19,8 @@ class ASkyLight;
 class AExponentialHeightFog;
 class UMaterialInstanceDynamic;
 class UWoodWeatherComponent;
+class AWoodPrecipitation;
+class UMaterialParameterCollection;
 struct FWoodResident;
 
 UCLASS()
@@ -69,6 +72,9 @@ public:
  void GetStreamEmitters(FIntPoint Chunk,TArray<FVector>& PositionsCm,TArray<float>& Gains) const;
  double FaunaCallGainAt(FVector PositionCm,double Seconds) const;
  const UWoodWeatherComponent* Weather() const;
+ // Console WoodWeather override: ForceWeather holds a state; ClearForcedWeather resumes sampled weather.
+ void ForceWeather(EWoodPrecip Kind,float Level);
+ void ClearForcedWeather();
 private:
  friend class FWoodThresholdTest;
  bool bEnteredWild=false;
@@ -110,6 +116,9 @@ private:
  void SpawnLandmarks(FIntPoint Chunk);
  UPROPERTY() TObjectPtr<UProceduralMeshComponent> TrailheadLot;
  UPROPERTY() TObjectPtr<UWoodWeatherComponent> WeatherState;
+ UPROPERTY() TObjectPtr<AWoodPrecipitation> Precipitation;
+ UPROPERTY() TObjectPtr<UMaterialParameterCollection> WeatherParameters;
+ float WetnessClock=1.0f; // starts full so the first Tick pushes Wetness
  UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> Landmarks;
  TSet<FIntPoint> LandmarkRegions;
 };
