@@ -87,6 +87,16 @@ inline constexpr std::uint32_t WindthrowClearingRng=0x71A0U;
 inline constexpr std::uint32_t FallenLogColonyRng=0xF0C1U;
 // RidgeOverlook RNG seed mix (generateRidgeOverlook()).
 inline constexpr std::uint32_t RidgeOverlookRng=0x0BE7U;
+// Ruin extra allocation roll, non-highland ruin cells (planDiscovery()).
+inline constexpr std::uint32_t RuinExtraCell=0x4E7A1U;
+// DryStoneWallStub RNG seed mix (generateDryStoneWallStub()).
+inline constexpr std::uint32_t DryStoneWallStubRng=0x7A11U;
+// FoundationStrip RNG seed mix (generateFoundationStrip()).
+inline constexpr std::uint32_t FoundationStripRng=0xF0A5U;
+// StonePierStump RNG seed mix (generateStonePierStump()).
+inline constexpr std::uint32_t StonePierStumpRng=0x91E2U;
+// MonolithStanding RNG seed mix (generateMonolithStanding()).
+inline constexpr std::uint32_t MonolithStandingRng=0x3A17U;
 
 // Chunk placement layer base salts. Each layer adds the offsets below.
 // Tree layer base (layer spacing 8.5).

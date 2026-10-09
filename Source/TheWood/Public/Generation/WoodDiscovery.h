@@ -33,7 +33,11 @@ enum class DiscoveryType {
     MossyRockHollow,
     WindthrowClearing,
     FallenLogColony,
-    RidgeOverlook
+    RidgeOverlook,
+    DryStoneWallStub,
+    FoundationStrip,
+    StonePierStump,
+    MonolithStanding
 };
 
 struct DiscoveryReservation {
@@ -152,6 +156,26 @@ DiscoveryPlan generateFallenLogColony(
     const std::function<double(double, double)>& heightFn);
 
 DiscoveryPlan generateRidgeOverlook(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateDryStoneWallStub(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateFoundationStrip(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateStonePierStump(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn);
+
+DiscoveryPlan generateMonolithStanding(
     std::uint32_t seed,
     const Vec3& origin,
     const std::function<double(double, double)>& heightFn);

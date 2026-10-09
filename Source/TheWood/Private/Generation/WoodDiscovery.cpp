@@ -838,6 +838,161 @@ DiscoveryPlan generateRidgeOverlook(
     return plan;
 }
 
+// Short dry-stone run butt-jointed on one line; the last course tapers toward a collapse, rubble at the foot.
+DiscoveryPlan generateDryStoneWallStub(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::DryStoneWallStubRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::DryStoneWallStub, Vec3{origin.x, origin.y, originZ}, 0.0);
+
+    const double theta = rng.nextDouble(0.0, 2.0 * kPi);
+    plan.yaw = theta * (180.0 / kPi);
+    const double ux = std::cos(theta);
+    const double uy = std::sin(theta);
+    const double vx = -uy;
+    const double vy = ux;
+
+    const int segCount = rng.nextInt(3, 4);
+    std::vector<double> scales(static_cast<std::size_t>(segCount), 1.0);
+    double total = 0.0;
+    for (int s = 0; s < segCount; ++s) {
+        const double sc = (s == segCount - 1) ? 0.55 : rng.nextDouble(0.9, 1.0);
+        scales[static_cast<std::size_t>(s)] = sc;
+        total += kDryStoneWallLen * sc;
+    }
+
+    double along = -0.5 * total;
+    for (int s = 0; s < segCount; ++s) {
+        const double sc = scales[static_cast<std::size_t>(s)];
+        const double len = kDryStoneWallLen * sc;
+        const double a = along + 0.5 * len;
+        const double off = rng.nextDouble(-0.03, 0.03);
+        const double x = origin.x + ux * a + vx * off;
+        const double y = origin.y + uy * a + vy * off;
+        addGroundedPiece(plan, rng, heightFn, "wall_stub_course", "SM_DryStone_Wall", x, y, plan.yaw, sc);
+        along += len;
+    }
+
+    for (int r = 0; r < 2; ++r) {
+        const double a = rng.nextDouble(-0.4, 0.4) * total;
+        const double lat = ((r == 0) ? 1.0 : -1.0) * rng.nextDouble(1.0, 1.6);
+        const double x = origin.x + ux * a + vx * lat;
+        const double y = origin.y + uy * a + vy * lat;
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.45, 0.7);
+        addGroundedPiece(plan, rng, heightFn, "wall_stub_rubble", "SM_DryStone_Rubble", x, y, yaw, scale);
+    }
+
+    const double half = 0.5 * total;
+    plan.reservation = DiscoveryReservation(DiscoveryType::DryStoneWallStub, plan.position, half + 1.5, half + 4.0);
+    plan.valid = true;
+    return plan;
+}
+
+// Single row of butt-jointed foundation courses with masonry debris at either side.
+DiscoveryPlan generateFoundationStrip(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::FoundationStripRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::FoundationStrip, Vec3{origin.x, origin.y, originZ}, 0.0);
+
+    const double theta = rng.nextDouble(0.0, 2.0 * kPi);
+    plan.yaw = theta * (180.0 / kPi);
+    const double ux = std::cos(theta);
+    const double uy = std::sin(theta);
+    const double vx = -uy;
+    const double vy = ux;
+
+    const int courseCount = rng.nextInt(4, 6);
+    const double total = kFoundationLen * static_cast<double>(courseCount);
+    for (int c = 0; c < courseCount; ++c) {
+        const double a = -0.5 * total + kFoundationLen * (static_cast<double>(c) + 0.5);
+        const double off = rng.nextDouble(-0.03, 0.03);
+        const double x = origin.x + ux * a + vx * off;
+        const double y = origin.y + uy * a + vy * off;
+        addGroundedPiece(plan, rng, heightFn, "foundation_strip_course", "SM_FoundationCourse", x, y, plan.yaw, 1.0);
+    }
+
+    for (int d = 0; d < 2; ++d) {
+        const double a = rng.nextDouble(-0.5, 0.5) * total;
+        const double lat = ((d == 0) ? 1.0 : -1.0) * rng.nextDouble(1.2, 2.0);
+        const double x = origin.x + ux * a + vx * lat;
+        const double y = origin.y + uy * a + vy * lat;
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.5, 0.8);
+        addGroundedPiece(plan, rng, heightFn, "foundation_strip_debris", "SM_MasonryDebris", x, y, yaw, scale);
+    }
+
+    const double half = 0.5 * total;
+    plan.reservation = DiscoveryReservation(DiscoveryType::FoundationStrip, plan.position, half + 1.5, half + 4.0);
+    plan.valid = true;
+    return plan;
+}
+
+// One standing stone pier stump with a loose fan of masonry debris downslope of its base.
+DiscoveryPlan generateStonePierStump(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::StonePierStumpRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::StonePierStump, Vec3{origin.x, origin.y, originZ}, 0.0);
+    plan.yaw = rng.nextDouble(0.0, 360.0);
+
+    addGroundedPiece(plan, rng, heightFn, "pier_stump_base", "SM_StonePier", origin.x, origin.y, plan.yaw, 1.1);
+
+    const int debrisCount = rng.nextInt(2, 3);
+    for (int d = 0; d < debrisCount; ++d) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = 1.2 + 0.6 * static_cast<double>(d) + rng.nextDouble(0.0, 0.4);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.4, 0.7);
+        addGroundedPiece(plan, rng, heightFn, "pier_stump_debris", "SM_MasonryDebris", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::StonePierStump, plan.position, 3.0, 6.0);
+    plan.valid = true;
+    return plan;
+}
+
+// A lone granite monolith standing on its own, with debris at the base.
+DiscoveryPlan generateMonolithStanding(
+    std::uint32_t seed,
+    const Vec3& origin,
+    const std::function<double(double, double)>& heightFn)
+{
+    DiscoveryRng rng(seed ^ Salt::MonolithStandingRng);
+    const double originZ = heightFn ? heightFn(origin.x, origin.y) : origin.z;
+    DiscoveryPlan plan(DiscoveryType::MonolithStanding, Vec3{origin.x, origin.y, originZ}, 0.0);
+    plan.yaw = rng.nextDouble(0.0, 360.0);
+
+    const double monoScale = rng.nextDouble(2.4, 3.2);
+    addGroundedPiece(plan, rng, heightFn, "standing_monolith", "SM_GraniteMonolith", origin.x, origin.y, plan.yaw, monoScale);
+
+    for (int d = 0; d < 2; ++d) {
+        const double a = rng.nextDouble(0.0, 2.0 * kPi);
+        const double dist = rng.nextDouble(1.0, 2.0);
+        const double x = origin.x + dist * std::cos(a);
+        const double y = origin.y + dist * std::sin(a);
+        const double yaw = rng.nextDouble(0.0, 360.0);
+        const double scale = rng.nextDouble(0.5, 0.8);
+        addGroundedPiece(plan, rng, heightFn, "monolith_base_debris", "SM_MasonryDebris", x, y, yaw, scale);
+    }
+
+    plan.reservation = DiscoveryReservation(DiscoveryType::MonolithStanding, plan.position, 4.0, 7.0);
+    plan.valid = true;
+    return plan;
+}
+
 static DiscoveryPlan planNaturalDiscovery(
     std::uint32_t seed,
     int cellQ,
@@ -907,6 +1062,45 @@ static DiscoveryPlan planNaturalDiscovery(
     return plan;
 }
 
+// Ruin-cell extras (non-highland, non-crossing ruin cells only). One roll gates the cell, then one
+// of four single-composition families is picked. A plan that breaches water clearance is dropped,
+// and the caller falls back to the cottage/shelter family.
+static constexpr double kRuinExtraChance = 0.3;
+
+static DiscoveryPlan planRuinExtra(
+    DiscoveryRng& roll,
+    std::uint32_t seed,
+    const Vec3& cellCenter,
+    const std::function<double(double, double)>& heightFn,
+    const std::function<double(double)>& streamXFn,
+    const std::function<double(double)>& streamHWFn,
+    bool hasStream)
+{
+    const int pick = roll.nextInt(0, 3);
+    DiscoveryPlan plan;
+    if (pick == 0) {
+        plan = generateDryStoneWallStub(seed, cellCenter, heightFn);
+    } else if (pick == 1) {
+        plan = generateFoundationStrip(seed, cellCenter, heightFn);
+    } else if (pick == 2) {
+        plan = generateStonePierStump(seed, cellCenter, heightFn);
+    } else {
+        plan = generateMonolithStanding(seed, cellCenter, heightFn);
+    }
+
+    if (!plan.valid || !hasStream) {
+        return plan;
+    }
+    for (const auto& p : plan.pieces) {
+        const double pSx = streamXFn(p.position.y);
+        const double pHw = streamHWFn(p.position.y);
+        if (std::abs(p.position.x - pSx) < pHw + kWaterClear) {
+            return DiscoveryPlan{};
+        }
+    }
+    return plan;
+}
+
 DiscoveryPlan planDiscovery(
     std::uint32_t seed,
     int cellQ,
@@ -955,13 +1149,23 @@ DiscoveryPlan planDiscovery(
     if (isStreamCrossing) {
         const Vec3 streamCenter{sx, cellCenter.y, heightFn ? heightFn(sx, cellCenter.y) : cellCenter.z};
         return generateStreamFootbridge(seed, streamCenter, heightFn, streamXFn, streamHWFn);
-    } else if (isHighlands) {
-        return generateRidgeTor(seed, cellCenter, cellClimate, heightFn);
-    } else if (cellClimate.forest >= 0.4 || cellClimate.biome[0] >= 0.4 || cellClimate.biome[3] >= 0.4) {
-        return generateCottageCorner(seed, cellCenter, cellClimate, heightFn);
-    } else {
-        return generateDryStoneShelter(seed, cellCenter, cellClimate, heightFn);
     }
+    if (isHighlands) {
+        return generateRidgeTor(seed, cellCenter, cellClimate, heightFn);
+    }
+
+    DiscoveryRng extraRoll(hashCell(seed, cellQ, cellR) ^ Salt::RuinExtraCell);
+    if (extraRoll.nextDouble(0.0, 1.0) < kRuinExtraChance) {
+        DiscoveryPlan extra = planRuinExtra(extraRoll, seed, cellCenter, heightFn, streamXFn, streamHWFn, hasStream);
+        if (extra.valid) {
+            return extra;
+        }
+    }
+
+    if (cellClimate.forest >= 0.4 || cellClimate.biome[0] >= 0.4 || cellClimate.biome[3] >= 0.4) {
+        return generateCottageCorner(seed, cellCenter, cellClimate, heightFn);
+    }
+    return generateDryStoneShelter(seed, cellCenter, cellClimate, heightFn);
 }
 
 } // namespace wood

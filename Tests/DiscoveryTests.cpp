@@ -725,6 +725,69 @@ static void test_natural_water_clearance() {
     EXPECT_TRUE(validCount > 0);
 }
 
+// Ruin-cell extras: every valid plan of the wanted type is grounded, contained by its reservation,
+// and clears the channel. mustFind requires at least one such plan within 400 seeds.
+static void check_ruin_type(
+    const char* label,
+    wood::DiscoveryType want,
+    const std::function<double(double, double)>& heightFn,
+    const std::function<double(double)>& streamXFn,
+    const std::function<double(double)>& streamHWFn,
+    const wood::Vec3& center,
+    bool mustFind)
+{
+    std::cout << "[TEST] " << label << "...\n";
+    wood::Surface climate;
+    bool found = false;
+    for (std::uint32_t seed = 1; seed <= 400; ++seed) {
+        const wood::DiscoveryPlan plan = wood::planDiscovery(seed, 3, 2, center, climate, heightFn, streamXFn, streamHWFn, true);
+        if (!plan.valid || plan.type != want) continue;
+        found = true;
+        EXPECT_FALSE(plan.pieces.empty());
+        EXPECT_TRUE(plan.reservation.type == want);
+        EXPECT_TRUE(plan.reservation.innerRadius > 0.0);
+        EXPECT_TRUE(plan.reservation.outerRadius > plan.reservation.innerRadius);
+        for (const auto& p : plan.pieces) {
+            EXPECT_GROUNDED(p, heightFn);
+            EXPECT_TRUE(wood::isInsideReservation(plan.reservation, p.position.x, p.position.y, false));
+            EXPECT_TRUE(std::abs(p.position.x - streamXFn(p.position.y)) >= streamHWFn(p.position.y) + 1.5 - 1e-9);
+        }
+    }
+    if (mustFind) {
+        EXPECT_TRUE(found);
+    }
+}
+
+static void test_ruin_extra_types() {
+    auto flatFn = [](double, double) -> double { return 10.0; };
+    auto rollingFn = [](double x, double y) -> double { return 10.0 + 0.2 * std::sin(x * 0.1) + 0.2 * std::cos(y * 0.1); };
+    auto farStreamX = [](double) -> double { return 5000.0; };
+    auto farStreamHW = [](double) -> double { return 5.0; };
+    auto nearStreamX = [](double) -> double { return 0.0; };
+    auto nearStreamHW = [](double) -> double { return 4.0; };
+
+    const wood::Vec3 dryCenter{20.0, 20.0, 10.0};
+    check_ruin_type("test_dry_stone_wall_stub_ruin", wood::DiscoveryType::DryStoneWallStub,
+        rollingFn, farStreamX, farStreamHW, dryCenter, true);
+    check_ruin_type("test_foundation_strip_ruin", wood::DiscoveryType::FoundationStrip,
+        rollingFn, farStreamX, farStreamHW, dryCenter, true);
+    check_ruin_type("test_stone_pier_stump_ruin", wood::DiscoveryType::StonePierStump,
+        flatFn, farStreamX, farStreamHW, dryCenter, true);
+    check_ruin_type("test_monolith_standing_ruin", wood::DiscoveryType::MonolithStanding,
+        rollingFn, farStreamX, farStreamHW, dryCenter, true);
+
+    // Centre 15 m from the channel: not stream-crossing, so the extras are rolled and water-checked.
+    const wood::Vec3 nearCenter{15.0, 20.0, 10.0};
+    check_ruin_type("test_dry_stone_wall_stub_water", wood::DiscoveryType::DryStoneWallStub,
+        rollingFn, nearStreamX, nearStreamHW, nearCenter, false);
+    check_ruin_type("test_foundation_strip_water", wood::DiscoveryType::FoundationStrip,
+        rollingFn, nearStreamX, nearStreamHW, nearCenter, false);
+    check_ruin_type("test_stone_pier_stump_water", wood::DiscoveryType::StonePierStump,
+        rollingFn, nearStreamX, nearStreamHW, nearCenter, false);
+    check_ruin_type("test_monolith_standing_water", wood::DiscoveryType::MonolithStanding,
+        rollingFn, nearStreamX, nearStreamHW, nearCenter, false);
+}
+
 int main() {
     std::cout << "Running DiscoveryTests...\n";
 
@@ -750,6 +813,8 @@ int main() {
     test_natural_discoveries_generated();
     test_natural_terrain_gates();
     test_natural_water_clearance();
+
+    test_ruin_extra_types();
 
     std::cout << "\nTest Summary: " << (gTestCount - gFailures) << "/" << gTestCount << " passed.\n";
 
