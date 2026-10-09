@@ -103,21 +103,23 @@ double familyMul(const std::array<double,kFamilyCount>& biome,const std::array<d
  for(std::size_t i=0;i<kFamilyCount;++i) m+=biome[i]*(mul[i]-1);
  return m;
 }
-// T1c: per-family tree species mix in Biome order, columns in Species order (Pine, Broadleaf, BroadleafGiant, Conifer, Evergreen).
-// Each row sums to one, so a position's blended mix sums to one.
+// T1c: per-family tree species mix in Biome order, columns in Species order (Pine, Broadleaf, BroadleafGiant, Conifer, Evergreen,
+// Acacia, BaldCypress, CypressKnees, Cattail, PrairieGrass, Krummholz). Columns 5-10 are the new-biome species; they are zero
+// for every family except Savannah, Swamp, Marsh, Prairie and IcyHills, so existing families draw identical species.
+// Rows need not sum to one: pickSpecies normalises by the blended total.
 constexpr std::array<std::array<double,kSpeciesCount>,kFamilyCount> kSpeciesMix{{
- {{0.4,0.5,0.0,0.1,0.0}}, // TemperateForest
- {{0.6,0.4,0.0,0.0,0.0}}, // DryGrassland
- {{0.7,0.0,0.0,0.3,0.0}}, // RockyHighlands
- {{0.3,0.0,0.0,0.7,0.0}}, // Taiga
- {{0.2,0.2,0.3,0.3,0.0}}, // OldGrowthForest
- {{0.0,0.2,0.0,0.8,0.0}}, // ColdRainforest
- {{0.4,0.0,0.0,0.6,0.0}}, // IcyHills
- {{0.0,0.7,0.0,0.0,0.3}}, // Savannah
- {{0.0,0.5,0.0,0.2,0.3}}, // Swamp
- {{0.0,1.0,0.0,0.0,0.0}}, // Marsh
- {{0.0,0.3,0.1,0.0,0.6}}, // WarmRainforest
- {{0.6,0.4,0.0,0.0,0.0}}  // Prairie
+ {{0.4,0.5,0.0,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // TemperateForest
+ {{0.6,0.4,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // DryGrassland
+ {{0.7,0.0,0.0,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // RockyHighlands
+ {{0.3,0.0,0.0,0.7,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // Taiga
+ {{0.2,0.2,0.3,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // OldGrowthForest
+ {{0.0,0.2,0.0,0.8,0.0,0.0,0.0,0.0,0.0,0.0,0.0}}, // ColdRainforest
+ {{0.4,0.0,0.0,0.6,0.0,0.0,0.0,0.0,0.0,0.0,0.5}}, // IcyHills
+ {{0.0,0.7,0.0,0.0,0.3,0.7,0.0,0.0,0.0,0.0,0.0}}, // Savannah
+ {{0.0,0.5,0.0,0.2,0.3,0.0,0.4,0.2,0.0,0.0,0.0}}, // Swamp
+ {{0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.6,0.0,0.0}}, // Marsh
+ {{0.0,0.3,0.1,0.0,0.6,0.0,0.0,0.0,0.0,0.0,0.0}}, // WarmRainforest
+ {{0.6,0.4,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.5,0.0}}  // Prairie
 }};
 // Picks a species by blending the family rows with the position's family weights; roll is in [0,1).
 int pickSpecies(const std::array<double,kFamilyCount>& biome,double roll) {

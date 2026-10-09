@@ -651,6 +651,11 @@ AUTHORED_KIT=[
  ('ArtSource/Authored/Landmarks/standing_stone_01.fbx','/Game/Art/Authored/Landmarks','standing_stone_01',True),
  ('ArtSource/Authored/Landmarks/standing_stone_02.fbx','/Game/Art/Authored/Landmarks','standing_stone_02',True),
  ('ArtSource/Authored/Landmarks/standing_stone_03.fbx','/Game/Art/Authored/Landmarks','standing_stone_03',True),
+ # Authored anomalies (Blender, ArtSource/Authored/Anomalies): kit ids 21-24 (WoodKit.h). Staircase and chess piece are solid.
+ ('ArtSource/Authored/Anomalies/staircase_to_nowhere.fbx','/Game/Art/Authored/Anomalies','staircase_to_nowhere',True),
+ ('ArtSource/Authored/Anomalies/rusted_sword.fbx','/Game/Art/Authored/Anomalies','rusted_sword',False),
+ ('ArtSource/Authored/Anomalies/stone_chess_piece.fbx','/Game/Art/Authored/Anomalies','stone_chess_piece',True),
+ ('ArtSource/Authored/Anomalies/broken_crown.fbx','/Game/Art/Authored/Anomalies','broken_crown',False),
 ]
 for relative,destination,name,solid in AUTHORED_KIT:
     source=ROOT/relative
@@ -672,8 +677,8 @@ for relative,destination,name,solid in AUTHORED_KIT:
         LIB.save_loaded_asset(mesh)
     kit.append(mesh)
 # Kit ids must match WoodKit.h exactly; a mismatch would silently shift every kit bucket.
-if len(kit)!=21:
-    raise RuntimeError('Kit array length %d, expected 21 (WoodKit.h count)' % len(kit))
+if len(kit)!=25:
+    raise RuntimeError('Kit array length %d, expected 25 (WoodKit.h count)' % len(kit))
 palette.set_editor_property('kit',kit)
 # Species canopy and dead wood (Prepare-Art TREE_GROUPS). Forced replace-reimport; palette arrays are not yet routed at runtime.
 # Standing trees: Nanite on LOD0 only (no authored LODs; leaves kept at 100% triangles, no trim), UV1 root mask kept,
@@ -778,6 +783,22 @@ for source in sorted((ROOT/'ArtSource/Authored/Vegetation').glob('*.glb')):
                 leaf=any(key in interface.get_name().lower() for key in ('leaf','leaves','needle','twig','frond','blade'))
                 mesh.set_material(i,with_wind(interface,3.0 if leaf else 16.0,True,leaf))
         LIB.save_loaded_asset(mesh)
+
+# Authored new-biome vegetation routed to palette species slots (WoodPalette.h). Names match the Species enum (Acacia..Krummholz).
+VEGETATION_PALETTE=[
+ ('acacia_savannah_01','acacia_trees'),
+ ('bald_cypress_01','bald_cypress_trees'),
+ ('bald_cypress_knees','cypress_knees_trees'),
+ ('cattail_reed_clump_01','cattail_trees'),
+ ('prairie_grass_clump_01','prairie_grass_trees'),
+ ('krummholz_conifer_01','krummholz_trees'),
+]
+for name,palette_slot in VEGETATION_PALETTE:
+    found=find_meshes('/Game/Art/Authored/Vegetation',name)
+    if len(found)!=1:
+        raise RuntimeError('Vegetation palette mesh missing or ambiguous: '+name)
+    palette.set_editor_property(palette_slot,[found[0]])
+LIB.save_loaded_asset(palette)
 
 map_path='/Game/Maps/VisualBenchmark'
 if not LIB.does_asset_exist(map_path):

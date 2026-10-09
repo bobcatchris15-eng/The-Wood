@@ -147,6 +147,12 @@ void AWoodWorld::Generate() {
   }
   Add(Palette->ConiferTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::Conifer));
   Add(Palette->EvergreenTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::Evergreen));
+  Add(Palette->AcaciaTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::Acacia));
+  Add(Palette->BaldCypressTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::BaldCypress));
+  Add(Palette->CypressKneesTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::CypressKnees));
+  Add(Palette->CattailTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::Cattail));
+  Add(Palette->PrairieGrassTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::PrairieGrass));
+  Add(Palette->KrummholzTrees,wood::Kind::Tree,false,false,static_cast<int32>(wood::Species::Krummholz));
   Add(Palette->Ferns,wood::Kind::Fern);
   Add(Palette->Grasses,wood::Kind::Grass); Add(Palette->Rocks,wood::Kind::Rock); Add(Palette->Prairie,wood::Kind::Grass,false,true);
   // Fallen logs: Kind::Deadwood has no collision and no wind material.

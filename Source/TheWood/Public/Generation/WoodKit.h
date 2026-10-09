@@ -27,8 +27,12 @@ inline constexpr Entry table[]={
  {"SM_StandingStone01",18},
  {"SM_StandingStone02",19},
  {"SM_StandingStone03",20},
+ {"StaircaseToNowhere",21},
+ {"RustedSword",22},
+ {"StoneChessPiece",23},
+ {"BrokenCrown",24},
 };
-inline constexpr int count=21;
+inline constexpr int count=25;
 // Returns kitId for a known kit mesh name, -1 otherwise.
 inline int kitIdFor(const std::string& mesh) {
  for(const auto& e:table) if(mesh==e.mesh) return e.id;

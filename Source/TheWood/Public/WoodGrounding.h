@@ -18,17 +18,18 @@ struct FWoodPlacementProfile {
 // Palette Props slots and prop bucket count; prop buckets are 6+propId.
 inline constexpr int32 WoodPropCount=4;
 // Palette Kit slots (kitId order, WoodKit.h); kit buckets are WoodKitBucketBase+kitId.
-inline constexpr int32 WoodKitCount=21;
+inline constexpr int32 WoodKitCount=25;
 inline constexpr int32 WoodKitBucketBase=6+WoodPropCount;
 // Bucket map (candidate tables, WoodPreparedChunk.cpp): 0-3 kinds, 4 young, 5 prairie, 6-9 props,
-// 10-30 kits, 31-35 tree species (WoodSpeciesBucketBase+species), 36 deadwood.
+// 10-34 kits, 35-45 tree species (WoodSpeciesBucketBase+species), 46 deadwood.
 inline constexpr int32 WoodSpeciesCount=wood::kSpeciesCount;
 inline constexpr int32 WoodSpeciesBucketBase=WoodKitBucketBase+WoodKitCount;
 inline constexpr int32 WoodDeadwoodBucket=WoodSpeciesBucketBase+WoodSpeciesCount;
 inline constexpr int32 WoodBucketCount=WoodDeadwoodBucket+1;
 // Kit meshes with collision: walls, piers, abutments, boulders. Rubble, debris, fern patch, foundation and stepping stones have none.
 // Landmark kits 15-20 (tower, spire, ring base, standing stones) are solid; logs and stump snag are not.
-inline bool WoodKitSolid(int32 KitId) { return KitId==0||KitId==2||KitId==3||KitId==7||KitId==9||KitId==10||(KitId>=15&&KitId<=20); }
+// Anomalies 21 (staircase) and 23 (chess piece) are solid; 22 (sword) and 24 (crown) are not.
+inline bool WoodKitSolid(int32 KitId) { return KitId==0||KitId==2||KitId==3||KitId==7||KitId==9||KitId==10||(KitId>=15&&KitId<=21)||KitId==23; }
 THEWOOD_API FWoodPlacementProfile WoodPlacementProfile(const UStaticMesh& Asset);
 
 // Cached imported root skirt vertices, in local Unreal centimetres.

@@ -30,6 +30,33 @@ FVector ScaleFor(wood::fauna::CreatureKind Kind) {
  }
  return FVector(1.0);
 }
+// Authored species mesh per kind (Blender, /Game/Art/Authored/Creatures). Strange kinds reuse the nearest species mesh.
+// Host kind supplies the mesh; ScaleFor(kind)/ScaleFor(host) gives the strange-kind scale relative to it.
+wood::fauna::CreatureKind HostFor(wood::fauna::CreatureKind Kind) {
+ using wood::fauna::CreatureKind;
+ switch(Kind) {
+ case CreatureKind::MothStag: return CreatureKind::Deer;
+ case CreatureKind::GlassHare: return CreatureKind::Hare;
+ case CreatureKind::LanternOwl: return CreatureKind::Owl;
+ case CreatureKind::StoneTortoise: return CreatureKind::Bear;
+ case CreatureKind::ShadowFox: return CreatureKind::Fox;
+ default: return Kind;
+ }
+}
+const TCHAR* MeshPathFor(wood::fauna::CreatureKind Kind) {
+ using wood::fauna::CreatureKind;
+ switch(HostFor(Kind)) {
+ case CreatureKind::Deer: return TEXT("/Game/Art/Authored/Creatures/deer.deer");
+ case CreatureKind::Elk: return TEXT("/Game/Art/Authored/Creatures/elk.elk");
+ case CreatureKind::Bear: return TEXT("/Game/Art/Authored/Creatures/bear.bear");
+ case CreatureKind::Fox: return TEXT("/Game/Art/Authored/Creatures/fox.fox");
+ case CreatureKind::Hare: return TEXT("/Game/Art/Authored/Creatures/hare.hare");
+ case CreatureKind::Crow: return TEXT("/Game/Art/Authored/Creatures/crow.crow");
+ case CreatureKind::Owl: return TEXT("/Game/Art/Authored/Creatures/owl.owl");
+ case CreatureKind::Heron: return TEXT("/Game/Art/Authored/Creatures/heron.heron");
+ default: return nullptr;
+ }
+}
 // Placeholder colour tint for strange kinds only. Mainstream kinds keep the default material.
 FLinearColor TintFor(wood::fauna::CreatureKind Kind) {
  using wood::fauna::CreatureKind;
@@ -57,13 +84,22 @@ void AWoodCreature::Init(wood::fauna::CreatureKind Kind, AWoodWorld* Terrain, do
  HeadingDeg=Heading;
  Ground=Terrain;
  const FVector Scale=ScaleFor(Kind);
- Body->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube")));
+ UStaticMesh* Species=MeshPathFor(Kind)?LoadObject<UStaticMesh>(nullptr,MeshPathFor(Kind)):nullptr;
+ if(Species) {
+  // Authored meshes pivot at ground contact; strange kinds scale the host mesh relative to their own box.
+  const FVector Host=ScaleFor(HostFor(Kind));
+  Body->SetStaticMesh(Species);
+  Body->SetRelativeScale3D(FVector(Scale.X/Host.X,Scale.Y/Host.Y,Scale.Z/Host.Z));
+  Body->SetRelativeLocation(FVector::ZeroVector);
+ } else {
+  // Fallback cube (no authored mesh): pivot is its centre; lift by half its height so the base sits on the ground.
+  Body->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube")));
+  Body->SetRelativeScale3D(Scale);
+  Body->SetRelativeLocation(FVector(0,0,Scale.Z*50.0));
+ }
  if(wood::fauna::isStrange(Kind)) {
   if(UMaterialInstanceDynamic* Dyn=Body->CreateAndSetMaterialInstanceDynamic(0)) Dyn->SetVectorParameterValue(TEXT("Color"),TintFor(Kind));
  }
- Body->SetRelativeScale3D(Scale);
- // Cube pivot is its centre; lift by half its height so the base sits on the ground.
- Body->SetRelativeLocation(FVector(0,0,Scale.Z*50.0));
 }
 
 void AWoodCreature::Tick(float DeltaSeconds) {

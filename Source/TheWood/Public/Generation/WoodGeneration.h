@@ -44,9 +44,9 @@ struct Surface {
 };
 enum class Kind { Tree, Fern, Grass, Rock, Prop, Kit, Deadwood };
 // Tree species; Pine is the default (0) and the value carried by non-tree features.
-enum class Species : int { Pine, Broadleaf, BroadleafGiant, Conifer, Evergreen };
-inline constexpr int kSpeciesCount=5;
-static_assert(static_cast<int>(Species::Evergreen)+1==kSpeciesCount,"kSpeciesCount out of sync with Species enum");
+enum class Species : int { Pine, Broadleaf, BroadleafGiant, Conifer, Evergreen, Acacia, BaldCypress, CypressKnees, Cattail, PrairieGrass, Krummholz };
+inline constexpr int kSpeciesCount=11;
+static_assert(static_cast<int>(Species::Krummholz)+1==kSpeciesCount,"kSpeciesCount out of sync with Species enum");
 // Prop features carry propId (0 signboard, 1 picnic table, 2 bin, 3 fence segment); -1 otherwise.
 // Kit features carry kitId (WoodKit.h table index); pitch/roll copied from the piece (same units); -1/0 otherwise.
 // Tree features carry species (Species order); 0 otherwise.
