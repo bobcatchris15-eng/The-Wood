@@ -1178,7 +1178,7 @@
       19.15457534790039,
       19.468875885009766
     ],
-    "triangles": 3859574,
+    "triangles": 145000,
     "materials": 3,
     "pivot": "trunk_ground_center",
     "source_triangles": 3863832,
@@ -1188,7 +1188,13 @@
     "texture_res": "1k",
     "needle_card_triangles": 0,
     "height_m": 19.469,
-    "crown_width_m": 24.417
+    "crown_width_m": 24.417,
+    "pre_decimate_triangles": 3859574,
+    "decimate_ratios": [
+      0.03757
+    ],
+    "lod0_budget_max": 150000,
+    "lod0_budget_version": 1
   },
   {
     "asset": "tree_small_02",
@@ -1199,7 +1205,7 @@
       4.292477130889893,
       4.556740760803223
     ],
-    "triangles": 2062435,
+    "triangles": 145000,
     "materials": 3,
     "pivot": "trunk_ground_center",
     "source_triangles": 2062487,
@@ -1209,7 +1215,13 @@
     "texture_res": "1k",
     "needle_card_triangles": 0,
     "height_m": 4.557,
-    "crown_width_m": 4.292
+    "crown_width_m": 4.292,
+    "pre_decimate_triangles": 2062435,
+    "decimate_ratios": [
+      0.07031
+    ],
+    "lod0_budget_max": 150000,
+    "lod0_budget_version": 1
   },
   {
     "asset": "fir_tree_01",
@@ -1220,7 +1232,7 @@
       6.426823139190674,
       18.92510986328125
     ],
-    "triangles": 4168173,
+    "triangles": 145000,
     "materials": 4,
     "pivot": "trunk_ground_center",
     "source_triangles": 4176819,
@@ -1230,7 +1242,13 @@
     "texture_res": "1k",
     "needle_card_triangles": 0,
     "height_m": 18.925,
-    "crown_width_m": 6.534
+    "crown_width_m": 6.534,
+    "pre_decimate_triangles": 4168173,
+    "decimate_ratios": [
+      0.03479
+    ],
+    "lod0_budget_max": 150000,
+    "lod0_budget_version": 1
   },
   {
     "asset": "fir_tree_01",
@@ -1241,7 +1259,7 @@
       6.056670665740967,
       14.055205345153809
     ],
-    "triangles": 2294309,
+    "triangles": 145000,
     "materials": 4,
     "pivot": "trunk_ground_center",
     "source_triangles": 2300624,
@@ -1251,7 +1269,13 @@
     "texture_res": "1k",
     "needle_card_triangles": 0,
     "height_m": 14.055,
-    "crown_width_m": 6.057
+    "crown_width_m": 6.057,
+    "pre_decimate_triangles": 2294309,
+    "decimate_ratios": [
+      0.0632
+    ],
+    "lod0_budget_max": 150000,
+    "lod0_budget_version": 1
   },
   {
     "asset": "fir_tree_01",
@@ -1262,7 +1286,7 @@
       5.9662370681762695,
       14.520581245422363
     ],
-    "triangles": 503607,
+    "triangles": 145000,
     "materials": 4,
     "pivot": "trunk_ground_center",
     "source_triangles": 505494,
@@ -1272,7 +1296,13 @@
     "texture_res": "1k",
     "needle_card_triangles": 0,
     "height_m": 14.521,
-    "crown_width_m": 6.306
+    "crown_width_m": 6.306,
+    "pre_decimate_triangles": 503607,
+    "decimate_ratios": [
+      0.28792
+    ],
+    "lod0_budget_max": 150000,
+    "lod0_budget_version": 1
   },
   {
     "asset": "island_tree_01",
@@ -1283,7 +1313,7 @@
       4.817679405212402,
       5.027446746826172
     ],
-    "triangles": 1598956,
+    "triangles": 145000,
     "materials": 3,
     "pivot": "trunk_ground_center",
     "source_triangles": 1599403,
@@ -1293,7 +1323,13 @@
     "texture_res": "1k",
     "needle_card_triangles": 0,
     "height_m": 5.027,
-    "crown_width_m": 4.818
+    "crown_width_m": 4.818,
+    "pre_decimate_triangles": 1598956,
+    "decimate_ratios": [
+      0.09068
+    ],
+    "lod0_budget_max": 150000,
+    "lod0_budget_version": 1
   },
   {
     "asset": "dead_tree_trunk",
@@ -1314,7 +1350,11 @@
     "texture_res": "1k",
     "needle_card_triangles": 0,
     "height_m": 0.29,
-    "crown_width_m": 3.051
+    "crown_width_m": 3.051,
+    "pre_decimate_triangles": 92581,
+    "decimate_ratios": [],
+    "lod0_budget_max": 150000,
+    "lod0_budget_version": 1
   },
   {
     "asset": "dead_tree_trunk_02",
@@ -1335,7 +1375,11 @@
     "texture_res": "1k",
     "needle_card_triangles": 0,
     "height_m": 1.055,
-    "crown_width_m": 4.051
+    "crown_width_m": 4.051,
+    "pre_decimate_triangles": 82326,
+    "decimate_ratios": [],
+    "lod0_budget_max": 150000,
+    "lod0_budget_version": 1
   },
   {
     "asset": "prairie_clump",

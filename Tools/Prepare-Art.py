@@ -27,6 +27,31 @@ TREE_GROUPS = {
     'dead_tree_trunk_02': 'snag',
 }
 tree_counts = {}
+# LOD0 triangle ceiling for non-pine species groups (collapse decimation). Bump TREE_BUDGET_VERSION to force reprocessing.
+TREE_LOD0_MAX = 150000
+TREE_BUDGET_VERSION = 1
+
+
+def decimate_tree(obj):
+    """Collapse-decimate a species group tree to TREE_LOD0_MAX. Whole-mesh collapse: trunk, branches and leaf geometry share one ratio.
+    Material slots and UV layers survive collapse, so the UV1 root mask is written afterwards by wind_uv.
+    Returns (triangles_before, triangles_after, ratios_applied)."""
+    obj.data.calc_loop_triangles()
+    before = len(obj.data.loop_triangles)
+    ratios = []
+    while len(obj.data.loop_triangles) > TREE_LOD0_MAX and len(ratios) < 3:
+        current = len(obj.data.loop_triangles)
+        ratio = (TREE_LOD0_MAX - 5000) / current
+        ratios.append(round(ratio, 5))
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        modifier = obj.modifiers.new('LOD0Budget', 'DECIMATE')
+        modifier.decimate_type = 'COLLAPSE'
+        modifier.ratio = ratio
+        bpy.ops.object.modifier_apply(modifier=modifier.name)
+        obj.data.calc_loop_triangles()
+    return before, len(obj.data.loop_triangles), ratios
 
 
 def is_tree(name):
@@ -233,7 +258,7 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
     old = json.loads(previous.read_text(encoding='utf-8')) if previous.exists() else []
     cached = [record for record in old if record['asset'] == name]
     rock_2k = name in ROCK_IDS
-    if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==7 for record in cached)) and (not rock_2k or all(record.get('texture_res')=='2k' for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
+    if cached and (name!='pine_tree_01' or all(record.get('canopy_version')==7 for record in cached)) and (name not in TREE_GROUPS or all(record.get('lod0_budget_version')==TREE_BUDGET_VERSION for record in cached)) and (not rock_2k or all(record.get('texture_res')=='2k' for record in cached)) and all((record.get('wind_color_version') == 1 or record.get('wind_uv_version') == 2) and (output / record['file']).exists() for record in cached):
         for record in cached:
             if record.get('wind_uv_version') != 2:
                 wind_uv(output / record['file'], is_tree(name))
@@ -283,6 +308,12 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
         soil_faces = remove_soil(obj) if is_tree(name) else 0
         if is_tree(name):
             print(f'{variant}: removed {soil_faces} soil ground faces')
+        budget = {}
+        if name in TREE_GROUPS:
+            pre_tris, post_tris, ratios = decimate_tree(obj)
+            print(f'{variant}: LOD0 tris {pre_tris} -> {post_tris} ratios {ratios}')
+            budget = {'pre_decimate_triangles': pre_tris, 'decimate_ratios': ratios,
+                      'lod0_budget_max': TREE_LOD0_MAX, 'lod0_budget_version': TREE_BUDGET_VERSION}
         canopy_triangles=needle_canopy(obj,high.z-low.z,index) if name=='pine_tree_01' else 0
         obj.name = variant
         obj.data.calc_loop_triangles()
@@ -296,7 +327,7 @@ for name in ('pine_sapling_small', 'fern_02', 'grass_medium_01', 'grass_bermuda_
                         'canopy_version': 7 if name=='pine_tree_01' else 0,
                         'soil_faces_removed': soil_faces,
                         'texture_res': '2k' if name in ROCK_IDS else '1k',
-                        'needle_card_triangles': canopy_triangles, **tree_fields})
+                        'needle_card_triangles': canopy_triangles, **tree_fields, **budget})
         bpy.ops.export_scene.gltf(filepath=str(output / (variant + '.glb')),
                                   export_format='GLB', use_selection=True)
         wind_uv(output / (variant + '.glb'), is_tree(name))

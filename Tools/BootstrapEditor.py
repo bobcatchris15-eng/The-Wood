@@ -542,6 +542,57 @@ for index,(name,solid) in enumerate(KIT_FILES):
     LIB.save_loaded_asset(mesh)
     kit.append(mesh)
 palette.set_editor_property('kit',kit)
+# Species canopy and dead wood (Prepare-Art TREE_GROUPS). Forced replace-reimport; palette arrays are not yet routed at runtime.
+# Standing trees: pine-style LODs (LOD0 + 65/35/18%, screen 0.45/0.18/0.065), UV1 root mask kept, leaf/bark materials wrapped with FoliageWind.
+# Collision: none in bootstrap for standing trees, as for pines (glTF hulls untrustworthy; trunk-only collision comes from the world adapter).
+# DeadWood: fallen logs, no collision, no wind.
+SPECIES_FILES=[
+ ('broadleaf','tree_broadleaf_00'),
+ ('broadleaf','tree_broadleaf_01'),
+ ('conifer','tree_conifer_00'),
+ ('conifer','tree_conifer_01'),
+ ('conifer','tree_conifer_02'),
+ ('evergreen','tree_evergreen_00'),
+ ('snag','tree_snag_00'),
+ ('snag','tree_snag_01'),
+]
+SPECIES_PALETTE={'broadleaf':'broadleaf_trees','conifer':'conifer_trees','evergreen':'evergreen_trees','snag':'dead_wood'}
+species={key:[] for key in SPECIES_PALETTE}
+for group,name in SPECIES_FILES:
+    source=prepared/(name+'.glb')
+    if not source.exists():
+        raise RuntimeError('Missing species source: '+str(source))
+    destination='/Game/Art/Species/'+VERSION
+    task=unreal.AssetImportTask()
+    task.set_editor_property('filename',str(source))
+    task.set_editor_property('destination_path',destination)
+    task.set_editor_property('automated',True)
+    task.set_editor_property('save',True)
+    task.set_editor_property('replace_existing',True)
+    TOOLS.import_asset_tasks([task])
+    found=[LIB.load_asset(path) for path in LIB.list_assets(destination,recursive=True)]
+    found=[mesh for mesh in found if isinstance(mesh,unreal.StaticMesh) and mesh.get_name()==name]
+    if len(found)!=1:
+        raise RuntimeError('Species import produced no unique mesh: '+name)
+    mesh=found[0]
+    SMES.remove_collisions(mesh)
+    if group!='snag':
+        mesh.set_editor_property('allow_cpu_access',True)
+    settings=SMES.get_lod_build_settings(mesh,0)
+    settings.set_editor_property('generate_lightmap_u_vs',False)
+    SMES.set_lod_build_settings(mesh,0,settings)
+    author_lods(mesh,'trees')
+    if group!='snag':
+        for i,item in enumerate(mesh.get_editor_property('static_materials')):
+            interface=item.get_editor_property('material_interface')
+            if interface is not None and '/Game/Wood/FoliageWind/' not in interface.get_path_name():
+                mesh.set_material(i,with_wind(interface,16.0))
+    LIB.save_loaded_asset(mesh)
+    species[group].append(mesh)
+for group,palette_slot in SPECIES_PALETTE.items():
+    if not species[group]:
+        raise RuntimeError('Empty species palette slot: '+palette_slot)
+    palette.set_editor_property(palette_slot,species[group])
 LIB.save_loaded_asset(palette)
 
 # Preserve low-root vertex data on older sapling assets too, for packaged
