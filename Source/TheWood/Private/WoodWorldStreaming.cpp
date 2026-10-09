@@ -126,8 +126,8 @@ void AWoodWorld::SpawnFauna(FWoodResident& Resident,FIntPoint Chunk) {
  for(int32 J=0;J<2;++J) for(int32 I=0;I<2;++I) {
   const int32 GX=Chunk.X*2+I,GY=Chunk.Y*2+J;
   const auto Region=Generator.regionOwner(GX*Cell+Cell/2,GY*Cell+Cell/2);
-  const auto Family=Generator.region(Region.q,Region.r).family;
-  for(const auto& Spawn:wood::fauna::spawnCreatures(static_cast<uint32>(Seed),GX,GY,Family)) {
+  const auto& RegionInfo=Generator.region(Region.q,Region.r);
+  for(const auto& Spawn:wood::fauna::spawnCreatures(static_cast<uint32>(Seed),GX,GY,RegionInfo.family,RegionInfo.unreal)) {
    const double X=GX*Cell+Spawn.x,Y=GY*Cell+Spawn.y;
    const FVector Where(X*100,Y*100,GroundAt(X*100,Y*100));
    if(auto* Creature=GetWorld()->SpawnActor<AWoodCreature>(Where,FRotator(0,Spawn.heading,0))) {

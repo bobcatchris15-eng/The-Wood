@@ -22,7 +22,11 @@ inline constexpr double kLoseM = 35.0;
 // Seconds beyond kLoseM before a creature returns to Idle.
 inline constexpr double kLoseS = 10.0;
 
-enum class CreatureKind : std::uint8_t { Deer, Fox, Hare, Crow, Owl, Elk, Bear, Heron };
+// Strange kinds (MothStag onward) spawn only through the unreal flag of spawnCreatures.
+enum class CreatureKind : std::uint8_t {
+    Deer, Fox, Hare, Crow, Owl, Elk, Bear, Heron,
+    MothStag, GlassHare, LanternOwl, StoneTortoise, ShadowFox
+};
 
 // Idle -> Notice -> Watch -> Retreat (timid) | Warn (territorial). Never approaches, never attacks.
 enum class CreatureState : std::uint8_t { Idle, Notice, Watch, Retreat, Warn };
@@ -39,11 +43,15 @@ struct CreatureMind {
     double farS = 0.0;        // accumulated seconds beyond kLoseM
 };
 
-// Mind for a kind: territorial only for Bear.
+// Mind for a kind: territorial for Bear, StoneTortoise and ShadowFox.
 CreatureMind mindFor(CreatureKind kind);
 
-// Pure in (seed, gx, gy, family). At most kMaxPerChunk entries.
-std::vector<CreatureSpawn> spawnCreatures(std::uint32_t seed, int gx, int gy, Biome family);
+// True for the strange kinds (MothStag onward).
+bool isStrange(CreatureKind kind);
+
+// Pure in (seed, gx, gy, family, unreal). At most kMaxPerChunk entries.
+// unreal=true: roughly half of the slots draw a strange kind instead of the family table.
+std::vector<CreatureSpawn> spawnCreatures(std::uint32_t seed, int gx, int gy, Biome family, bool unreal = false);
 
 // One transition per call. Distance drives all transitions; dtS accrues the Idle-return timer.
 CreatureState stepCreature(CreatureState state, double playerDistM, double dtS, CreatureMind& mind);

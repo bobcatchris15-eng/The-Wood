@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 namespace {
 // Retreat speed, cm/s.
@@ -21,8 +22,25 @@ FVector ScaleFor(wood::fauna::CreatureKind Kind) {
  case CreatureKind::Crow: return FVector(0.2,0.15,0.15);
  case CreatureKind::Owl: return FVector(0.25,0.25,0.3);
  case CreatureKind::Heron: return FVector(0.8,0.3,1.2);
+ case CreatureKind::MothStag: return FVector(1.0,0.6,1.3);
+ case CreatureKind::GlassHare: return FVector(0.45,0.22,0.32);
+ case CreatureKind::LanternOwl: return FVector(0.3,0.28,0.4);
+ case CreatureKind::StoneTortoise: return FVector(1.0,0.8,0.4);
+ case CreatureKind::ShadowFox: return FVector(0.9,0.35,0.6);
  }
  return FVector(1.0);
+}
+// Placeholder colour tint for strange kinds only. Mainstream kinds keep the default material.
+FLinearColor TintFor(wood::fauna::CreatureKind Kind) {
+ using wood::fauna::CreatureKind;
+ switch(Kind) {
+ case CreatureKind::MothStag: return FLinearColor(0.9,0.6,0.2);
+ case CreatureKind::GlassHare: return FLinearColor(0.6,0.9,1.0);
+ case CreatureKind::LanternOwl: return FLinearColor(1.0,0.9,0.3);
+ case CreatureKind::StoneTortoise: return FLinearColor(0.45,0.5,0.42);
+ case CreatureKind::ShadowFox: return FLinearColor(0.12,0.05,0.18);
+ default: return FLinearColor::White;
+ }
 }
 }
 
@@ -40,6 +58,9 @@ void AWoodCreature::Init(wood::fauna::CreatureKind Kind, AWoodWorld* Terrain, do
  Ground=Terrain;
  const FVector Scale=ScaleFor(Kind);
  Body->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Cube.Cube")));
+ if(wood::fauna::isStrange(Kind)) {
+  if(UMaterialInstanceDynamic* Dyn=Body->CreateAndSetMaterialInstanceDynamic(0)) Dyn->SetVectorParameterValue(TEXT("Color"),TintFor(Kind));
+ }
  Body->SetRelativeScale3D(Scale);
  // Cube pivot is its centre; lift by half its height so the base sits on the ground.
  Body->SetRelativeLocation(FVector(0,0,Scale.Z*50.0));

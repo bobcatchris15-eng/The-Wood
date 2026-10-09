@@ -12,6 +12,8 @@ constexpr std::uint32_t kSaltFaunaKind = 0xFA0002U;
 constexpr std::uint32_t kSaltFaunaX = 0xFA0003U;
 constexpr std::uint32_t kSaltFaunaY = 0xFA0004U;
 constexpr std::uint32_t kSaltFaunaHeading = 0xFA0005U;
+constexpr std::uint32_t kSaltFaunaStrangeGate = 0xFA0006U;
+constexpr std::uint32_t kSaltFaunaStrangeKind = 0xFA0007U;
 // Per-slot offset so each creature slot in a chunk draws independent rolls.
 constexpr std::uint32_t kSaltFaunaSlotStride = 0x100U;
 
@@ -44,15 +46,24 @@ std::vector<CreatureKind> familyTable(Biome family) {
     return {};
 }
 
+// Strange kinds: unreal-region only. Used in place of the family table for about half the slots.
+std::vector<CreatureKind> strangeTable() {
+    return {K::MothStag, K::GlassHare, K::LanternOwl, K::StoneTortoise, K::ShadowFox};
+}
+
 } // namespace
 
 CreatureMind mindFor(CreatureKind kind) {
     CreatureMind mind;
-    mind.territorial = kind == K::Bear;
+    mind.territorial = kind == K::Bear || kind == K::StoneTortoise || kind == K::ShadowFox;
     return mind;
 }
 
-std::vector<CreatureSpawn> spawnCreatures(std::uint32_t seed, int gx, int gy, Biome family) {
+bool isStrange(CreatureKind kind) {
+    return static_cast<std::uint8_t>(kind) >= static_cast<std::uint8_t>(K::MothStag);
+}
+
+std::vector<CreatureSpawn> spawnCreatures(std::uint32_t seed, int gx, int gy, Biome family, bool unreal) {
     std::vector<CreatureSpawn> out;
     const auto table = familyTable(family);
     if (table.empty()) return out;
@@ -61,9 +72,15 @@ std::vector<CreatureSpawn> spawnCreatures(std::uint32_t seed, int gx, int gy, Bi
     const int count = static_cast<int>(random(seed, gx, gy, kSaltFaunaCount) * (kMaxPerChunk + 1));
     for (int i = 0; i < count; ++i) {
         const std::uint32_t off = static_cast<std::uint32_t>(i) * kSaltFaunaSlotStride;
-        const auto idx = static_cast<std::size_t>(random(seed, gx, gy, kSaltFaunaKind + off) * table.size());
         CreatureSpawn s{};
-        s.kind = table[idx];
+        if (unreal && random(seed, gx, gy, kSaltFaunaStrangeGate + off) < 0.5) {
+            const auto strange = strangeTable();
+            const auto sidx = static_cast<std::size_t>(random(seed, gx, gy, kSaltFaunaStrangeKind + off) * strange.size());
+            s.kind = strange[sidx];
+        } else {
+            const auto idx = static_cast<std::size_t>(random(seed, gx, gy, kSaltFaunaKind + off) * table.size());
+            s.kind = table[idx];
+        }
         s.x = random(seed, gx, gy, kSaltFaunaX + off) * kChunkM;
         s.y = random(seed, gx, gy, kSaltFaunaY + off) * kChunkM;
         s.heading = random(seed, gx, gy, kSaltFaunaHeading + off) * 360.0;

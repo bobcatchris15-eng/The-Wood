@@ -151,6 +151,64 @@ static void test_spawn_count_cap() {
     EXPECT_EQ(kMaxPerChunk, 3);
 }
 
+static void test_strange_gated_by_unreal() {
+    std::cout << "[TEST] test_strange_gated_by_unreal...\n";
+    std::size_t offStrange = 0;
+    std::size_t onStrange = 0;
+    std::size_t onTotal = 0;
+    for (int i = 0; i < 5000; ++i) {
+        const Biome f = kAllFamilies[i % (sizeof(kAllFamilies) / sizeof(kAllFamilies[0]))];
+        const int gx = i % 100 - 50;
+        const int gy = i / 100 - 25;
+        for (const auto& s : spawnCreatures(7777u, gx, gy, f)) {
+            if (isStrange(s.kind)) ++offStrange;
+        }
+        for (const auto& s : spawnCreatures(7777u, gx, gy, f, false)) {
+            if (isStrange(s.kind)) ++offStrange;
+        }
+        for (const auto& s : spawnCreatures(7777u, gx, gy, f, true)) {
+            ++onTotal;
+            if (isStrange(s.kind)) ++onStrange;
+            EXPECT_TRUE(s.x >= 0.0 && s.x < kChunkM);
+            EXPECT_TRUE(s.y >= 0.0 && s.y < kChunkM);
+            EXPECT_TRUE(s.heading >= 0.0 && s.heading < 360.0);
+        }
+    }
+    EXPECT_EQ(offStrange, static_cast<std::size_t>(0));
+    EXPECT_TRUE(onTotal > 0);
+    EXPECT_TRUE(onStrange > 0);
+    // About half of unreal spawns are strange: accept 40%..60%.
+    EXPECT_TRUE(onStrange * 10 >= onTotal * 4 && onStrange * 10 <= onTotal * 6);
+}
+
+static void test_determinism_unreal() {
+    std::cout << "[TEST] test_determinism_unreal...\n";
+    for (Biome f : kAllFamilies) {
+        EXPECT_TRUE(sameSpawns(spawnCreatures(42u, 3, -7, f, true), spawnCreatures(42u, 3, -7, f, true)));
+    }
+    EXPECT_TRUE(sameSpawns(spawnCreatures(42u, 3, -7, Biome::Taiga, false), spawnCreatures(42u, 3, -7, Biome::Taiga)));
+}
+
+static void test_strange_minds() {
+    std::cout << "[TEST] test_strange_minds...\n";
+    EXPECT_FALSE(mindFor(CreatureKind::MothStag).territorial);
+    EXPECT_FALSE(mindFor(CreatureKind::GlassHare).territorial);
+    EXPECT_FALSE(mindFor(CreatureKind::LanternOwl).territorial);
+    EXPECT_TRUE(mindFor(CreatureKind::StoneTortoise).territorial);
+    EXPECT_TRUE(mindFor(CreatureKind::ShadowFox).territorial);
+    EXPECT_FALSE(isStrange(CreatureKind::Heron));
+    EXPECT_TRUE(isStrange(CreatureKind::MothStag));
+    EXPECT_TRUE(isStrange(CreatureKind::ShadowFox));
+
+    // Timid strange kinds retreat, territorial ones warn. Neither approaches.
+    CreatureMind timid = mindFor(CreatureKind::GlassHare);
+    EXPECT_EQ(stepCreature(CreatureState::Watch, 5.0, 0.1, timid), CreatureState::Retreat);
+    CreatureMind territorial = mindFor(CreatureKind::ShadowFox);
+    EXPECT_EQ(stepCreature(CreatureState::Watch, 5.0, 0.1, territorial), CreatureState::Warn);
+    EXPECT_EQ(stepCreature(CreatureState::Retreat, 12.0, 0.1, timid), CreatureState::Retreat);
+    EXPECT_EQ(stepCreature(CreatureState::Warn, 12.0, 0.1, territorial), CreatureState::Warn);
+}
+
 int main() {
     test_determinism();
     test_chunk_order_independence();
@@ -160,6 +218,9 @@ int main() {
     test_far_return_to_idle();
     test_no_approach_or_attack();
     test_spawn_count_cap();
+    test_strange_gated_by_unreal();
+    test_determinism_unreal();
+    test_strange_minds();
 
     if (gFailures == 0) {
         std::cout << "PASS: " << gTestCount << " fauna checks\n";
