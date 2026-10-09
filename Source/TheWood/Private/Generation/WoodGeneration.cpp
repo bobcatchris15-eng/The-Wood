@@ -349,7 +349,7 @@ void World::forEachDiscoveryNear(int ownerQ,int ownerR,const std::function<void(
   const auto r=describe(*this,col,row);
   const Vec3 cellCenter{r.origin.x,r.origin.y,terrainHeight(r.origin.x,r.origin.y)};
   const auto cellClimate=sample(r.origin.x,r.origin.y);
-  const auto plan=planDiscovery(regionSeed(col,row),col,row,cellCenter,cellClimate,heightFn,streamXFn,streamHWFn,r.ruins);
+  const auto plan=planDiscovery(regionSeed(col,row),col,row,cellCenter,cellClimate,heightFn,streamXFn,streamHWFn,r.ruins,r.unreal);
   if(!plan.valid) continue;
   fn(plan);
  }
