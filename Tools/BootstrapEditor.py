@@ -191,7 +191,7 @@ if 'rain_streak_atlas' not in precip_textures or 'snowflake_atlas' not in precip
 precip_sprite('M_Rain', precip_textures['rain_streak_atlas'], (0.72, 0.80, 0.88), 0.55)
 precip_sprite('M_Snow', precip_textures['snowflake_atlas'], (0.97, 0.98, 1.0), 0.90)
 
-GROUND_VERSION='BiomeV2'
+GROUND_VERSION='BiomeV3'
 ground, build = fresh('M_Ground_' + GROUND_VERSION)
 if build:
     # Runtime contract: Vertex RGBA = temperate/dry/highlands/taiga weights;
@@ -228,7 +228,9 @@ if build:
     color_inputs['WT']=(weather_wet,'')
     color_inputs.update({name:(samples[index][0],'RGB') for index,name in enumerate(('A','B','C','D'))})
     color=custom(ground,weight_code+'''
-    float3 temperate=A*float3(0.60,0.70,0.49);
+    // Litter diffuse reads orange: pull its saturation down 35% (luma blend) before the forest tint.
+    float litterL=dot(A,float3(0.2126,0.7152,0.0722));
+    float3 temperate=lerp(A,float3(litterL,litterL,litterL),0.35)*float3(0.60,0.70,0.49);
     float3 grassland=B*float3(0.66,0.74,0.40);
     float mineral=dot(C,float3(0.2126,0.7152,0.0722));
     float3 highlands=lerp(C,float3(mineral,mineral,mineral),0.65)*float3(0.78,0.82,0.86);

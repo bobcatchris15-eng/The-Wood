@@ -164,7 +164,14 @@ void AWoodWorld::SpawnFlora(FWoodResident& Resident,const FWoodPreparedChunk& Pr
   const int32 Pick=FMath::Abs(static_cast<int32>(Feature.yaw*19))%Ids->Num();
   const int32 Id=(*Ids)[Pick];
   const FWoodFloraVariant& Variant=Runtime->FloraVariants[Id];
-  const FTransform Where=WoodGroundedTransform(Feature,Variant.Profile,[this](double X,double Y){return Generator.terrainHeight(X,Y);});
+  FTransform Where=WoodGroundedTransform(Feature,Variant.Profile,[this](double X,double Y){return Generator.terrainHeight(X,Y);});
+  if(wood::flora::table()[static_cast<std::size_t>(Variant.Species)].row.role==wood::flora::Role::Moss) {
+   // Ground moss mounds are 0.5 m discs at feature scale 0.5-2.5, which read as flat green decals. Patches are 0.4x the
+   // feature scale with 0.8-1.2 height variation, and half the instances are thinned deterministically (catalogue ceiling unchanged).
+   if(FMath::Frac(Feature.yaw*0.0137+Feature.position.x*0.31)>0.5) continue;
+   const FVector S=Where.GetScale3D();
+   Where.SetScale3D(FVector(S.X*0.4,S.Y*0.4,S.Z*0.4*(0.8+0.4*FMath::Frac(Feature.yaw*0.0531+Feature.position.y*0.17))));
+  }
   Placed.FindOrAdd(Id).Add(Where);
   Tints.FindOrAdd(Id).Add(static_cast<float>(Feature.tint));
  }

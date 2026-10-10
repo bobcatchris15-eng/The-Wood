@@ -38,22 +38,22 @@ Polar displaced discs (one combined mesh, slot `Moss`), zero height at the outli
 
 | File (.glb / .fbx) | Tris | W x D x H (m) | Colour variant |
 |---|---|---|---|
-| feather_moss_v01.glb / .fbx | 1080 | 0.814 x 0.819 x 0.033 | green |
-| feather_moss_v02.glb / .fbx | 1080 | 0.814 x 0.819 x 0.049 | dark green |
+| feather_moss_v01.glb / .fbx | 1080 | 0.814 x 0.819 x 0.033 | olive green |
+| feather_moss_v02.glb / .fbx | 1080 | 0.814 x 0.819 x 0.049 | dark olive |
 | sphagnum_hummock_v01.glb / .fbx | 1080 | 0.625 x 0.627 x 0.186 | pale green |
 | sphagnum_hummock_v02.glb / .fbx | 1080 | 0.625 x 0.627 x 0.297 | rust-red |
-| ground_moss_carpet_v01.glb / .fbx | 1080 | 1.071 x 1.061 x 0.029 | bright green |
-| ground_moss_carpet_v02.glb / .fbx | 1080 | 1.071 x 1.061 x 0.052 | dark olive |
-| rock_moss_patch_v01.glb / .fbx | 1080 | 0.653 x 0.661 x 0.118 | green |
-| rock_moss_patch_v02.glb / .fbx | 1080 | 0.653 x 0.661 x 0.219 | grey-green |
+| ground_moss_carpet_v01.glb / .fbx | 1080 | 1.071 x 1.061 x 0.029 | olive |
+| ground_moss_carpet_v02.glb / .fbx | 1080 | 1.071 x 1.061 x 0.052 | brown olive |
+| rock_moss_patch_v01.glb / .fbx | 1080 | 0.653 x 0.661 x 0.118 | olive |
+| rock_moss_patch_v02.glb / .fbx | 1080 | 0.653 x 0.661 x 0.219 | grey-olive |
 | lichen_crust_v01.glb / .fbx | 540 | 0.486 x 0.500 x 0.014 | grey-green |
 | lichen_crust_v02.glb / .fbx | 540 | 0.486 x 0.500 x 0.033 | orange-brown pale |
 
 Moss and lichen:
-- `feather_moss`: soft feathery carpet on ground, low. Catalogue height see catalogue m. Variants: v01 green; v02 dark green.
+- `feather_moss`: soft feathery carpet on ground, low. Catalogue height see catalogue m. Variants: v01 olive green; v02 dark olive.
 - `sphagnum_hummock`: puffy hummocks mixing pale and red moss. Catalogue height see catalogue m. Variants: v01 pale green; v02 rust-red.
-- `ground_moss_carpet`: tight cushion over roots and soil. Catalogue height see catalogue m. Variants: v01 bright green; v02 dark olive.
-- `rock_moss_patch`: green cushion draped over stone, mound form. Catalogue height see catalogue m. Variants: v01 green; v02 grey-green.
+- `ground_moss_carpet`: tight cushion over roots and soil. Catalogue height see catalogue m. Variants: v01 olive; v02 brown olive.
+- `rock_moss_patch`: green cushion draped over stone, mound form. Catalogue height see catalogue m. Variants: v01 olive; v02 grey-olive.
 - `lichen_crust`: flat crust on stone with lobed leafy edge. Catalogue height see catalogue m. Variants: v01 grey-green; v02 orange-brown pale.
 
 Previews: `previews/<name>.png`, 512 px, LOD0, 3/4 view over a preview-only ground plane (not exported).

@@ -50,7 +50,11 @@ FTransform WoodGroundedTransform(const wood::Feature& Feature,const FWoodPlaceme
  // Kit pieces keep their authored z, pitch and roll exactly; no root fit.
  if(Feature.kind==wood::Kind::Kit) return FTransform(FRotator(Feature.pitch,Feature.yaw,Feature.roll),FVector(X,Y,Feature.position.z*100),FVector(Feature.scale));
  const double Lean=Feature.kind==wood::Kind::Tree?FMath::Sin(FMath::DegreesToRadians(Feature.yaw*3))*2.5:0;
- FTransform Result(FRotator(Lean,Feature.yaw,0),FVector(X,Y,GroundHeight(X/100,Y/100)*100),FVector(Feature.scale));
+ // Tree meshes are authored at 14-18 m with 0.5-0.6 m base radii and flares, so uniform scale gave 1-2 m trunk bases.
+ // Girth applies to the horizontal axes only; height keeps the authored proportion. Root fit below uses the same transform.
+ constexpr double TreeGirth=0.5;
+ const double Girth=Feature.kind==wood::Kind::Tree?TreeGirth:1.0;
+ FTransform Result(FRotator(Lean,Feature.yaw,0),FVector(X,Y,GroundHeight(X/100,Y/100)*100),FVector(Feature.scale*Girth,Feature.scale*Girth,Feature.scale));
  if(Feature.kind==wood::Kind::Tree) {
   double Base=DBL_MAX;
   for(const FVector& Contact:Profile.Roots) {
