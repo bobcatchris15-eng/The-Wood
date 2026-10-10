@@ -39,6 +39,17 @@ struct GroundShade {
  float tintR,tintG,tintB;
 };
 
+// Permanent snow/frost cover 0..1 from climate (family weights, temperature) and elevation. Flats take it; the material
+// removes it from steep slopes. IcyHills is near-full; Taiga and RockyHighlands only where cold and high.
+inline float snowCover(const wood::Surface& S) {
+ const auto Clamp01=[](double V){ return V<0.0?0.0:(V>1.0?1.0:V); };
+ const double Cold=Clamp01((4.0-S.temperature)/10.0);
+ const double Elev=0.6+0.4*Clamp01(S.height/150.0);
+ const double Cover=S.biome[static_cast<std::size_t>(wood::Biome::IcyHills)]*0.95
+  +(S.biome[static_cast<std::size_t>(wood::Biome::Taiga)]*0.6+S.biome[static_cast<std::size_t>(wood::Biome::RockyHighlands)]*0.7)*Cold*Elev;
+ return static_cast<float>(Clamp01(Cover));
+}
+
 // Family-weighted sum of archetype rows and tints. Deterministic; no normalisation.
 GroundShade shade(const wood::Surface& Surface);
 

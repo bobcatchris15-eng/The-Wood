@@ -16,6 +16,8 @@ public:
  // Called once after spawn. Terrain supplies ground height for retreat moves; HeadingDeg is the fallback retreat direction.
  void Init(wood::fauna::CreatureKind Kind, AWoodWorld* Terrain, double HeadingDeg);
  virtual void Tick(float DeltaSeconds) override;
+ // Capture/review: while true no creature moves or turns (the FSM is not stepped).
+ static bool bFreezeAll;
  wood::fauna::CreatureState CurrentState() const { return StateValue; }
 private:
  UPROPERTY() TObjectPtr<UStaticMeshComponent> Body;

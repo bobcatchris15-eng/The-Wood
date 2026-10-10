@@ -272,10 +272,15 @@ void AWoodWorld::Tick(float DeltaSeconds) {
   Precipitation->Drive(DeltaSeconds,Position,WeatherState->Precip,WeatherState->Intensity,WeatherState->Wind,CameraYaw);
  }
  // Ground wetness reaches the ground material through MPC_Weather, once a second.
+ // Snow accumulates over about 40 s of full snowfall and melts over about 4 minutes.
+ if(WeatherState) {
+  if(WeatherState->Precip==EWoodPrecip::Snow) SnowAccum=FMath::Min(1.0f,SnowAccum+WeatherState->Intensity*DeltaSeconds/40.0f);
+  else SnowAccum=FMath::Max(0.0f,SnowAccum-DeltaSeconds/240.0f*(WeatherState->Precip==EWoodPrecip::Rain?3.0f:1.0f));
+ }
  WetnessClock+=DeltaSeconds;
  if(WetnessClock>=1.0f&&WeatherState&&WeatherParameters) {
   WetnessClock=0.0f;
-  if(auto* Instance=GetWorld()->GetParameterCollectionInstance(WeatherParameters)) Instance->SetScalarParameterValue(TEXT("Wetness"),WeatherState->Wetness);
+  if(auto* Instance=GetWorld()->GetParameterCollectionInstance(WeatherParameters)) { Instance->SetScalarParameterValue(TEXT("Wetness"),WeatherState->Wetness); Instance->SetScalarParameterValue(TEXT("Snow"),SnowAccum); }
  }
  if(SkyComponent) SkyComponent->SetWorldLocation(Position);
  const auto Habitat=Generator.sample(Position.X/100,Position.Y/100);
@@ -440,6 +445,8 @@ const UWoodWeatherComponent* AWoodWorld::Weather() const {
 }
 void AWoodWorld::ForceWeather(EWoodPrecip Kind,float Level) {
  if(WeatherState) WeatherState->Force(Kind,Level);
+ // A forced snowfall starts with its ground cover already laid (review captures cannot wait for accumulation).
+ if(Kind==EWoodPrecip::Snow) { SnowAccum=FMath::Clamp(Level,0.0f,1.0f); WetnessClock=1.0f; }
 }
 void AWoodWorld::ClearForcedWeather() {
  if(WeatherState) WeatherState->ClearForce();

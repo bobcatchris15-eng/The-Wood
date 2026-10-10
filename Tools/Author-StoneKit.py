@@ -4,7 +4,7 @@ Run: blender -b --factory-startup -P Tools/Author-StoneKit.py
 Outputs ArtSource/Prepared/kit_sm_*.glb. Names, footprints, pivots (base centre, Z up), wall-run yaw convention
 and kit ids match the procedural kit in Prepare-Art.py, which no longer writes these eight files.
 Each piece is built from individual irregular stones: bevelled, subdivided and displaced blocks of varied size.
-Slot 0 Stone: CC0 Poly Haven rock_07 2K (diffuse, GL normal). Slot 1 Moss: CC0 AmbientCG Moss002 1K (ArtSource/AmbientCG/Moss002), desaturated, on upward faces only.
+Slot 0 Stone: CC0 AmbientCG Rock064 1K (tileable; desaturated). Slot 1 Moss: CC0 AmbientCG Moss002 1K (ArtSource/AmbientCG/Moss002), desaturated, on upward faces only.
 Box-projected UV at 1 tile per 1.25 m for stone, 1 tile per 0.5 m for moss.
 """
 import bpy
@@ -16,7 +16,7 @@ from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[1] if '__file__' in globals() else Path.cwd()
 OUT = ROOT / 'ArtSource' / 'Prepared'
-ROCK = ROOT / 'ArtSource' / 'PolyHaven' / 'rock_07' / 'textures'
+ROCK = ROOT / 'ArtSource' / 'AmbientCG' / 'Rock064'  # tileable CC0 stacked stone; rock_07 is a one-off boulder UV atlas (the shattered look)
 MOSS = ROOT / 'ArtSource' / 'AmbientCG' / 'Moss002'
 STONE_AUTHOR_SEED = 9100
 TAU = 2.0 * math.pi
@@ -61,6 +61,16 @@ def stone(bm, rng, center, size, yaw=0.0, bevel=0.025, jitter=0.012, lean=0.02, 
         bmesh.ops.subdivide_edges(bm, edges=sub, cuts=cuts, use_grid_fill=True)
 
 
+def tag_axes(bm):
+    """Box-projection axis per face from the pre-displacement normal. Displacement makes small bevel and cut faces flip
+    axis at random, which shattered the texture into a triangulated patchwork; the axis is fixed before displacement."""
+    bm.normal_update()
+    layer = bm.faces.layers.int.new('proj_axis')
+    for face in bm.faces:
+        n = face.normal
+        face[layer] = max(range(3), key=lambda i: abs(n[i]))
+
+
 def displace(bm, amount):
     """Push every vertex along its normal by a smooth field. Base stays flat (ground contact)."""
     bm.normal_update()
@@ -88,9 +98,11 @@ def finalize(bm, rotate_length):
         upward = face.normal.z > 0.7 and centre.z > 0.08
         face.material_index = 1 if upward else 0
     layer = bm.loops.layers.uv.new('UVMap')
+    axis_layer = bm.faces.layers.int.get('proj_axis')
     for face in bm.faces:
-        n = face.normal
-        axis = max(range(3), key=lambda i: abs(n[i]))
+        axis = face[axis_layer]
+        if rotate_length and axis < 2:
+            axis = 1 - axis  # the length rotation swaps X and Y
         for loop in face.loops:
             p = loop.vert.co
             pair = ((p.y, p.z), (p.x, p.z), (p.x, p.y))[axis]
@@ -198,18 +210,18 @@ def build_debris(bm, rng):
               yaw=rng.uniform(0.0, TAU), bevel=0.012, jitter=0.008, lean=0.0)
 
 
-def desaturated_moss():
-    """Soft moss colour: keep MOSS_SATURATION of the source chroma and scale value, written beside the prepared kit."""
+def desaturated_moss(source=None, target=None, saturation=MOSS_SATURATION, value=MOSS_VALUE):
+    """Soft colour: keep `saturation` of the source chroma and scale value, written beside the prepared kit."""
     import numpy as np
-    image = bpy.data.images.load(str(MOSS / 'Moss002_1K-JPG_Color.jpg'), check_existing=False)
+    image = bpy.data.images.load(str(source or MOSS / 'Moss002_1K-JPG_Color.jpg'), check_existing=False)
     width, height = image.size
     px = np.empty(width * height * 4, dtype=np.float32)
     image.pixels.foreach_get(px)
     px = px.reshape(-1, 4)
     luma = (px[:, 0] * 0.2126 + px[:, 1] * 0.7152 + px[:, 2] * 0.0722)[:, None]
-    px[:, :3] = (luma + (px[:, :3] - luma) * MOSS_SATURATION) * MOSS_VALUE
+    px[:, :3] = (luma + (px[:, :3] - luma) * saturation) * value
     image.pixels.foreach_set(px.reshape(-1))
-    target = OUT / 'Moss002_soft_color.png'
+    target = target or OUT / 'Moss002_soft_color.png'
     image.filepath_raw = str(target)
     image.file_format = 'PNG'
     image.save()
@@ -251,13 +263,15 @@ DISPLACE = {'SM_DryStone_Wall': 0.012, 'SM_FoundationCourse': 0.01, 'SM_StonePie
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     OUT.mkdir(parents=True, exist_ok=True)
-    stone_mat = make_surface('M_StoneKit_Stone', ROCK / 'rock_07_diff_2k.jpg', ROCK / 'rock_07_nor_gl_2k.jpg', 0.82)
+    stone_mat = make_surface('M_StoneKit_Stone', desaturated_moss(ROCK / 'Rock064_1K-PNG_Color.png', OUT / 'Rock064_soft_color.png', 0.3, 0.95),
+                              ROCK / 'Rock064_1K-PNG_NormalGL.png', 0.82)
     moss_mat = make_surface('M_StoneKit_Moss', desaturated_moss(),
                             MOSS / 'Moss002_1K-JPG_NormalGL.jpg', 0.9)
     for index, (name, build, rotate) in enumerate(PIECES):
         rng = random.Random(STONE_AUTHOR_SEED + index)
         bm = bmesh.new()
         build(bm, rng)
+        tag_axes(bm)
         displace(bm, DISPLACE.get(name, 0.01))
         finalize(bm, rotate)
         mesh = bpy.data.meshes.new(name)

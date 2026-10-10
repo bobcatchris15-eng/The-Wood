@@ -162,15 +162,17 @@ if not any(str(p.get_editor_property('parameter_name'))=='Wetness' for p in mpc.
     wetness.set_editor_property('parameter_name','Wetness')
     wetness.set_editor_property('default_value',0.0)
     mpc.set_editor_property('scalar_parameters',list(mpc.get_editor_property('scalar_parameters'))+[wetness])
+if not any(str(p.get_editor_property('parameter_name'))=='Snow' for p in mpc.get_editor_property('scalar_parameters')):
+    snow_param=unreal.CollectionScalarParameter()
+    snow_param.set_editor_property('parameter_name','Snow')
+    snow_param.set_editor_property('default_value',0.0)
+    mpc.set_editor_property('scalar_parameters',list(mpc.get_editor_property('scalar_parameters'))+[snow_param])
 LIB.save_loaded_asset(mpc)
 
 
 def precip_sprite(name, tex, tint, opacity_scale):
     """Unlit translucent two-sided atlas sprite for instanced quads. Custom data 0/1 = atlas column/row (4x4)."""
-    path = '/Game/Wood/' + name
-    if LIB.does_asset_exist(path):
-        return LIB.load_asset(path)
-    mat = TOOLS.create_asset(name, '/Game/Wood', unreal.Material, unreal.MaterialFactoryNew())
+    mat, _ = fresh(name)  # always rebuilt so material tuning applies to existing content
     mat.set_editor_property('shading_model', unreal.MaterialShadingModel.MSM_UNLIT)
     mat.set_editor_property('blend_mode', unreal.BlendMode.BLEND_TRANSLUCENT)
     mat.set_editor_property('two_sided', True)
@@ -188,10 +190,10 @@ def precip_sprite(name, tex, tint, opacity_scale):
 
 if 'rain_streak_atlas' not in precip_textures or 'snowflake_atlas' not in precip_textures:
     raise RuntimeError('Missing precip atlas textures in ArtSource/Authored/Precip')
-precip_sprite('M_Rain', precip_textures['rain_streak_atlas'], (0.72, 0.80, 0.88), 0.55)
-precip_sprite('M_Snow', precip_textures['snowflake_atlas'], (0.97, 0.98, 1.0), 0.90)
+precip_sprite('M_Rain', precip_textures['rain_streak_atlas'], (0.85, 0.91, 0.98), 1.6)
+precip_sprite('M_Snow', precip_textures['snowflake_atlas'], (1.0, 1.0, 1.0), 1.5)
 
-GROUND_VERSION='BiomeV3'
+GROUND_VERSION='BiomeV4'
 ground, build = fresh('M_Ground_' + GROUND_VERSION)
 if build:
     # Runtime contract: Vertex RGBA = temperate/dry/highlands/taiga weights;
@@ -202,7 +204,26 @@ if build:
     weights=expr(ground,unreal.MaterialExpressionComponentMask,r=True,g=True,b=True,a=False)
     link(vertex,'',weights,'')
     habitat=expr(ground,unreal.MaterialExpressionTextureCoordinate,coordinate_index=0)
-    common={'W':(weights,''),'T':(vertex,'A'),'H':(habitat,'')}
+    # CC0 AmbientCG Snow006 (ArtSource/AmbientCG/Snow006): snow/frost layer on cold families, flats, and during snowfall.
+    def snow_map(kind, srgb):
+        name='Snow006_1K-PNG_'+kind
+        import_unit(ROOT/'ArtSource/AmbientCG/Snow006'/(name+'.png'),'/Game/Art/Ground',name)
+        tex=LIB.load_asset('/Game/Art/Ground/'+name)
+        if tex is None:
+            raise RuntimeError('Snow texture import failed: '+name)
+        tex.set_editor_property('srgb',srgb)
+        if kind=='NormalDX':
+            tex.set_editor_property('compression_settings',unreal.TextureCompressionSettings.TC_NORMALMAP)
+        LIB.save_loaded_asset(tex)
+        return tex
+    snow_color_tex=snow_map('Color',True)
+    snow_normal_tex=snow_map('NormalDX',False)
+    snow_uv=custom(ground,'return P.xy/180.0;',{'P':(pos,'')},unreal.CustomMaterialOutputType.CMOT_FLOAT2)
+    snow_color=sample(ground,snow_color_tex,snow_uv)
+    snow_normal=sample(ground,snow_normal_tex,snow_uv,True)
+    snow_accum=expr(ground,unreal.MaterialExpressionCollectionParameter,collection=mpc,parameter_name='Snow')
+    cover_uv=expr(ground,unreal.MaterialExpressionTextureCoordinate,coordinate_index=2)
+    common={'W':(weights,''),'T':(vertex,'A'),'H':(habitat,''),'CV':(cover_uv,''),'SN':(snow_accum,'')}
     weight_code='''float4 b=max(float4(W,T),0.0);float total=dot(b,float4(1,1,1,1));
     b=total>0.0001?b/total:float4(1,0,0,0);
     float moisture=saturate(H.x);float slope=saturate(H.y);
@@ -210,7 +231,9 @@ if build:
     b*=1.0-exposed;b.z+=exposed;
     float wet=smoothstep(0.94,0.99,moisture);
     float riparianGravel=smoothstep(0.95,0.995,moisture)*0.85;
-    b=lerp(b,float4(0,0,1,0),riparianGravel);'''
+    b=lerp(b,float4(0,0,1,0),riparianGravel);
+    float cvr=saturate(CV.y+SN*(0.25+0.6*CV.y));
+    float snowMask=smoothstep(0.2,0.6,cvr*(1.0-smoothstep(0.25,0.6,slope)));'''
     configs=[('forest_floor','return P.xy/270.0;'),
              ('withered_grass','return float2(P.x*0.940-P.y*0.342,P.x*0.342+P.y*0.940)/220.0;'),
              ('gravel_ground_01','return float2(P.x*0.760-P.y*0.650,P.x*0.650+P.y*0.760)/360.0;'),
@@ -227,6 +250,7 @@ if build:
     weather_wet=expr(ground,unreal.MaterialExpressionCollectionParameter,collection=mpc,parameter_name='Wetness')
     color_inputs['WT']=(weather_wet,'')
     color_inputs.update({name:(samples[index][0],'RGB') for index,name in enumerate(('A','B','C','D'))})
+    color_inputs['S']=(snow_color,'RGB')
     color=custom(ground,weight_code+'''
     // Litter diffuse reads orange: pull its saturation down 35% (luma blend) before the forest tint.
     float litterL=dot(A,float3(0.2126,0.7152,0.0722));
@@ -241,10 +265,12 @@ if build:
     color*=lerp(float3(1,1,1),float3(0.66,0.73,0.65),wet);
     float macro=0.91+0.09*sin(P.x/1300.0)*sin(P.y/1700.0);
     color*=lerp(1.0,0.62,WT);
-    return color*macro*float3(K.x,K.y,L.x);''',color_inputs)
+    float3 ground=color*macro*float3(K.x,K.y,L.x);
+    return lerp(ground,S*0.92,snowMask);''',color_inputs)
     prop(color,'',unreal.MaterialProperty.MP_BASE_COLOR)
     normal_inputs=dict(common,P=(pos,''))
     normal_inputs.update({name:(samples[index][1],'RGB') for index,name in enumerate(('A','B','C','D'))})
+    normal_inputs['S']=(snow_normal,'RGB')
     normal=custom(ground,weight_code+'''
     float3 n0=A;
     float3 n1=float3(B.x*0.940+B.y*0.342,-B.x*0.342+B.y*0.940,B.z);
@@ -255,7 +281,9 @@ if build:
     // relying on texture tangents generated from moisture/slope coordinates.
     float3 surface=normalize(cross(ddx(P),ddy(P)));if(surface.z<0)surface=-surface;
     float3 tx=normalize(float3(surface.z,0,-surface.x));float3 ty=normalize(cross(surface,tx));
+    detail=normalize(lerp(detail,S,snowMask*0.7));
     float strength=lerp(0.55,0.32,wet);
+    strength=lerp(strength,0.30,snowMask);
     return normalize(tx*detail.x*strength+ty*detail.y*strength+surface*max(detail.z,0.2));''',normal_inputs)
     prop(normal,'',unreal.MaterialProperty.MP_NORMAL)
     rough_inputs=dict(common)
@@ -263,7 +291,7 @@ if build:
     rough_inputs['WT']=(weather_wet,'')
     rough=custom(ground,weight_code+'''
     float base=clamp(A*b.x+B*b.y+C*b.z+D*b.w,0.79,1.0);
-    return lerp(base,0.30,wet*0.85)*lerp(1.0,0.45,WT);''',rough_inputs,unreal.CustomMaterialOutputType.CMOT_FLOAT1)
+    return lerp(lerp(base,0.30,wet*0.85)*lerp(1.0,0.45,WT),0.78,snowMask);''',rough_inputs,unreal.CustomMaterialOutputType.CMOT_FLOAT1)
     prop(rough,'',unreal.MaterialProperty.MP_ROUGHNESS)
     prop(constant(ground,0.22),'',unreal.MaterialProperty.MP_SPECULAR)
     finish(ground)
@@ -468,10 +496,11 @@ return B*F*H*tint*lerp(0.94,1.06,k);''',{'B':(base_tex,'RGB'),'F':(base_factor,'
         prop(tinted_color,'',unreal.MaterialProperty.MP_BASE_COLOR)
     return finish(copy)
 
-def with_instancing(interface):
+def with_instancing(interface, tag=''):
     """Compile local rock parents for HISM without changing plugin masters."""
     # _2K suffix: rock re-imports from the 2k source must not reuse 1k-era copies.
-    dest='/Game/Wood/RockMaterials/'+interface.get_name()+'_'+VERSION+'_2K'
+    # tag: per-mesh copy, so a re-authored piece never inherits a cached copy that points at superseded textures.
+    dest='/Game/Wood/RockMaterials/'+interface.get_name()+(('_'+tag) if tag else '')+'_'+VERSION+'_2K'
     if LIB.does_asset_exist(dest):
         return LIB.load_asset(dest)
     copy=LIB.duplicate_asset(interface.get_path_name(),dest)
@@ -681,7 +710,7 @@ for index,(name,solid) in enumerate(KIT_FILES):
         for i,item in enumerate(mesh.get_editor_property('static_materials')):
             interface=item.get_editor_property('material_interface')
             if interface is not None and '/Game/Wood/RockMaterials/' not in interface.get_path_name():
-                mesh.set_material(i,with_instancing(interface))
+                mesh.set_material(i,with_instancing(interface,name))
         LIB.save_loaded_asset(mesh)
     kit.append(mesh)
 # Authored logs and landmarks (Blender, ArtSource/Authored): kit ids 11-20, appended after the masonry kit (WoodKit.h).

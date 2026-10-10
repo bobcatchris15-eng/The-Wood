@@ -57,8 +57,8 @@ void AWoodPrecipitation::Drive(float DeltaSeconds,FVector CenterCm,EWoodPrecip K
  const int32 RainActive=Kind==EWoodPrecip::Rain?FMath::RoundToInt(RainCapacity*Level):0;
  const int32 SnowActive=Kind==EWoodPrecip::Snow?FMath::RoundToInt(SnowCapacity*Level):0;
  // Plane mesh is 100 cm square; scale 0.08 x 0.9 gives an 8 cm x 90 cm streak (was 4 x 50 cm, invisible in a still frame), 0.07 gives a 7 cm flake.
- Step(RainPool,RainFlakes,RainActive,Dt,CenterCm,Drift,RainFallCmPerS,FVector(0.08f,0.9f,1.0f),CameraYawDeg,101);
- Step(SnowPool,SnowFlakes,SnowActive,Dt,CenterCm,Drift*0.5f,SnowFallCmPerS,FVector(0.07f,0.07f,1.0f),CameraYawDeg,202);
+ Step(RainPool,RainFlakes,RainActive,Dt,CenterCm,Drift,RainFallCmPerS,FVector(0.45f,1.4f,1.0f),CameraYawDeg,101);
+ Step(SnowPool,SnowFlakes,SnowActive,Dt,CenterCm,Drift*0.5f,SnowFallCmPerS,FVector(0.2f,0.2f,1.0f),CameraYawDeg,202);
 }
 
 void AWoodPrecipitation::Initialize() {
@@ -96,8 +96,8 @@ UInstancedStaticMeshComponent* AWoodPrecipitation::MakePool(const TCHAR* Name,US
 void AWoodPrecipitation::Step(UInstancedStaticMeshComponent* Pool,TArray<FWoodFlake>& Flakes,int32 Active,float Dt,FVector Center,FVector Drift,float Fall,FVector Scale,float CameraYawDeg,uint32 Salt) {
  if(!Pool) return;
  const int32 Count=Flakes.Num();
- // Billboard: tilt the XY plane upright (Y to Z), then yaw it to the camera's heading. Quads are two-sided.
- const FQuat Facing=FRotator(0.0f,CameraYawDeg,0.0f).Quaternion()*FQuat(FVector::XAxisVector,PI*0.5f);
+ // Billboard: tilt the XY plane upright (Y to Z; normal becomes -Y), then yaw by heading+90 so the normal faces along the view axis (was edge-on). Quads are two-sided.
+ const FQuat Facing=FRotator(0.0f,CameraYawDeg+90.0f,0.0f).Quaternion()*FQuat(FVector::XAxisVector,PI*0.5f);
  TArray<FTransform> Transforms;
  Transforms.Reserve(Count);
  for(int32 I=0;I<Count;++I) {

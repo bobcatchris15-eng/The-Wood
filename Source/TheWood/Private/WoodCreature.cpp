@@ -1,6 +1,7 @@
 #include "WoodCreature.h"
 #include "WoodWorld.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SceneComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
@@ -30,7 +31,7 @@ FVector ScaleFor(wood::fauna::CreatureKind Kind) {
  }
  return FVector(1.0);
 }
-// Authored species mesh per kind (Blender, /Game/Art/Authored/Creatures). Strange kinds reuse the nearest species mesh.
+// Authored species mesh per kind (Blender, /Game/Art/Authored/Creatures). The FBX import names the texture <name> and the static mesh <name>1. Strange kinds reuse the nearest species mesh.
 // Host kind supplies the mesh; ScaleFor(kind)/ScaleFor(host) gives the strange-kind scale relative to it.
 wood::fauna::CreatureKind HostFor(wood::fauna::CreatureKind Kind) {
  using wood::fauna::CreatureKind;
@@ -46,14 +47,14 @@ wood::fauna::CreatureKind HostFor(wood::fauna::CreatureKind Kind) {
 const TCHAR* MeshPathFor(wood::fauna::CreatureKind Kind) {
  using wood::fauna::CreatureKind;
  switch(HostFor(Kind)) {
- case CreatureKind::Deer: return TEXT("/Game/Art/Authored/Creatures/deer.deer");
- case CreatureKind::Elk: return TEXT("/Game/Art/Authored/Creatures/elk.elk");
- case CreatureKind::Bear: return TEXT("/Game/Art/Authored/Creatures/bear.bear");
- case CreatureKind::Fox: return TEXT("/Game/Art/Authored/Creatures/fox.fox");
- case CreatureKind::Hare: return TEXT("/Game/Art/Authored/Creatures/hare.hare");
- case CreatureKind::Crow: return TEXT("/Game/Art/Authored/Creatures/crow.crow");
- case CreatureKind::Owl: return TEXT("/Game/Art/Authored/Creatures/owl.owl");
- case CreatureKind::Heron: return TEXT("/Game/Art/Authored/Creatures/heron.heron");
+ case CreatureKind::Deer: return TEXT("/Game/Art/Authored/Creatures/deer1.deer1");
+ case CreatureKind::Elk: return TEXT("/Game/Art/Authored/Creatures/elk1.elk1");
+ case CreatureKind::Bear: return TEXT("/Game/Art/Authored/Creatures/bear1.bear1");
+ case CreatureKind::Fox: return TEXT("/Game/Art/Authored/Creatures/fox1.fox1");
+ case CreatureKind::Hare: return TEXT("/Game/Art/Authored/Creatures/hare1.hare1");
+ case CreatureKind::Crow: return TEXT("/Game/Art/Authored/Creatures/crow1.crow1");
+ case CreatureKind::Owl: return TEXT("/Game/Art/Authored/Creatures/owl1.owl1");
+ case CreatureKind::Heron: return TEXT("/Game/Art/Authored/Creatures/heron1.heron1");
  default: return nullptr;
  }
 }
@@ -71,10 +72,18 @@ FLinearColor TintFor(wood::fauna::CreatureKind Kind) {
 }
 }
 
+bool AWoodCreature::bFreezeAll=false;
+
 AWoodCreature::AWoodCreature() {
  PrimaryActorTick.bCanEverTick=true;
  Body=CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
- RootComponent=Body;
+ // Body hangs off a plain root: Init sets Body relative location/scale, which on the root itself moved the actor to the world origin.
+ auto* Root=CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+ RootComponent=Root;
+ Root->SetMobility(EComponentMobility::Movable);
+ Body->SetupAttachment(Root);
+ // Movable: SetStaticMesh in Init and SetActorLocation in Tick are ignored on a registered Static component (creatures never rendered).
+ Body->SetMobility(EComponentMobility::Movable);
  Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
@@ -104,6 +113,7 @@ void AWoodCreature::Init(wood::fauna::CreatureKind Kind, AWoodWorld* Terrain, do
 
 void AWoodCreature::Tick(float DeltaSeconds) {
  Super::Tick(DeltaSeconds);
+ if(bFreezeAll) return;
  const APlayerController* PC=GetWorld()?GetWorld()->GetFirstPlayerController():nullptr;
  const APawn* Pawn=PC?PC->GetPawn():nullptr;
  if(!Pawn) return;

@@ -127,6 +127,7 @@ private:
  UPROPERTY() TObjectPtr<UWoodWeatherComponent> WeatherState;
  UPROPERTY() TObjectPtr<AWoodPrecipitation> Precipitation;
  UPROPERTY() TObjectPtr<UMaterialParameterCollection> WeatherParameters;
+ float SnowAccum=0.0f; // 0..1 ground snow accumulation pushed to MPC_Weather "Snow"
  float WetnessClock=1.0f; // starts full so the first Tick pushes Wetness
  UPROPERTY() TArray<TObjectPtr<UStaticMeshComponent>> Landmarks;
  TSet<FIntPoint> LandmarkRegions;

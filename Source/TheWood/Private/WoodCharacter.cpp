@@ -1,4 +1,5 @@
 #include "WoodCharacter.h"
+#include "WoodCreature.h"
 #include "WoodWorld.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -309,6 +310,34 @@ void AWoodCharacter::WoodCapture(const FString& View,float Delay) {
  // Weather review views: forced precipitation at 0.8 (WoodWeather override), applied after framing.
  if(Environment&&View.Equals(TEXT("Rain"),ESearchCase::IgnoreCase)) Environment->ForceWeather(EWoodPrecip::Rain,0.8f);
  if(Environment&&View.Equals(TEXT("Snow"),ESearchCase::IgnoreCase)) Environment->ForceWeather(EWoodPrecip::Snow,0.8f);
+ if(Environment&&View.Equals(TEXT("Creature"),ESearchCase::IgnoreCase)) {
+  // Freeze every creature and place a deer 8 m ahead on the ground, facing the camera, so the subject cannot retreat before the shot.
+  AWoodCreature::bFreezeAll=true;
+  FRotator Look=Controller?Controller->GetControlRotation():FRotator::ZeroRotator;
+  // Face the most open of 16 directions so no trunk stands between the camera and the subject.
+  double BestYaw=Look.Yaw,BestLen=-1.0;
+  for(int32 K=0;K<16;++K) {
+   const double Len=OpenSight(GetWorld(),this,GetActorLocation(),K*22.5);
+   if(Len>BestLen) { BestLen=Len; BestYaw=K*22.5; }
+  }
+  Look.Yaw=BestYaw; Look.Pitch=-6.0f;
+  if(Controller) Controller->SetControlRotation(Look);
+  FVector Where=GetActorLocation()+FRotator(0,Look.Yaw,0).Vector()*800.0;
+  Where.Z=Environment->GroundAt(Where.X,Where.Y);
+  Environment->EnsureTerrainAround(Where);
+  Where.Z=Environment->GroundAt(Where.X,Where.Y);
+  if(auto* Subject=GetWorld()->SpawnActor<AWoodCreature>(Where,FRotator(0,Look.Yaw+180.0f,0))) {
+   Subject->Init(wood::fauna::CreatureKind::Deer,Environment,Look.Yaw+180.0f);
+   TWeakObjectPtr<AWoodCreature> Weak=Subject;
+   FTimerHandle ProbeTimer;
+   GetWorldTimerManager().SetTimer(ProbeTimer,FTimerDelegate::CreateLambda([this,Weak]{
+    if(!Weak.IsValid()) { UE_LOG(LogTemp,Display,TEXT("WoodCapture: creature subject destroyed")); return; }
+    const FBox Box=Weak->GetComponentsBoundingBox();
+    UE_LOG(LogTemp,Display,TEXT("WoodCapture: creature subject at %s bounds %s hidden=%d camera %s"),*Weak->GetActorLocation().ToString(),*Box.GetSize().ToString(),Weak->IsHidden()?1:0,*GetActorLocation().ToString());
+   }),1.5f,false);
+   UE_LOG(LogTemp,Display,TEXT("WoodCapture: creature subject placed at %s camera %s yaw %.1f sight %.0f"),*Where.ToString(),*GetActorLocation().ToString(),Look.Yaw,BestLen);
+  }
+ }
  if(FParse::Param(FCommandLine::Get(),TEXT("WoodDumpView"))) {
   FTimerHandle DumpTimer;
   GetWorldTimerManager().SetTimer(DumpTimer,FTimerDelegate::CreateLambda([this]{ WoodDumpView(60.0f); }),FMath::Max(Delay,0.1f)*0.8f,false);

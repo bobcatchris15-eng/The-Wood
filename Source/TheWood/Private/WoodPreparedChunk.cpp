@@ -19,7 +19,7 @@ FWoodPreparedChunk WoodPrepareChunk(const wood::World& World,int X,int Y,
   Result.HabitatUV.Add(FVector2D(Surface.moisture,Surface.slope));
   const auto Ground=wood::ground::shade(Surface);
   Result.BiomeColors.Add(FLinearColor(Ground.archetype[0],Ground.archetype[1],Ground.archetype[2],Ground.archetype[3]));
-  Result.Tints.Add(FLinearColor(Ground.tintR,Ground.tintG,Ground.tintB,1.f)); }
+  Result.Tints.Add(FLinearColor(Ground.tintR,Ground.tintG,Ground.tintB,wood::ground::snowCover(Surface))); }
  Result.Placements.SetNum(Kinds.Num());
  if(!Details || Chunk.features.empty()) return Result;
  const double Size=World.settings().chunkSize,Step=Size/Chunk.cells;
