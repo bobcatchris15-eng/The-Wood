@@ -27,7 +27,7 @@ FIntPoint JourneyChunkOf(const FVector& PositionCm) {
 }
 
 // Fresh start at the trailhead lot, threshold crossing, entrance unreachable afterwards, state survives save/resume.
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWoodJourneyFlowTest,"Wood.Runtime.JourneyFlow",EAutomationTestFlags::EditorContext|EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FWoodJourneyFlowTest,"Wood.Fresh.JourneyFlow",EAutomationTestFlags::EditorContext|EAutomationTestFlags::ProductFilter)
 bool FWoodJourneyFlowTest::RunTest(const FString&) {
  const FString Path=JourneyScratchPath(TEXT("journey-flow-test.json"));
  IFileManager::Get().Delete(*Path,false,true,true);
