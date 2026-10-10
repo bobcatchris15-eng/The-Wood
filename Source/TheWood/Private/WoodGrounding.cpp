@@ -2,6 +2,11 @@
 #include "Engine/StaticMesh.h"
 #include "StaticMeshResources.h"
 
+// Matches core validatePoint (1e6 m) in centimetres; anything past it is garbage, not geometry.
+namespace {
+constexpr double WoodRootLimitCm=1.0e8;
+}
+
 const TArray<FVector>& WoodRootContacts(const UStaticMesh& Asset) {
  check(IsInGameThread());
  static TMap<TWeakObjectPtr<const UStaticMesh>,TArray<FVector>> Cache;
@@ -18,6 +23,9 @@ const TArray<FVector>& WoodRootContacts(const UStaticMesh& Asset) {
    TMap<FIntPoint,FVector> Bins;
    for(uint32 I=0;I<Positions.GetNumVertices();++I) {
     const FVector P(Positions.VertexPosition(I));
+    // Cooked buffers can carry non-finite or wild positions; never let them reach the ground probe.
+    if(P.ContainsNaN() || !FMath::IsFinite(P.X) || !FMath::IsFinite(P.Y) || !FMath::IsFinite(P.Z)) continue;
+    if(FMath::Abs(P.X)>WoodRootLimitCm || FMath::Abs(P.Y)>WoodRootLimitCm || FMath::Abs(P.Z)>WoodRootLimitCm) continue;
     if(P.Z>Bottom+15) continue;
     const FIntPoint Bin(FMath::FloorToInt(P.X/5),FMath::FloorToInt(P.Y/5));
     FVector* Existing=Bins.Find(Bin);
@@ -28,7 +36,12 @@ const TArray<FVector>& WoodRootContacts(const UStaticMesh& Asset) {
  }
  // Imported tree meshes must retain CPU positions when cooked. This fallback
  // still compensates an offset origin, but authoring validation rejects it.
- if(Contacts.IsEmpty()) Contacts.Add(FVector(0,0,Asset.GetBoundingBox().Min.Z));
+ if(Contacts.IsEmpty()) {
+  const FBox Box=Asset.GetBoundingBox();
+  const double MinZ=Box.IsValid?Box.Min.Z:0.0;
+  Contacts.Add(FVector(0,0,FMath::IsFinite(MinZ)&&FMath::Abs(MinZ)<=WoodRootLimitCm?MinZ:0.0));
+  UE_LOG(LogTemp,Warning,TEXT("WoodRootContacts: %s has no usable CPU positions; using bounds base"),*Asset.GetName());
+ }
  return Cache.Add(Key,MoveTemp(Contacts));
 }
 
@@ -57,12 +70,17 @@ FTransform WoodGroundedTransform(const wood::Feature& Feature,const FWoodPlaceme
  FTransform Result(FRotator(Lean,Feature.yaw,0),FVector(X,Y,GroundHeight(X/100,Y/100)*100),FVector(Feature.scale*Girth,Feature.scale*Girth,Feature.scale));
  if(Feature.kind==wood::Kind::Tree) {
   double Base=DBL_MAX;
+  int32 Used=0;
   for(const FVector& Contact:Profile.Roots) {
+   if(Contact.ContainsNaN()) continue;
    const FVector Offset=Result.TransformVector(Contact);
+   if(!FMath::IsFinite(Offset.X)||!FMath::IsFinite(Offset.Y)||!FMath::IsFinite(Offset.Z)) continue;
+   if(FMath::Abs(X+Offset.X)>WoodRootLimitCm||FMath::Abs(Y+Offset.Y)>WoodRootLimitCm) continue;
    Base=FMath::Min(Base,GroundHeight((X+Offset.X)/100,(Y+Offset.Y)/100)*100-Offset.Z);
+   ++Used;
   }
   // Five centimetres of soil contact hides the scan's open cut at its base.
-  if(!Profile.Roots.IsEmpty()) Result.SetTranslation(FVector(X,Y,Base-5));
+  if(Used>0 && FMath::IsFinite(Base)) Result.SetTranslation(FVector(X,Y,Base-5));
  } else if(Feature.kind==wood::Kind::Rock) {
   // Props stay flat at terrain height under the base centre: no root fit, no tilt.
   Result.AddToTranslation(FVector(0,0,-Profile.Bounds.GetSize().Z*Feature.scale*.18));

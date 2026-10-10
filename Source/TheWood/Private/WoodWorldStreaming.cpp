@@ -9,6 +9,8 @@
 #include "Materials/MaterialInterface.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include <algorithm>
+#include <exception>
+#include <stdexcept>
 #include <map>
 #include <memory>
 #include "WoodRuntime.h"
@@ -213,7 +215,18 @@ void AWoodWorld::SpawnFlora(FWoodResident& Resident,const FWoodPreparedChunk& Pr
   const int32 Pick=FMath::Abs(static_cast<int32>(Feature.yaw*19))%Ids->Num();
   const int32 Id=(*Ids)[Pick];
   const FWoodFloraVariant& Variant=Runtime->FloraVariants[Id];
-  FTransform Where=WoodGroundedTransform(Feature,Variant.Profile,[this](double X,double Y){return Generator.terrainHeight(X,Y);});
+  FTransform Where;
+  try {
+   Where=WoodGroundedTransform(Feature,Variant.Profile,[this](double X,double Y){return Generator.terrainHeight(X,Y);});
+  } catch(const std::exception& Error) {
+   // Core rejects non-finite or out-of-range samples; drop the one placement instead of killing the game thread.
+   UE_LOG(LogTemp,Warning,TEXT("SpawnFlora: skipped invalid placement (species %d): %hs"),static_cast<int32>(Variant.Species),Error.what());
+   continue;
+  }
+  if(Where.GetTranslation().ContainsNaN()||!FMath::IsFinite(Where.GetScale3D().X)||!FMath::IsFinite(Where.GetScale3D().Z)) {
+   UE_LOG(LogTemp,Warning,TEXT("SpawnFlora: skipped non-finite transform (species %d)"),static_cast<int32>(Variant.Species));
+   continue;
+  }
   if(wood::flora::table()[static_cast<std::size_t>(Variant.Species)].row.role==wood::flora::Role::Moss) {
    // Ground moss mounds are 0.5 m discs at feature scale 0.5-2.5, which read as flat green decals. Patches are 0.4x the
    // feature scale with 0.8-1.2 height variation, and half the instances are thinned deterministically (catalogue ceiling unchanged).
