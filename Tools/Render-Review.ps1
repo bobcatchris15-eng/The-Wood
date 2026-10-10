@@ -1,4 +1,4 @@
-param([int]$Seed=12345,[ValidateSet('Forest','Stream','Ridge','Grassland','Taiga','Highlands','OldGrowth','ColdRainforest','IcyHills','Savannah','Swamp','Marsh','WarmRainforest','Roots','Ruins','Trailhead','TemperateForest','RockyHighlands','DryGrassland','Prairie','Landmark','Creature','Unreal','Rain','Snow')][string]$View='Forest',[double]$Time=0,[switch]$Dump)
+param([int]$Seed=12345,[ValidateSet('Forest','Stream','Ridge','Grassland','Taiga','Highlands','OldGrowth','ColdRainforest','IcyHills','Savannah','Swamp','Marsh','WarmRainforest','Roots','Ruins','Trailhead','TemperateForest','RockyHighlands','DryGrassland','Prairie','Landmark','Creature','Unreal','Unreal_Shadebell','Unreal_Lanternbrush','Unreal_Glassfinger','Unreal_Embercrown','Rain','Snow')][string]$View='Forest',[double]$Time=0,[switch]$Dump)
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path $PSScriptRoot -Parent
 $editor='C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe'

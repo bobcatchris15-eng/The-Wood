@@ -167,6 +167,12 @@ if not any(str(p.get_editor_property('parameter_name'))=='Snow' for p in mpc.get
     snow_param.set_editor_property('parameter_name','Snow')
     snow_param.set_editor_property('default_value',0.0)
     mpc.set_editor_property('scalar_parameters',list(mpc.get_editor_property('scalar_parameters'))+[snow_param])
+# UnrealWeight 0..1 at the player (AWoodWorld::Tick): drives unreal-cell foliage hue shift and ground tint.
+if not any(str(p.get_editor_property('parameter_name'))=='UnrealWeight' for p in mpc.get_editor_property('scalar_parameters')):
+    unreal_param=unreal.CollectionScalarParameter()
+    unreal_param.set_editor_property('parameter_name','UnrealWeight')
+    unreal_param.set_editor_property('default_value',0.0)
+    mpc.set_editor_property('scalar_parameters',list(mpc.get_editor_property('scalar_parameters'))+[unreal_param])
 LIB.save_loaded_asset(mpc)
 
 
@@ -875,6 +881,51 @@ for name,palette_slot in VEGETATION_PALETTE:
     palette.set_editor_property(palette_slot,[found[0]])
 LIB.save_loaded_asset(palette)
 
+# Unreal-only leaf variants (WoodFlora.h unreal rows): LeafPools albedo master 0, vein normal and vein mask from the Vivarium project
+# (ArtSource/Vivarium/LeafPools; self-generated, owner-permitted reuse, see Docs/Assets.md). Applied to the leaf slots of these species' flora meshes.
+# Emissive accent (mask-weighted) for lanternbrush and embercrown.
+LEAF_POOLS=ROOT/'ArtSource/Vivarium/LeafPools'
+LEAF_DIR='/Game/Art/Vivarium/LeafPools'
+LEAF_VARIANT_ACCENT={'shadebell':None,'lanternbrush':(1.0,0.62,0.22),'glassfinger':None,'embercrown':(1.0,0.28,0.06)}
+def leaf_texture(source, species, role, srgb=False, normal=False):
+    # import_source names the asset by file stem (vein_normal, shadebell-0): one folder per species keeps the stems unique.
+    dest=LEAF_DIR+'/'+species
+    import_unit(source,dest,source.stem)
+    tex=LIB.load_asset(dest+'/'+source.stem)
+    if tex is None:
+        raise RuntimeError('LeafPools texture import failed: '+str(source))
+    tex.set_editor_property('srgb',srgb)
+    if normal:
+        compression=unreal.TextureCompressionSettings.TC_NORMALMAP
+    elif srgb:
+        compression=unreal.TextureCompressionSettings.TC_DEFAULT
+    else:
+        compression=unreal.TextureCompressionSettings.TC_GRAYSCALE
+    tex.set_editor_property('compression_settings',compression)
+    LIB.save_loaded_asset(tex)
+    return tex
+LEAF_VARIANT_MATS={}
+for species,accent in LEAF_VARIANT_ACCENT.items():
+    mat,build=fresh('LeafVariant_'+species)
+    if build:
+        albedo_tex=leaf_texture(LEAF_POOLS/'Masters'/(species+'-0.png'),species,'albedo',srgb=True)
+        normal_tex=leaf_texture(LEAF_POOLS/species/'vein_normal.png',species,'normal',normal=True)
+        mask_tex=leaf_texture(LEAF_POOLS/species/'vein_mask.png',species,'mask')
+        leaf_uv=expr(mat,unreal.MaterialExpressionTextureCoordinate)
+        albedo=sample(mat,albedo_tex,leaf_uv)
+        normal_node=sample(mat,normal_tex,leaf_uv,True)
+        mask=sample(mat,mask_tex,leaf_uv)
+        prop(albedo,'RGB',unreal.MaterialProperty.MP_BASE_COLOR)
+        prop(albedo,'A',unreal.MaterialProperty.MP_OPACITY)
+        prop(normal_node,'RGB',unreal.MaterialProperty.MP_NORMAL)
+        roughness=constant(mat,0.6)
+        prop(roughness,'',unreal.MaterialProperty.MP_ROUGHNESS)
+        if accent is not None:
+            accent_color=vector(mat,(accent[0],accent[1],accent[2]))
+            glow=custom(mat,'return C*M*S;',{'C':(accent_color,''),'M':(mask,'R'),'S':(constant(mat,3.0),'')})
+            prop(glow,'',unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+        finish(mat)
+    LEAF_VARIANT_MATS[species]=mat
 # Flora (ArtSource/Authored/Flora). Every approved variant imports to /Game/Art/Flora/<species>/ with LOD1/LOD2 added as
 # LODs of the LOD0 StaticMesh. Leaves are masked and two-sided with wind; bark is opaque with wind; all slots carry the tint.
 # Palette routing follows the WoodFlora.h table: only rows with approved=true (not deadwood, not unreal-only) are mapped.
@@ -955,7 +1006,11 @@ for species in sorted(flora_files):
             material_name=interface.get_name().lower()
             bark=any(word in material_name for word in ('bark','trunk','wood','stem','stalk','knee'))
             leaf=not bark
-            mesh.set_material(i,with_wind(interface,3.0 if leaf else 16.0,True,leaf,True,name))
+            if leaf and species in LEAF_VARIANT_MATS:
+                # Unreal-only species take the LeafPools leaf variant (untinted: the variant supplies its own albedo).
+                mesh.set_material(i,with_wind(LEAF_VARIANT_MATS[species],3.0,True,True))
+            else:
+                mesh.set_material(i,with_wind(interface,3.0 if leaf else 16.0,True,leaf,True,name))
             keyed=True
         if keyed:
             LIB.save_loaded_asset(mesh)

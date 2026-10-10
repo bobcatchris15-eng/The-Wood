@@ -24,6 +24,10 @@ $views=[ordered]@{
  Landmark='Landmark: nearest lattice landmark, camera 120 m away'
  Creature='Creature: first fauna spawn, camera 8 m away'
  Unreal='Unreal: nearest unreal-flagged region origin'
+ Unreal_Shadebell='Unreal Shadebell: 1st unreal core (overlay unrealWeight 0.85+), lattice order'
+ Unreal_Lanternbrush='Unreal Lanternbrush: 2nd unreal core, lattice order'
+ Unreal_Glassfinger='Unreal Glassfinger: 3rd unreal core, lattice order'
+ Unreal_Embercrown='Unreal Embercrown: 4th unreal core, lattice order'
  Rain='Rain: forced WoodWeather rain 0.8 at wilderness start'
  Snow='Snow: forced WoodWeather snow 0.8 in IcyHills core'
 }

@@ -55,6 +55,12 @@ Notes on the picks:
 
 The copies match the Vivarium originals byte-for-byte (MD5 checked). The CC0 licence and source URL are from the packet, not re-verified against the ambientCG site.
 
+### LeafPools (leaf albedo, vein normal and vein mask, from the Vivarium project)
+
+`ArtSource/Vivarium/LeafPools/` holds PNG copies only, from `C:\Misc\Vivarium\game\Textures\LeafPools\`: `Masters/<species>-0..3.png` (albedo masters for shadebell, lanternbrush, glassfinger, embercrown) and `<species>/vein_normal.png` and `<species>/vein_mask.png`. The `.res` files are not copied.
+
+Provenance: self-generated for Vivarium (owner: project user), Codex image_gen; reused with owner permission. This is not CC0 and is not a third-party licence. It is recorded here so the reuse basis is traceable.
+
 
 ## Discovery stone kit (CC0 procedural masonry)
 

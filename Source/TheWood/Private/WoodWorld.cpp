@@ -297,10 +297,16 @@ void AWoodWorld::Tick(float DeltaSeconds) {
    LastWindValue=CurrentWind;
    for(const auto& Material:WindMaterials) Material->SetScalarParameterValue(TEXT("WindStrength"),CurrentWind);
   }
+ // Unreal-cell blend at the player (overlay unrealWeight 0..1): fog colour and density, sky light tint, and MPC_Weather "UnrealWeight"
+ // for material foliage hue shift and ground tint. Ordinary cells give 0, which leaves the base look unchanged.
+ const float UnrealW=static_cast<float>(FMath::Clamp(Generator.overlayAt(Position.X/100,Position.Y/100).unrealWeight,0.0,1.0));
  if(AtmosphereFog) {
   AtmosphereFog->SetActorLocation(FVector(Position.X,Position.Y,Position.Z+1200));
-  AtmosphereFog->GetComponent()->SetFogDensity(static_cast<float>(0.014+Weather.fogDensity+(WeatherState?WeatherState->FogDensityBoost():0.0f)));
+  AtmosphereFog->GetComponent()->SetFogDensity(static_cast<float>((0.014+Weather.fogDensity+(WeatherState?WeatherState->FogDensityBoost():0.0f))*(1.0+0.5*UnrealW)));
+  AtmosphereFog->GetComponent()->SetFogInscatteringColor(FLinearColor(FMath::Lerp(0.16f,0.30f,UnrealW),FMath::Lerp(0.22f,0.17f,UnrealW),FMath::Lerp(0.25f,0.24f,UnrealW)));
  }
+ if(AmbientLight) AmbientLight->GetLightComponent()->SetLightColor(FLinearColor(1.0f,1.0f-0.12f*UnrealW,1.0f-0.25f*UnrealW));
+ if(WeatherParameters) if(auto* Instance=GetWorld()->GetParameterCollectionInstance(WeatherParameters)) Instance->SetScalarParameterValue(TEXT("UnrealWeight"),UnrealW);
  for(int32 Index=0;Index<RegionLights.Num();++Index) {
   auto* Component=Cast<URectLightComponent>(RegionLights[Index]->GetLightComponent());
   const auto Light=Generator.lighting(RegionLights[Index]->GetActorLocation().X/100,RegionLights[Index]->GetActorLocation().Y/100,Clock.seconds);
