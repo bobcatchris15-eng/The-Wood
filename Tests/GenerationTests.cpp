@@ -373,11 +373,12 @@ int main() {
   // T1c: tree species + deadwood (fingerprint hashes species and Deadwood; all 15 cases re-baselined)
   // F1: flora engine (WoodFlora.h) re-baselined the 12 feature cases; the 3 terrain-only cases are unchanged.
   // F2: ground-cover consolidation (moss only via ground layer; aquatic + fungus enabled) re-baselined 9 feature cases; the (12,12) feature cases and the 3 terrain-only cases are unchanged.
+  // U2: unreal-only flora (shadebell, lanternbrush, glassfinger, embercrown) and fungus x3 in ExcessivelyFungal; re-baselined 2 feature cases (42,12,12) and (98765,0,0); 13 unchanged.
   struct GoldenCase { unsigned seed; int x,y; bool features; std::uint64_t expected; };
   const GoldenCase cases[]={
    {0,0,0,true,0xb1e5dde1a11bfdaaULL},{0,3,-2,true,0x8538ad8c6c8199f3ULL},{0,-5,7,true,0xfda278a318d22a72ULL},{0,12,12,true,0xc26ca1df7bfc5d84ULL},{0,0,0,false,0x675a54c2da3a3c3eULL},
-   {42,0,0,true,0x5d644dbfc2074f6eULL},{42,3,-2,true,0x5b89a86293626bbdULL},{42,-5,7,true,0x5a3a5d142c4f6b02ULL},{42,12,12,true,0x45f8f332d9d2807eULL},{42,0,0,false,0x0f61a6ac614626beULL},
-   {98765,0,0,true,0xed134e131d241b79ULL}, // T1c; was U1 (unreal region, overlay density)
+   {42,0,0,true,0x5d644dbfc2074f6eULL},{42,3,-2,true,0x5b89a86293626bbdULL},{42,-5,7,true,0x5a3a5d142c4f6b02ULL},{42,12,12,true,0xa96c31a13c15339cULL},{42,0,0,false,0x0f61a6ac614626beULL},
+   {98765,0,0,true,0xcf178d323a5ce3b5ULL}, // U2; was T1c (unreal region, overlay density)
    {98765,3,-2,true,0x58ac28a4af147e19ULL}, // T1c; was U1 (unreal region, overlay density)
    {98765,-5,7,true,0xa12102bda79e55e8ULL},{98765,12,12,true,0xb29adde9f954a483ULL},{98765,0,0,false,0x8c534ebf0aa6c2f5ULL},
   };

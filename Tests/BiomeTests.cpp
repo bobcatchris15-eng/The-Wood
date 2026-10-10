@@ -240,6 +240,7 @@ int main() {
     flora::Site local;
     local.biome=site.biome; local.moisture=site.moisture; local.slope=site.slope; local.forest=site.forest;
     local.streamDist=std::abs(f.position.x-w.streamX(f.position.y)); local.halfWidth=w.streamHalfWidth(f.position.y);
+    local.unreal=w.overlayAt(f.position.x,f.position.y).unrealWeight;
     const auto& s=flora::table()[static_cast<std::size_t>(f.flora)];
     return flora::viable(s,local,s.row.role);
    };

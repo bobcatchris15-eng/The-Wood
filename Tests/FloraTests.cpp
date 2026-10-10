@@ -46,18 +46,20 @@ int main() {
  check(table.size()==count,"table holds 69 species");
 
  // Mesh flags: approved species (APPROVED.md) carry their own mesh; unapproved ones fall back or are skipped.
- std::size_t meshes=0, approvedMismatch=0, fallbackRoleMismatch=0, unrealMesh=0;
+ std::size_t meshes=0, approvedMismatch=0, fallbackRoleMismatch=0, unrealMesh=0, unrealProxyBad=0;
  for(std::size_t i=0;i<count;++i) {
   const auto& s=table[i];
   meshes+=s.hasMesh?1:0;
   if(s.row.approved!=(s.hasMesh&&s.meshSource==static_cast<int>(i))) ++approvedMismatch;
-  if(s.row.unrealOnly&&(s.hasMesh||s.meshSource>=0)) ++unrealMesh;
+  if(s.row.unrealOnly&&s.hasMesh) ++unrealMesh;
+  if(s.row.unrealOnly&&(s.meshSource<0||table[static_cast<std::size_t>(s.meshSource)].row.role!=s.row.role||!table[static_cast<std::size_t>(s.meshSource)].hasMesh)) ++unrealProxyBad;
   if(s.meshSource>=0&&table[static_cast<std::size_t>(s.meshSource)].row.role!=s.row.role) ++fallbackRoleMismatch;
  }
  check(meshes==60,"60 approved species carry a mesh flag");
  check(approvedMismatch==0,"hasMesh is set exactly for approved species, sourced from themselves");
  check(fallbackRoleMismatch==0,"mesh fallbacks stay within the same role");
- check(unrealMesh==0,"unreal-only species carry no physical mesh");
+ check(unrealMesh==0,"unreal-only species carry no physical mesh of their own");
+ check(unrealProxyBad==0,"unreal-only species render a same-role approved proxy mesh (LeafPools material applied by adapter)");
 
  // Approval list hard-coded from ArtSource/Authored/Flora/APPROVED.md, final state (later redo rows supersede rejections).
  // Batches: canopy_a, shrub_a, flower(all 9), canopy_b, grass, fern, wetfungi, shrub_b, conifer, shrub_c, redo. Keep in sync with that file.
@@ -85,7 +87,7 @@ int main() {
  check(approvedFlags==std::size(kApprovedNames),"approved flag count equals APPROVED.md list (60)");
 
  double worstOverCeiling=0, worstUnderFloor=1e9;
- std::size_t badSpeciesCount=0;
+ std::size_t badSpeciesCount=0, unrealPlaced=0;
  for(int family=0;family<kFamilyCount;++family) {
   const auto f=static_cast<std::size_t>(family);
   World world({42,128,64});
@@ -99,22 +101,26 @@ int main() {
 
   std::set<int> species;
   std::array<std::size_t,flora::kRoleCount> roleCounts{};
-  std::size_t outside=0, badMesh=0, badTint=0, badHeight=0;
+  std::size_t outside=0, badMesh=0, badTint=0, badHeight=0, unrealOutside=0;
   for(const auto& c:chunks) for(const auto& feature:c.features) {
    if(feature.flora<0) continue;
    const auto& s=table[static_cast<std::size_t>(feature.flora)];
    species.insert(feature.flora);
    roleCounts[static_cast<std::size_t>(s.row.role)]++;
    const auto site=world.sample(feature.position.x,feature.position.y);
+   const auto ov=world.overlayAt(feature.position.x,feature.position.y);
    flora::Site local;
    local.biome=site.biome; local.moisture=site.moisture; local.slope=site.slope; local.forest=site.forest;
    local.streamDist=std::abs(feature.position.x-world.streamX(feature.position.y));
    local.halfWidth=world.streamHalfWidth(feature.position.y);
+   local.unreal=ov.unrealWeight;
+   if(s.row.unrealOnly) { ++unrealPlaced; if(!ov.active) ++unrealOutside; }
    if(!flora::viable(s,local,s.row.role)) ++outside;
    if(feature.floraMesh<0||!table[static_cast<std::size_t>(feature.floraMesh)].hasMesh) ++badMesh;
    if(feature.tint<0||feature.tint>3) ++badTint;
    if(feature.heightM<s.row.heightMin-1e-9||feature.heightM>s.row.heightMax+1e-9) ++badHeight;
   }
+  check(unrealOutside==0,"unreal-only species are placed only where unreal overlay has weight");
   check(species.size()>=7,"each family places at least 7 distinct species over its 32 cores (WR catalogue-limited at 7)");
   check(outside==0,"no species placed outside its viability");
   check(badMesh==0,"every placed species renders an approved mesh");
@@ -133,11 +139,12 @@ int main() {
   for(const auto& core:cores) for(int gy=0;gy<8;++gy) for(int gx=0;gx<8;++gx) {
    const double px=core.first*128.0+(gx+0.5)*16.0, py=core.second*128.0+(gy+0.5)*16.0;
    const auto site=world.sample(px,py);
-   const double scale=world.overlayAt(px,py).densityScale;
+   const auto ov=world.overlayAt(px,py);
+   const double scale=ov.densityScale;
    flora::Site local;
    local.biome=site.biome; local.moisture=site.moisture; local.slope=site.slope; local.forest=site.forest;
    local.streamDist=std::abs(px-world.streamX(py)); local.halfWidth=world.streamHalfWidth(py);
-   for(int r=0;r<flora::kRoleCount;++r) blockCeiling[static_cast<std::size_t>(r)]+=flora::roleDensity(site.biome,static_cast<flora::Role>(r))*scale/sampledCells;
+   for(int r=0;r<flora::kRoleCount;++r) blockCeiling[static_cast<std::size_t>(r)]+=flora::roleDensity(site.biome,static_cast<flora::Role>(r))*scale*(r==static_cast<int>(flora::Role::Fungus)?ov.fungusScale:1.0)/sampledCells;
    std::array<bool,flora::kRoleCount> hereViable{};
    for(std::size_t i=0;i<count;++i) {
     const auto& s=table[i];
@@ -182,6 +189,8 @@ int main() {
    }
   }
  }
+ check(unrealPlaced>0,"unreal-only species are placed somewhere across the family cores");
+ std::printf("unreal-only features placed: %zu\n",unrealPlaced);
  std::printf("worst role density ratio: max %.3f of ceiling, min %.3f of ceiling; families below 8 species: %zu\n",worstOverCeiling,worstUnderFloor,badSpeciesCount);
 
  if(failures) std::cerr<<failures<<" flora checks failed\n";

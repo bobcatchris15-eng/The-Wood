@@ -7,6 +7,7 @@
 #include "Generation/WoodGeneration.h"
 
 // Flora habitat engine. Rows transcribed from Docs/FloraCatalog.md: 65 biome flora plus 4 unreal-only species (kFloraCount=69).
+// Unreal-only rows take a same-role approved mesh as proxy (meshSource, hasMesh=false); the adapter applies the LeafPools material.
 // Header-only: the build scripts compile explicit .cpp lists, so a new translation unit would touch every test script.
 // Density and weight arrays are indexed by wood::Biome (TF DG RH TG OG CR IH SV SW MA WR PR).
 namespace wood {
@@ -152,7 +153,8 @@ inline std::array<FloraSpecies,kFloraCount> buildTable() {
  }
  for(std::size_t i=0;i<kFloraCount;++i) {
   const Row& r=t[i].row;
-  if(r.unrealOnly) continue;
+  // Unreal-only rows: weight 1 in every family so the mesh proxy below ranks them; placement is gated by Site::unreal.
+  if(r.unrealOnly) for(auto& w:t[i].weight) w=1.0;
   if(r.approved) { t[i].hasMesh=true; t[i].meshSource=static_cast<int>(i); continue; }
   int best=-1;
   double bestOverlap=0, bestMoist=1e9;
@@ -182,6 +184,7 @@ inline const std::array<FloraSpecies,kFloraCount>& table() {
 struct Site {
  std::array<double,kFamilyCount> biome{};
  double moisture=0, slope=0, forest=0, streamDist=1e9, halfWidth=0;
+ double unreal=0; // unreal-cell weight at the point (OverlayField::unrealWeight); 0 outside unreal blends
 };
 
 // Understory roles are gated by canopy closure; trees are not.
@@ -195,8 +198,9 @@ inline double blendWeight(const FloraSpecies& s,const std::array<double,kFamilyC
 
 // Soft tolerances: moisture +-0.10 and slope +0.10 beyond the catalogue range, since family moisture is a regional mean.
 inline bool viable(const FloraSpecies& s,const Site& site,Role role) {
- if(s.row.role!=role||s.meshSource<0||s.row.deadwood||s.row.unrealOnly) return false;
- if(blendWeight(s,site.biome)<=0) return false;
+ if(s.row.role!=role||s.meshSource<0||s.row.deadwood) return false;
+ if(s.row.unrealOnly) { if(site.unreal<=0) return false; }
+ else if(blendWeight(s,site.biome)<=0) return false;
  if(site.moisture<s.row.moistMin-0.1||site.moisture>s.row.moistMax+0.1) return false;
  if(site.slope>s.row.slopeMax+0.1) return false;
  if(understoryRole(role)) {
@@ -215,7 +219,7 @@ inline int pick(const Site& site,Role role,double roll) {
  double total=0;
  for(std::size_t i=0;i<kFloraCount;++i) {
   if(!viable(t[i],site,role)) continue;
-  w[i]=blendWeight(t[i],site.biome);
+  w[i]=t[i].row.unrealOnly?site.unreal:blendWeight(t[i],site.biome);
   total+=w[i];
  }
  if(total<=0) return -1;

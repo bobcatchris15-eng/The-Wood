@@ -64,6 +64,9 @@ int main() {
  const auto none=unreal::params(Overlay::None);
  check(none.featureScale==1.0&&none.densityScale==1.0&&none.lightBrightness==1.0&&none.lightKelvinShift==0.0,"None overlay is identity");
  check(unreal::params(Overlay::ExcessivelyFungal).featureScale>=1.8,"fungal overlay scales features at least 1.8x");
+ check(none.fungusScale==1.0,"None overlay leaves fungi unscaled");
+ check(unreal::params(Overlay::ExcessivelyFungal).fungusScale==3.0,"fungal overlay boosts fungus ground cover x3");
+ for(const Overlay o:{Overlay::LuminousMoss,Overlay::UnnaturallyDark,Overlay::PaleEnchanted,Overlay::GlassyMineral}) check(unreal::params(o).fungusScale==1.0,"only the fungal overlay boosts fungi");
 
  // Feature scale inside a large-scale core versus ordinary ground.
  bool foundCore=false; double peakScale=0;

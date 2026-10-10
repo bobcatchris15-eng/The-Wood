@@ -151,7 +151,7 @@ Surface climate(const World& world,double x,double y) {
 // Hex-weighted overlay multipliers. Ordinary cells contribute neutral values, so the field fades across the blend band.
 unreal::OverlayField overlayField(const World& world,double x,double y) {
  unreal::OverlayField f;
- double total=0,featureScale=0,densityScale=0,brightness=0,kelvinShift=0;
+ double total=0,featureScale=0,densityScale=0,brightness=0,kelvinShift=0,fungusScale=0,unrealW=0;
  bool any=false;
  for(const auto& cell:cellWeights(world.settings(),x,y)) {
   if(cell.weight<=0) continue;
@@ -159,12 +159,14 @@ unreal::OverlayField overlayField(const World& world,double x,double y) {
   const auto p=unreal::params(r.overlay);
   const double w=cell.weight;
   total+=w; featureScale+=w*p.featureScale; densityScale+=w*p.densityScale;
-  brightness+=w*p.lightBrightness; kelvinShift+=w*p.lightKelvinShift;
+  brightness+=w*p.lightBrightness; kelvinShift+=w*p.lightKelvinShift; fungusScale+=w*p.fungusScale;
+  if(r.unreal) unrealW+=w;
   any=any||r.unreal;
  }
  if(!any||total<=0) return f;
  f.featureScale=featureScale/total; f.densityScale=densityScale/total;
- f.lightBrightness=brightness/total; f.lightKelvinShift=kelvinShift/total; f.active=true;
+ f.lightBrightness=brightness/total; f.lightKelvinShift=kelvinShift/total;
+ f.fungusScale=fungusScale/total; f.unrealWeight=unrealW/total; f.active=true;
  return f;
 }
 double waterLevel(double y) { return 8-0.018*y; }
@@ -443,7 +445,7 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
    const double patch=0.5+0.5*noise(config.seed+Salt::PatchCover,px/38,py/38);
    const double routeDistance=std::abs(px-(streamX(py)-7));
    Kind kind; double scale; bool young=false; int species=static_cast<int>(Species::Pine);
-   flora::Site site{surface.biome,surface.moisture,surface.slope,surface.forest,std::abs(px-streamX(py)),streamHalfWidth(py)};
+   flora::Site site{surface.biome,surface.moisture,surface.slope,surface.forest,std::abs(px-streamX(py)),streamHalfWidth(py),ov.unrealWeight};
    int floraIndex=-1; double heightM=0;
    if(type==0||type==6) {
     // Canopy and subcanopy trees: a catalogue ceiling per role and family, species from the viability engine.
@@ -483,7 +485,7 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     std::array<double,8> ceilings{};
     double total=0;
     for(std::size_t g=0;g<groundRoles.size();++g) {
-     ceilings[g]=flora::roleDensity(surface.biome,groundRoles[g])*ov.densityScale*(0.2+1.6*patch);
+     ceilings[g]=flora::roleDensity(surface.biome,groundRoles[g])*ov.densityScale*(0.2+1.6*patch)*(groundRoles[g]==flora::Role::Fungus?ov.fungusScale:1.0);
      total+=ceilings[g];
     }
     // Low plants preserve an open walking strip without emptying both banks.
