@@ -88,3 +88,18 @@ The terrain generation pipeline now procedurally synthesizes ruins and natural d
    - Standalone suites (`Test-Discovery`, `Test-Core`, `Test-Biomes`, `Test-Hex`, `Test-MSVC`, `Test-Streaming`, `Test-Atmosphere`) all pass with zero warnings.
    - Unreal Editor target compiled cleanly (Win64 Development).
    - All 4 Unreal runtime automation tests pass (ContinuousExploration, GroundAndObservation, RetainedVegetation, TreeRootContact) with 0 failures.
+
+
+## Dev-machine frame-time capture (autopilot) - 9 October 2026
+
+Label: dev machine, editor -game, not packaged - not the acceptance target. The packaged 1080p60 measurement in Docs/Specification.md section 12 is still open.
+
+- Machine: Ryzen AI 7 PRO 350, Radeon 860M iGPU (shared memory), 32 GB RAM, Windows 11 Pro.
+- Command: `Tools\Capture-FrameTime.ps1 -Seconds 120` (UnrealEditor -game, 1920x1080 windowed, `-WoodFresh -WoodWild -WoodAutopilot=120`, CsvProfile started and stopped by the autopilot).
+- Route: fixed table, 10 legs of 60 m from grid start (-500,-300) (world -680,-480 m). Sprint 10 s, 3 photographs at 30, 60 and 90 s, 10 s seated 20x segment at 95-105 s, then quit at 120 s.
+- Region boundaries crossed: 2 (region 0,0 to -1,0 at 31.8 s, to 0,-1 at 78.6 s). Route reached waypoint 8 of 10.
+- Frames: 5096 over 120 s.
+- Frame ms: avg 23.56, p50 22.70, p95 31.56, p99 44.18. Hitches (frame > 33 ms): 156.
+- Game ms: avg 10.45, p95 15.18. Render ms: avg 22.72, p95 30.47. GPU ms: avg 21.70, p95 28.97.
+- Result against the 16.7 ms p95 budget: FAIL on this machine. This is a measurement of the dev baseline, not a certification.
+- Raw CSV: `Saved/FrameTime/20261009-224303.csv` (not committed).

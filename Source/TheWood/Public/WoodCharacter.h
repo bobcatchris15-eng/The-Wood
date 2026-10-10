@@ -48,4 +48,19 @@ private:
  void StartJump();
  void StartSprint();
  void StopSprint();
+ // -WoodAutopilot=<seconds>: fixed route walk, 10 s sprint, 10 s seated 20x segment, 3 photographs, CsvProfile stop, then quit.
+ void TickAutopilot();
+ bool bAutopilotParsed=false;
+ bool bAutopilotActive=false;
+ double AutopilotCap=0;
+ double AutopilotStartWall=0;
+ double AutopilotLegStart=0;
+ double AutopilotRegionNext=0;
+ int32 AutopilotWaypoint=0;
+ int32 AutopilotPhotos=0;
+ int32 AutopilotCrossings=0;
+ int32 AutopilotRegionQ=0,AutopilotRegionR=0;
+ bool bAutopilotRegionKnown=false;
+ bool bAutopilotSeatStarted=false;
+ bool bAutopilotSeatDone=false;
 };

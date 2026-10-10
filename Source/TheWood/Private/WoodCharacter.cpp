@@ -59,6 +59,7 @@ void AWoodCharacter::BeginPlay() {
 void AWoodCharacter::Tick(float DeltaSeconds) {
  Super::Tick(DeltaSeconds);
  if(!Environment) return;
+ TickAutopilot();
  const bool Seated=Environment->IsSeated();
  // -WoodEntrance: first tick places the explorer at the trailhead, eye height, facing north (+Y).
  static bool bEntrancePlaced=false;
@@ -359,6 +360,85 @@ void AWoodCharacter::WoodCapture(const FString& View,float Delay) {
   FTimerHandle ExitTimer;
   GetWorldTimerManager().SetTimer(ExitTimer,FTimerDelegate::CreateLambda([]{ FPlatformMisc::RequestExit(false); }),3.0f,false);
  }),0.1f,true);
+}
+namespace {
+// Autopilot route in grid metres: start, then 60 m legs with a turn at each point. Hex ownership is evaluated at
+// (x+180, y+180) (WoodGeneration regionOwner), so grid metres = world metres + 180. Grid origin cell centre is world (-180,-180).
+// The first legs cross the origin/west cell edge near grid x=-623 and the west/south-west edge near grid (-678,-390).
+// Fixed table, no RNG.
+struct FAutopilotPoint { double X,Y; };
+constexpr double AutopilotStartX=-500.0,AutopilotStartY=-300.0;
+constexpr FAutopilotPoint AutopilotRoute[]={{-552,-330},{-604,-300},{-656,-330},{-708,-300},{-678,-352},{-678,-412},{-648,-464},{-678,-516},{-648,-568},{-678,-620}};
+constexpr int32 AutopilotRouteCount=sizeof(AutopilotRoute)/sizeof(AutopilotRoute[0]);
+constexpr double AutopilotSprintFrom=10.0,AutopilotSprintTo=20.0;
+constexpr double AutopilotPhotoAt[3]={30.0,60.0,90.0};
+constexpr double AutopilotSeatFrom=95.0,AutopilotSeatTo=105.0;
+constexpr double AutopilotLegTimeout=25.0;
+}
+// Wall-clock schedule (seated 20x time would stretch Tick deltas). Starts at the first tick after the flag is parsed.
+void AWoodCharacter::TickAutopilot() {
+ if(!bAutopilotParsed) {
+  bAutopilotParsed=true;
+  double Cap=0;
+  if(!Environment||!FParse::Value(FCommandLine::Get(),TEXT("-WoodAutopilot="),Cap)||Cap<=0) return;
+  bAutopilotActive=true; AutopilotCap=Cap; AutopilotStartWall=FPlatformTime::Seconds();
+  const FVector Start((AutopilotStartX-180.0)*100.0,(AutopilotStartY-180.0)*100.0,0);
+  Environment->EnsureTerrainAround(Start);
+  SetActorLocation(FVector(Start.X,Start.Y,Environment->GroundAt(Start.X,Start.Y)+100));
+  GetCharacterMovement()->StopMovementImmediately();
+  if(GEngine) GEngine->Exec(GetWorld(),TEXT("CsvProfile Start"),*GLog);
+  UE_LOG(LogTemp,Display,TEXT("WoodAutopilot: start at world %.0f,%.0f m cap %.0f s"),AutopilotStartX-180.0,AutopilotStartY-180.0,Cap);
+ }
+ if(!bAutopilotActive||!Environment) return;
+ const double T=FPlatformTime::Seconds()-AutopilotStartWall;
+ const FVector P=GetActorLocation();
+ SetSprintHeld(T>=AutopilotSprintFrom&&T<AutopilotSprintTo);
+ if(AutopilotPhotos<3&&T>=AutopilotPhotoAt[AutopilotPhotos]) { Photograph(); ++AutopilotPhotos; }
+ if(!bAutopilotSeatStarted&&T>=AutopilotSeatFrom) {
+  bAutopilotSeatStarted=true;
+  Environment->SetSeated(true);
+  if(!Environment->IsAccelerated()) Environment->ToggleAcceleration();
+  GetCharacterMovement()->StopMovementImmediately();
+ }
+ if(bAutopilotSeatStarted&&!bAutopilotSeatDone&&T>=AutopilotSeatTo) {
+  bAutopilotSeatDone=true;
+  if(Environment->IsAccelerated()) Environment->ToggleAcceleration();
+  Environment->SetSeated(false);
+ }
+ if(T>=AutopilotRegionNext) {
+  // Region ownership sampled once per second; a change between samples counts as one boundary crossing.
+  AutopilotRegionNext=T+1.0;
+  wood::World Landscape(wood::Settings{static_cast<uint32>(Environment->Seed),128,64});
+  const auto Cell=Landscape.regionOwner(P.X/100.0,P.Y/100.0);
+  if(!bAutopilotRegionKnown||Cell.q!=AutopilotRegionQ||Cell.r!=AutopilotRegionR) {
+   if(bAutopilotRegionKnown) ++AutopilotCrossings;
+   UE_LOG(LogTemp,Display,TEXT("WoodAutopilot: region %d,%d at %.1f s"),Cell.q,Cell.r,T);
+  }
+  bAutopilotRegionKnown=true; AutopilotRegionQ=Cell.q; AutopilotRegionR=Cell.r;
+ }
+ if(T>=AutopilotCap) {
+  bAutopilotActive=false;
+  SetSprintHeld(false);
+  if(Environment->IsSeated()) { if(Environment->IsAccelerated()) Environment->ToggleAcceleration(); Environment->SetSeated(false); }
+  if(GEngine) GEngine->Exec(GetWorld(),TEXT("CsvProfile Stop"),*GLog);
+  UE_LOG(LogTemp,Display,TEXT("WoodAutopilot: done at %.1f s, photos %d, region crossings %d, waypoint %d of %d"),T,AutopilotPhotos,AutopilotCrossings,AutopilotWaypoint,AutopilotRouteCount);
+  FTimerHandle QuitTimer;
+  GetWorldTimerManager().SetTimer(QuitTimer,FTimerDelegate::CreateLambda([]{ FPlatformMisc::RequestExit(false); }),2.0f,false);
+  return;
+ }
+ if(Environment->IsSeated()) return;
+ // Advance past reached or timed-out waypoints so a snagged leg cannot hold the route.
+ FVector D(0,0,0);
+ for(;;) {
+  if(AutopilotWaypoint>=AutopilotRouteCount) return;
+  const FAutopilotPoint& W=AutopilotRoute[AutopilotWaypoint];
+  D=FVector((W.X-180.0)*100.0-P.X,(W.Y-180.0)*100.0-P.Y,0);
+  if(D.Size2D()>=200.0&&T-AutopilotLegStart<=AutopilotLegTimeout) break;
+  ++AutopilotWaypoint; AutopilotLegStart=T;
+ }
+ const double Yaw=FMath::RadiansToDegrees(FMath::Atan2(D.Y,D.X));
+ if(Controller) Controller->SetControlRotation(FRotator(-4,Yaw,0));
+ AddMovementInput(FRotator(0,Yaw,0).Vector(),1.0f);
 }
 void AWoodCharacter::ApplyRuntimeSettings(const FWoodSettings& S) {
  MouseSensitivity=S.MouseSensitivity;

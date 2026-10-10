@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 BUDGET_MS = 16.7
+HITCH_MS = 33.0
 COLS = {
     'frame': ['frametime', 'frame time', 'frame'],
     'game': ['gamethreadtime', 'game thread time', 'gamethread', 'game'],
@@ -81,6 +82,7 @@ def stats(vals):
 def summarize(path):
     data = load(path)
     out = {'frames': len(data['frame']), 'frame': stats(data['frame'])}
+    out['hitches'] = sum(1 for v in data['frame'] if v > HITCH_MS)
     for key in ('game', 'render', 'gpu'):
         if data.get(key):
             out[key] = stats(data[key])
@@ -96,6 +98,7 @@ def report(path):
     f = res['frame']
     print(f"frames: {res['frames']}")
     print(f"frame ms  avg {f['avg']:.2f}  p50 {f['p50']:.2f}  p95 {f['p95']:.2f}  p99 {f['p99']:.2f}")
+    print(f"hitches (frame > {HITCH_MS:.0f} ms): {res['hitches']}")
     for key, label in (('game', 'game'), ('render', 'render'), ('gpu', 'gpu')):
         if key in res:
             s = res[key]
@@ -132,6 +135,7 @@ def selftest():
         assert abs(a['frame']['p50'] - 10.0) < 1e-9, a
         assert abs(a['frame']['p95'] - 20.0) < 1e-9, a
         assert abs(a['frame']['p99'] - 20.0) < 1e-9, a
+        assert a['hitches'] == 0, a
         assert abs(a['gpu']['avg'] - 8.0) < 1e-9, a
         assert abs(a['game']['avg'] - 5.0) < 1e-9, a
         assert 'render' in a, a
