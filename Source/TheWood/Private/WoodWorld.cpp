@@ -300,13 +300,38 @@ void AWoodWorld::Tick(float DeltaSeconds) {
  // Unreal-cell blend at the player (overlay unrealWeight 0..1): fog colour and density, sky light tint, and MPC_Weather "UnrealWeight"
  // for material foliage hue shift and ground tint. Ordinary cells give 0, which leaves the base look unchanged.
  const float UnrealW=static_cast<float>(FMath::Clamp(Generator.overlayAt(Position.X/100,Position.Y/100).unrealWeight,0.0,1.0));
+ // Per-variant look: the first unreal region covering the player picks its variant. MPC hue (deg), sat, value and emissive feed the
+ // foliage and ground materials; fog colour follows. Overlay to variant: UnnaturallyDark=Shadebell, LuminousMoss=Lanternbrush,
+ // GlassyMineral=Glassfinger, ExcessivelyFungal=Embercrown; PaleEnchanted keeps the neutral look.
+ float VHue=0.0f,VSat=1.0f,VValue=1.0f,VEmissive=0.0f;
+ FLinearColor VFog(0.30f,0.17f,0.24f);
+ if(UnrealW>0.0f) {
+  for(const auto& Reg:Generator.regions(Position.X/100,Position.Y/100)) {
+   if(Reg.overlay==wood::unreal::Overlay::None) continue;
+   switch(Reg.overlay) {
+    case wood::unreal::Overlay::UnnaturallyDark: VHue=130.0f; VSat=0.80f; VValue=0.55f; VEmissive=0.0f; VFog=FLinearColor(0.10f,0.10f,0.22f); break;
+    case wood::unreal::Overlay::LuminousMoss: VHue=-80.0f; VSat=1.10f; VValue=1.00f; VEmissive=1.0f; VFog=FLinearColor(0.30f,0.20f,0.12f); break;
+    case wood::unreal::Overlay::GlassyMineral: VHue=0.0f; VSat=0.25f; VValue=1.30f; VEmissive=0.15f; VFog=FLinearColor(0.12f,0.30f,0.34f); break;
+    case wood::unreal::Overlay::ExcessivelyFungal: VHue=-105.0f; VSat=1.20f; VValue=0.90f; VEmissive=1.0f; VFog=FLinearColor(0.12f,0.10f,0.10f); break;
+    default: break;
+   }
+   break;
+  }
+ }
  if(AtmosphereFog) {
   AtmosphereFog->SetActorLocation(FVector(Position.X,Position.Y,Position.Z+1200));
   AtmosphereFog->GetComponent()->SetFogDensity(static_cast<float>((0.014+Weather.fogDensity+(WeatherState?WeatherState->FogDensityBoost():0.0f))*(1.0+0.5*UnrealW)));
-  AtmosphereFog->GetComponent()->SetFogInscatteringColor(FLinearColor(FMath::Lerp(0.16f,0.30f,UnrealW),FMath::Lerp(0.22f,0.17f,UnrealW),FMath::Lerp(0.25f,0.24f,UnrealW)));
+  AtmosphereFog->GetComponent()->SetFogInscatteringColor(FLinearColor(
+   FMath::Lerp(0.16f,VFog.R,UnrealW),FMath::Lerp(0.22f,VFog.G,UnrealW),FMath::Lerp(0.25f,VFog.B,UnrealW)));
  }
  if(AmbientLight) AmbientLight->GetLightComponent()->SetLightColor(FLinearColor(1.0f,1.0f-0.12f*UnrealW,1.0f-0.25f*UnrealW));
- if(WeatherParameters) if(auto* Instance=GetWorld()->GetParameterCollectionInstance(WeatherParameters)) Instance->SetScalarParameterValue(TEXT("UnrealWeight"),UnrealW);
+ if(WeatherParameters) if(auto* Instance=GetWorld()->GetParameterCollectionInstance(WeatherParameters)) {
+  Instance->SetScalarParameterValue(TEXT("UnrealWeight"),UnrealW);
+  Instance->SetScalarParameterValue(TEXT("UnrealHue"),VHue);
+  Instance->SetScalarParameterValue(TEXT("UnrealSat"),VSat);
+  Instance->SetScalarParameterValue(TEXT("UnrealValue"),VValue);
+  Instance->SetScalarParameterValue(TEXT("UnrealEmissive"),VEmissive);
+ }
  for(int32 Index=0;Index<RegionLights.Num();++Index) {
   auto* Component=Cast<URectLightComponent>(RegionLights[Index]->GetLightComponent());
   const auto Light=Generator.lighting(RegionLights[Index]->GetActorLocation().X/100,RegionLights[Index]->GetActorLocation().Y/100,Clock.seconds);

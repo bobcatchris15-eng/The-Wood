@@ -173,7 +173,35 @@ if not any(str(p.get_editor_property('parameter_name'))=='UnrealWeight' for p in
     unreal_param.set_editor_property('parameter_name','UnrealWeight')
     unreal_param.set_editor_property('default_value',0.0)
     mpc.set_editor_property('scalar_parameters',list(mpc.get_editor_property('scalar_parameters'))+[unreal_param])
+# Per-variant look (WoodWorld::Tick sets these from the unreal region at the player). Defaults are the neutral look.
+# UnrealHue degrees (rotation about the grey axis), UnrealSat, UnrealValue multiply, UnrealEmissive scales leaf vein-mask glow.
+for _look_name,_look_default in (('UnrealHue',0.0),('UnrealSat',1.0),('UnrealValue',1.0),('UnrealEmissive',0.0)):
+    if not any(str(p.get_editor_property('parameter_name'))==_look_name for p in mpc.get_editor_property('scalar_parameters')):
+        _look_param=unreal.CollectionScalarParameter()
+        _look_param.set_editor_property('parameter_name',_look_name)
+        _look_param.set_editor_property('default_value',_look_default)
+        mpc.set_editor_property('scalar_parameters',list(mpc.get_editor_property('scalar_parameters'))+[_look_param])
 LIB.save_loaded_asset(mpc)
+
+
+def mpc_param(mat, name):
+    return expr(mat, unreal.MaterialExpressionCollectionParameter, collection=mpc, parameter_name=name)
+
+
+def mpc_look_inputs(mat):
+    """Custom-node inputs for the unreal look: weight, hue, sat, value (all from MPC_Weather)."""
+    return {'UWGT': (mpc_param(mat, 'UnrealWeight'), ''), 'UHUE': (mpc_param(mat, 'UnrealHue'), ''),
+            'USAT': (mpc_param(mat, 'UnrealSat'), ''), 'UVAL': (mpc_param(mat, 'UnrealValue'), '')}
+
+
+def unreal_look(src):
+    """HLSL body fragment: hue rotation (Rodrigues about (1,1,1)), saturation, value, blended by UWGT. Returns lerp(src, look, UWGT)."""
+    return ('float3 vc=' + src + ';float ang=UHUE*0.0174533;float ca=cos(ang);float sa=sin(ang);'
+            'float3 kk=float3(0.57735,0.57735,0.57735);'
+            'float3 vr=vc*ca+cross(kk,vc)*sa+kk*dot(kk,vc)*(1.0-ca);'
+            'float vl=dot(vr,float3(0.2126,0.7152,0.0722));'
+            'vr=lerp(float3(vl,vl,vl),vr,USAT);vr*=UVAL;'
+            'return lerp(' + src + ',vr,UWGT);')
 
 
 def precip_sprite(name, tex, tint, opacity_scale):
@@ -255,6 +283,7 @@ if build:
     # Wetness 0..1 from MPC_Weather: darkens albedo and lowers roughness on wet ground.
     weather_wet=expr(ground,unreal.MaterialExpressionCollectionParameter,collection=mpc,parameter_name='Wetness')
     color_inputs['WT']=(weather_wet,'')
+    color_inputs.update(mpc_look_inputs(ground))
     color_inputs.update({name:(samples[index][0],'RGB') for index,name in enumerate(('A','B','C','D'))})
     color_inputs['S']=(snow_color,'RGB')
     color=custom(ground,weight_code+'''
@@ -272,7 +301,8 @@ if build:
     float macro=0.91+0.09*sin(P.x/1300.0)*sin(P.y/1700.0);
     color*=lerp(1.0,0.62,WT);
     float3 ground=color*macro*float3(K.x,K.y,L.x);
-    return lerp(ground,S*0.92,snowMask);''',color_inputs)
+    float3 base=lerp(ground,S*0.92,snowMask);
+    ''' + unreal_look('base'), color_inputs)
     prop(color,'',unreal.MaterialProperty.MP_BASE_COLOR)
     normal_inputs=dict(common,P=(pos,''))
     normal_inputs.update({name:(samples[index][1],'RGB') for index,name in enumerate(('A','B','C','D'))})
@@ -930,7 +960,7 @@ LIB.save_loaded_asset(palette)
 # Emissive accent (mask-weighted) for lanternbrush and embercrown.
 LEAF_POOLS=ROOT/'ArtSource/Vivarium/LeafPools'
 LEAF_DIR='/Game/Art/Vivarium/LeafPools'
-LEAF_VARIANT_ACCENT={'shadebell':None,'lanternbrush':(1.0,0.62,0.22),'glassfinger':None,'embercrown':(1.0,0.28,0.06)}
+LEAF_VARIANT_ACCENT={'shadebell':(0.55,0.42,1.0),'lanternbrush':(1.0,0.62,0.22),'glassfinger':(0.70,0.95,1.0),'embercrown':(1.0,0.28,0.06)}
 def leaf_texture(source, species, role, srgb=False, normal=False):
     # import_source names the asset by file stem (vein_normal, shadebell-0): one folder per species keeps the stems unique.
     dest=LEAF_DIR+'/'+species
@@ -959,15 +989,17 @@ for species,accent in LEAF_VARIANT_ACCENT.items():
         albedo=sample(mat,albedo_tex,leaf_uv)
         normal_node=sample(mat,normal_tex,leaf_uv,True)
         mask=sample(mat,mask_tex,leaf_uv)
-        prop(albedo,'RGB',unreal.MaterialProperty.MP_BASE_COLOR)
+        # Variant look from MPC_Weather (hue/sat/value blended by UnrealWeight); albedo alpha stays the leaf cut-out.
+        look=custom(mat,unreal_look('V'),dict({'V':(albedo,'RGB')},**mpc_look_inputs(mat)))
+        prop(look,'',unreal.MaterialProperty.MP_BASE_COLOR)
         prop(albedo,'A',unreal.MaterialProperty.MP_OPACITY)
         prop(normal_node,'RGB',unreal.MaterialProperty.MP_NORMAL)
         roughness=constant(mat,0.6)
         prop(roughness,'',unreal.MaterialProperty.MP_ROUGHNESS)
-        if accent is not None:
-            accent_color=vector(mat,(accent[0],accent[1],accent[2]))
-            glow=custom(mat,'return C*M*S;',{'C':(accent_color,''),'M':(mask,'R'),'S':(constant(mat,3.0),'')})
-            prop(glow,'',unreal.MaterialProperty.MP_EMISSIVE_COLOR)
+        # Vein-mask emissive: accent x mask x 3, scaled by MPC UnrealEmissive (0 in ordinary cells and for dim variants).
+        accent_color=vector(mat,(accent[0],accent[1],accent[2]))
+        glow=custom(mat,'return C*M*S*E;',{'C':(accent_color,''),'M':(mask,'R'),'S':(constant(mat,3.0),''),'E':(mpc_param(mat,'UnrealEmissive'),'')})
+        prop(glow,'',unreal.MaterialProperty.MP_EMISSIVE_COLOR)
         finish(mat)
     LEAF_VARIANT_MATS[species]=mat
 # Flora (ArtSource/Authored/Flora). Every approved variant imports to /Game/Art/Flora/<species>/ with LOD1/LOD2 added as
