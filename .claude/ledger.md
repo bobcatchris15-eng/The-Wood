@@ -67,3 +67,8 @@ Take The Wood from current prototype to Docs/Specification.md v1.1 (M1–M5) via
 - Renders OK on SM6 (Forest/Grassland/Ridge/Ruins). Visual issues: Forest ground flat grey; ruin walls show bark-like texture (material mixup suspect, Bark_CanopyV4_2K in RockMaterials); tree crowns still shard-like/sparse.
 - Gaps: anomaly meshes imported but not placed by discoveries; Test-Unreal printed count stale (index.json has 8); rain/snow not rendered yet; creature meshes not seen in renders.
 - Host: page file now enabled (commit limit 67 GB) — fixed OOM/UBA.
+
+## 2026-10-10 Stage 2 status (HEAD after D4)
+- Done: flora catalogue (69 spp) + authored/CC0 meshes (Sonnet for authoring), habitat engine, region radius 720 m (~5 min), sprint, materials fixes (forest mix, snow, rain, stone kit), creatures re-authored, journey tests (fresh start, forgetting, landmarks, save/resume 128 m), unreal overlays (fog/ambient/LeafPools), perf: dev-machine editor p95 31.6->24.6 ms, hitches 156->35.
+- Open: packaged-build perf on a mainstream reference PC; unreal variants weakly distinct (no lantern/ember glow, hue shift not wired in materials); moss edges hard; tree R0 durable fix; snow thresholds for Taiga/Highlands unverified; owl/bear/elk weak.
+- Content/ untracked since 2026-10-09 (rebuilt by -InitializeContent).
