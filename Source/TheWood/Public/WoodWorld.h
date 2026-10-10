@@ -80,6 +80,9 @@ public:
  void ClearForcedWeather();
 private:
  friend class FWoodThresholdTest;
+ friend class FWoodJourneyFlowTest;
+ friend class FWoodLandmarkPersistenceTest;
+ friend class FWoodForgetFreshTest;
  bool bEnteredWild=false;
  bool bTrailheadStart=false;
  bool bResumeReady=false;
