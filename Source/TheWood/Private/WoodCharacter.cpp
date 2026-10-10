@@ -17,6 +17,9 @@
 #include "WoodGalleryWidget.h"
 #include "WoodAmbience.h"
 #include "Engine/Engine.h"
+#include "Engine/StaticMesh.h"
+#include "Components/InstancedStaticMeshComponent.h"
+#include "Materials/MaterialInterface.h"
 #include "Engine/GameViewportClient.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
@@ -208,8 +211,33 @@ void AWoodCharacter::Photograph() {
  FScreenshotRequest::RequestScreenshot(FPaths::Combine(Directory,Name),false,false);
  LastPhotoSeconds=Now;
 }
+void AWoodCharacter::WoodDumpView(float RadiusM) {
+ // Diagnostic: instanced components with instances within RadiusM of the camera: mesh, materials, count, nearest distance.
+ UWorld* World=GetWorld(); if(!World) return;
+ const FVector Eye=GetActorLocation(); const double R2=FMath::Square(RadiusM*100.0);
+ for(TObjectIterator<UInstancedStaticMeshComponent> It;It;++It) {
+  UInstancedStaticMeshComponent* C=*It;
+  if(!C||C->GetWorld()!=World||!C->GetStaticMesh()) continue;
+  int32 Near=0; double Min=1e18; FTransform T; float TintSum=0; double ScaleSum=0;
+  for(int32 I=0;I<C->GetInstanceCount();++I) {
+   if(!C->GetInstanceTransform(I,T,true)) continue;
+   const double D2=FVector::DistSquared(T.GetLocation(),Eye);
+   if(D2>R2) continue;
+   ++Near; Min=FMath::Min(Min,D2); ScaleSum+=T.GetScale3D().Z;
+   if(C->NumCustomDataFloats>0&&C->PerInstanceSMCustomData.IsValidIndex(I*C->NumCustomDataFloats)) TintSum+=C->PerInstanceSMCustomData[I*C->NumCustomDataFloats];
+  }
+  if(!Near) continue;
+  FString Mats;
+  for(int32 M=0;M<C->GetNumMaterials();++M) Mats+=(C->GetMaterial(M)?C->GetMaterial(M)->GetPathName():TEXT("none"))+TEXT(" ");
+  UE_LOG(LogTemp,Display,TEXT("WoodDump mesh=%s near=%d total=%d nearestM=%.1f meanScale=%.2f meanTint=%.2f mats=%s"),*C->GetStaticMesh()->GetPathName(),Near,C->GetInstanceCount(),FMath::Sqrt(Min)/100.0,ScaleSum/Near,TintSum/Near,*Mats);
+ }
+}
 void AWoodCharacter::WoodCapture(const FString& View,float Delay) {
  WoodView(View);
+ if(FParse::Param(FCommandLine::Get(),TEXT("WoodDumpView"))) {
+  FTimerHandle DumpTimer;
+  GetWorldTimerManager().SetTimer(DumpTimer,FTimerDelegate::CreateLambda([this]{ WoodDumpView(60.0f); }),FMath::Max(Delay,0.1f)*0.8f,false);
+ }
  FTimerHandle CaptureTimer;
  GetWorldTimerManager().SetTimer(CaptureTimer,this,&AWoodCharacter::Photograph,FMath::Max(Delay,0.1f),false);
 }

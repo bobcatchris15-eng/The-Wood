@@ -43,10 +43,10 @@ struct Row {
 
 inline constexpr Row kRows[kFloraCount]={
  // canopy
- {"pine_open",Role::Canopy,0,false,0.2,0.5,0.8,15,30,"TF2 DG1 RH3",0,true,false,false},
+ {"pine_open",Role::Canopy,0,false,0.2,0.7,0.8,15,30,"TF2 DG1 RH3",0,true,false,false},
  {"oak_broadleaf",Role::Canopy,1,false,0.4,0.7,0.5,15,25,"TF4 OG3 DG2 SV1",1,true,false,false},
  {"broadleaf_giant",Role::Canopy,2,false,0.5,0.8,0.4,30,45,"OG4",2,true,false,false},
- {"spruce_conifer",Role::Canopy,2,false,0.4,0.8,0.9,20,35,"TG4 OG3 CR2",3,true,false,false},
+ {"spruce_conifer",Role::Canopy,2,false,0.4,0.8,0.9,20,35,"TG4 OG3 CR2 TF2",3,true,false,false},
  {"evergreen_broad",Role::Canopy,2,false,0.6,0.9,0.5,18,28,"CR4 WR2",4,true,false,false},
  {"deadwood_snag",Role::Canopy,0,false,0.2,0.9,0.9,6,20,"TF1 TG2 SW1",-1,true,true,false},
  {"acacia_flat",Role::Canopy,0,false,0.1,0.4,0.4,6,12,"SV4",5,true,false,false},

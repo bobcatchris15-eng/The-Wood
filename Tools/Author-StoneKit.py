@@ -4,8 +4,8 @@ Run: blender -b --factory-startup -P Tools/Author-StoneKit.py
 Outputs ArtSource/Prepared/kit_sm_*.glb. Names, footprints, pivots (base centre, Z up), wall-run yaw convention
 and kit ids match the procedural kit in Prepare-Art.py, which no longer writes these eight files.
 Each piece is built from individual irregular stones: bevelled, subdivided and displaced blocks of varied size.
-Slot 0 Stone: CC0 Poly Haven rock_07 2K (diffuse, GL normal). Slot 1 Moss: CC0 AmbientCG Moss002 1K, on upward faces only.
-Box-projected UV at 1 tile per 1.25 m for both slots.
+Slot 0 Stone: CC0 Poly Haven rock_07 2K (diffuse, GL normal). Slot 1 Moss: CC0 AmbientCG Moss002 1K (ArtSource/AmbientCG/Moss002), desaturated, on upward faces only.
+Box-projected UV at 1 tile per 1.25 m for stone, 1 tile per 0.5 m for moss.
 """
 import bpy
 import bmesh
@@ -17,10 +17,13 @@ from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[1] if '__file__' in globals() else Path.cwd()
 OUT = ROOT / 'ArtSource' / 'Prepared'
 ROCK = ROOT / 'ArtSource' / 'PolyHaven' / 'rock_07' / 'textures'
-MOSS = Path('C:/Misc/Vivarium/game/Textures')
+MOSS = ROOT / 'ArtSource' / 'AmbientCG' / 'Moss002'
 STONE_AUTHOR_SEED = 9100
 TAU = 2.0 * math.pi
 UV_SCALE = 1.0 / 1.25
+MOSS_UV_SCALE = 1.0 / 0.5
+MOSS_SATURATION = 0.45  # fraction of the source chroma kept
+MOSS_VALUE = 0.72
 
 
 def wobble(p):
@@ -82,7 +85,7 @@ def finalize(bm, rotate_length):
         v.co = v.co - Vector((cx, cy, minz))
     for face in bm.faces:
         centre = face.calc_center_median()
-        upward = face.normal.z > 0.55 and centre.z > 0.08 and wobble(centre * 3.1) > -0.45
+        upward = face.normal.z > 0.7 and centre.z > 0.08
         face.material_index = 1 if upward else 0
     layer = bm.loops.layers.uv.new('UVMap')
     for face in bm.faces:
@@ -91,7 +94,8 @@ def finalize(bm, rotate_length):
         for loop in face.loops:
             p = loop.vert.co
             pair = ((p.y, p.z), (p.x, p.z), (p.x, p.y))[axis]
-            loop[layer].uv = (pair[0] * UV_SCALE, pair[1] * UV_SCALE)
+            scale = MOSS_UV_SCALE if face.material_index == 1 else UV_SCALE
+            loop[layer].uv = (pair[0] * scale, pair[1] * scale)
 
 
 def build_wall(bm, rng):
@@ -194,6 +198,24 @@ def build_debris(bm, rng):
               yaw=rng.uniform(0.0, TAU), bevel=0.012, jitter=0.008, lean=0.0)
 
 
+def desaturated_moss():
+    """Soft moss colour: keep MOSS_SATURATION of the source chroma and scale value, written beside the prepared kit."""
+    import numpy as np
+    image = bpy.data.images.load(str(MOSS / 'Moss002_1K-JPG_Color.jpg'), check_existing=False)
+    width, height = image.size
+    px = np.empty(width * height * 4, dtype=np.float32)
+    image.pixels.foreach_get(px)
+    px = px.reshape(-1, 4)
+    luma = (px[:, 0] * 0.2126 + px[:, 1] * 0.7152 + px[:, 2] * 0.0722)[:, None]
+    px[:, :3] = (luma + (px[:, :3] - luma) * MOSS_SATURATION) * MOSS_VALUE
+    image.pixels.foreach_set(px.reshape(-1))
+    target = OUT / 'Moss002_soft_color.png'
+    image.filepath_raw = str(target)
+    image.file_format = 'PNG'
+    image.save()
+    return target
+
+
 def make_surface(name, colour_file, normal_file, roughness):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
@@ -230,7 +252,7 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     OUT.mkdir(parents=True, exist_ok=True)
     stone_mat = make_surface('M_StoneKit_Stone', ROCK / 'rock_07_diff_2k.jpg', ROCK / 'rock_07_nor_gl_2k.jpg', 0.82)
-    moss_mat = make_surface('M_StoneKit_Moss', MOSS / 'Moss002_1K-JPG_Color.jpg',
+    moss_mat = make_surface('M_StoneKit_Moss', desaturated_moss(),
                             MOSS / 'Moss002_1K-JPG_NormalGL.jpg', 0.9)
     for index, (name, build, rotate) in enumerate(PIECES):
         rng = random.Random(STONE_AUTHOR_SEED + index)

@@ -19,6 +19,7 @@ public:
  UFUNCTION(Exec) void WoodView(const FString& View);
  UFUNCTION(Exec) void WoodCapture(const FString& View,float Delay=1.0f);
  UFUNCTION(Exec) void Photograph();
+ UFUNCTION(Exec) void WoodDumpView(float RadiusM=60.0f);
  // Sprint hold state (Left Shift). Public so automation can drive it without input.
  void SetSprintHeld(bool bHeld);
 private:

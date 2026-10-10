@@ -396,21 +396,36 @@ def keep_base_factor(source, copy):
     if found and color is not None:
         MEL.set_material_instance_vector_parameter_value(copy, 'BaseColorFactor', color)
 
-def with_wind(interface, strength, two_sided=False, masked=False, tinted=False):
+def with_wind(interface, strength, two_sided=False, masked=False, tinted=False, key=''):
     """Copy each project import parent; preserve alpha, textures and shading. two_sided sets the Material-level flag (MIC inherits it).
     masked converts a BLEND foliage parent to BLEND_MASKED: Nanite does not draw translucent materials, so leaves must be cut out.
     The Opacity source is re-wired to OpacityMask at the same output.
-    tinted multiplies base colour by a per-instance tint index (PerInstanceCustomData 0, 0..3)."""
-    name=interface.get_name() + '_' + VERSION + '_Wind' + str(int(strength)) + ('_2S' if two_sided else '') + ('_Mask' if masked else '') + ('_Tint' if tinted else '')
+    tinted multiplies base colour by a per-instance tint index (PerInstanceCustomData 0, 0..3).
+    key makes the copy unique per owner (flora species+variant): glTF slots are all named Bark/Leaves/Blade, so without it every
+    species reused the first species' copy and shared its textures (all trees got the same bark and leaves)."""
+    name=interface.get_name() + (('_' + key) if key else '') + '_' + VERSION + '_Wind' + str(int(strength)) + ('_2S' if two_sided else '') + ('_Mask' if masked else '') + ('_TintV4' if tinted else '')
     dest='/Game/Wood/FoliageWind/' + name
     if LIB.does_asset_exist(dest):
         return LIB.load_asset(dest)
     if isinstance(interface,unreal.MaterialInstanceConstant):
         parent=interface.get_editor_property('parent')
-        animated_parent=with_wind(parent,strength,two_sided,masked,tinted)
+        animated_parent=with_wind(parent,strength,two_sided,masked,tinted)  # parent is shared; only the instance copy is keyed
         copy=LIB.duplicate_asset(interface.get_path_name(),dest)
         MEL.set_material_instance_parent(copy,animated_parent)
         keep_base_factor(interface,copy)
+        if tinted:
+            # Tinted flora samples its own FloraBase* parameters (see below); feed them from the glTF instance's values.
+            texture_value=MEL.get_material_instance_texture_parameter_value(interface,'BaseColorTexture')
+            texture_value=texture_value[1] if isinstance(texture_value,tuple) else texture_value
+            if texture_value is not None:
+                MEL.set_material_instance_texture_parameter_value(copy,'FloraBaseTexture',texture_value)
+            factor=MEL.get_material_instance_vector_parameter_value(interface,'BaseColorFactor')
+            factor=factor[1] if isinstance(factor,tuple) else factor
+            if factor is not None:
+                MEL.set_material_instance_vector_parameter_value(copy,'FloraBaseFactor',factor)
+            if 'blade' in interface.get_name().lower():
+                # Grass blade textures read teal; shift toward olive-green.
+                MEL.set_material_instance_vector_parameter_value(copy,'FloraHueShift',unreal.LinearColor(1.3,1.0,0.65,1))
         LIB.save_loaded_asset(copy)
         return copy
     if not isinstance(interface,unreal.Material):
@@ -437,14 +452,17 @@ return float3(sin(T*1.1+phase),cos(T*0.83+phase)*0.38,0)*A*W.x*gust*S;''',{'W':(
     prop(offset,'',unreal.MaterialProperty.MP_WORLD_POSITION_OFFSET)
     copy.set_editor_property('max_world_position_offset_displacement',strength)
     if tinted:
-        base=MEL.get_material_property_input_node(copy,unreal.MaterialProperty.MP_BASE_COLOR)
-        if base is None:
-            raise RuntimeError('Flora material has no base colour input: '+interface.get_path_name())
-        base_output=MEL.get_material_property_input_node_output_name(copy,unreal.MaterialProperty.MP_BASE_COLOR)
+        # The glTF body function multiplies base colour by the mesh vertex colour. Flora meshes carry (1,0,0) there (a wind mask), which
+        # turned every bark maroon/red and grass black. Rebuild base colour from the same texture and factor parameters (own parameter names: reusing the
+        # glTF names makes duplicate parameters that drop the instance overrides; the MIC copy sets them) and skip the vertex colour.
+        base_tex=expr(copy,unreal.MaterialExpressionTextureSampleParameter2D,parameter_name='FloraBaseTexture',
+            texture=unreal.EditorAssetLibrary.load_asset('/Engine/EngineResources/WhiteSquareTexture'),sampler_type=unreal.MaterialSamplerType.SAMPLERTYPE_COLOR)
+        base_factor=expr(copy,unreal.MaterialExpressionVectorParameter,parameter_name='FloraBaseFactor',default_value=unreal.LinearColor(1,1,1,1))
+        hue_shift=expr(copy,unreal.MaterialExpressionVectorParameter,parameter_name='FloraHueShift',default_value=unreal.LinearColor(1,1,1,1))
         tint_index=expr(copy,unreal.MaterialExpressionPerInstanceCustomData,data_index=0)
         tinted_color=custom(copy,'''float k=saturate(T/3.0);
 float3 tint=lerp(float3(0.90,1.04,0.86),float3(1.10,0.97,0.84),k);
-return B*tint*lerp(0.94,1.06,k);''',{'B':(base,base_output),'T':(tint_index,'')})
+return B*F*H*tint*lerp(0.94,1.06,k);''',{'B':(base_tex,'RGB'),'F':(base_factor,'RGB'),'H':(hue_shift,'RGB'),'T':(tint_index,'')})
         prop(tinted_color,'',unreal.MaterialProperty.MP_BASE_COLOR)
     return finish(copy)
 
@@ -892,14 +910,23 @@ for species in sorted(flora_files):
                 if lod_source.exists():
                     if unreal.EditorStaticMeshLibrary.import_lod(mesh,level,str(lod_source))>=0:
                         FLORA_STATS['lods']+=1
-            for i,item in enumerate(mesh.get_editor_property('static_materials')):
-                interface=item.get_editor_property('material_interface')
-                if interface is None or '/Game/Wood/FoliageWind/' in interface.get_path_name():
+            LIB.save_loaded_asset(mesh)
+        # Per-variant wind copies. A slot already pointing at a copy that lacks this variant's key is re-derived from the imported glTF material.
+        keyed=False
+        for i,item in enumerate(mesh.get_editor_property('static_materials')):
+            interface=item.get_editor_property('material_interface')
+            if interface is None or '/Game/Wood/FoliageWind/' in interface.get_path_name():
+                if interface is not None and ('_'+name+'_'+VERSION) in interface.get_path_name() and '_TintV4' in interface.get_path_name():
                     continue
-                material_name=interface.get_name().lower()
-                bark=any(key in material_name for key in ('bark','trunk','wood','stem','stalk','knee'))
-                leaf=not bark
-                mesh.set_material(i,with_wind(interface,3.0 if leaf else 16.0,True,leaf,True))
+                interface=LIB.load_asset('%s/%s/Materials/%s' % (dest_dir,name,str(item.get_editor_property('material_slot_name'))))
+                if interface is None:
+                    continue
+            material_name=interface.get_name().lower()
+            bark=any(word in material_name for word in ('bark','trunk','wood','stem','stalk','knee'))
+            leaf=not bark
+            mesh.set_material(i,with_wind(interface,3.0 if leaf else 16.0,True,leaf,True,name))
+            keyed=True
+        if keyed:
             LIB.save_loaded_asset(mesh)
         FLORA_STATS['variants']+=1
         if species in flora_mapped:
