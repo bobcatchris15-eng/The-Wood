@@ -75,6 +75,15 @@ FVector AWoodWorld::ExplorerStart() const {
  return FVector(X*100,Y*100,0);
 }
 int32 AWoodWorld::LoadedChunkCount() const {return Runtime->Chunks.Num();}
+bool AWoodWorld::StreamingSettled(FVector Position) const {
+ if(!Runtime.IsValid()||!Runtime->Jobs.IsEmpty()) return false;
+ const FIntPoint Center(FMath::FloorToInt(Position.X/12800),FMath::FloorToInt(Position.Y/12800));
+ for(int32 J=-1;J<=1;++J) for(int32 I=-1;I<=1;++I) {
+  const FWoodResident* Resident=Runtime->Chunks.Find(FIntPoint(Center.X+I,Center.Y+J));
+  if(!Resident||!Resident->Detailed) return false;
+ }
+ return true;
+}
 void AWoodWorld::EnsureTerrainAround(FVector Position) {
  FIntPoint Key(FMath::FloorToInt(Position.X/12800),FMath::FloorToInt(Position.Y/12800));
  if(!Runtime->Chunks.Contains(Key)) Realize(WoodPrepareChunk(Generator,Key.X,Key.Y,Runtime->Kinds,Runtime->Profiles,Runtime->Available,false),false);

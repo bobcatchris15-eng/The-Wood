@@ -32,6 +32,8 @@ public:
  virtual ~AWoodWorld();
  FVector ExplorerStart() const;
  void EnsureTerrainAround(FVector Position);
+ // True when no streaming job is pending and the 3x3 chunks around PositionCm are detailed (terrain, flora, fauna realized).
+ bool StreamingSettled(FVector PositionCm) const;
  int32 LoadedChunkCount() const;
  virtual void BeginPlay() override;
  virtual void Tick(float DeltaSeconds) override;

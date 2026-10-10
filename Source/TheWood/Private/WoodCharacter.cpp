@@ -17,6 +17,8 @@
 #include "WoodGalleryWidget.h"
 #include "WoodAmbience.h"
 #include "Engine/Engine.h"
+#include "Engine/World.h"
+#include "HAL/PlatformMisc.h"
 #include "Engine/StaticMesh.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Materials/MaterialInterface.h"
@@ -114,6 +116,32 @@ void AWoodCharacter::Sit() {
  }
 }
 void AWoodCharacter::Accelerate() { if(Environment) Environment->ToggleAcceleration(); }
+namespace {
+// Sight length in cm from eye height along yaw; 3000 cm when nothing blocks.
+double OpenSight(UWorld* World,const AActor* Self,FVector Eye,double YawDeg) {
+ const FVector Dir=FRotator(0,YawDeg,0).Vector();
+ FHitResult Hit;
+ FCollisionQueryParams Params(SCENE_QUERY_STAT(WoodFrameClearance),true);
+ Params.AddIgnoredActor(Self);
+ if(World->LineTraceSingleByChannel(Hit,Eye,Eye+Dir*3000.0,ECC_Visibility,Params)) return Hit.Distance;
+ return 3000.0;
+}
+// Keeps the authored yaw when 6 m is clear in front; otherwise takes the most open of 16 directions.
+FRotator OpenFacing(UWorld* World,const AActor* Self,FVector Position,FRotator Authored) {
+ if(!World) return Authored;
+ const FVector Eye=Position+FVector(0,0,150);
+ if(OpenSight(World,Self,Eye,Authored.Yaw)>=600.0) return Authored;
+ double BestYaw=Authored.Yaw,BestLen=-1.0;
+ for(int32 K=0;K<16;++K) {
+  const double Yaw=K*22.5;
+  const double Len=OpenSight(World,Self,Eye,Yaw);
+  if(Len>BestLen) { BestLen=Len; BestYaw=Yaw; }
+ }
+ UE_LOG(LogTemp,Display,TEXT("WoodView authored yaw blocked; open yaw %.1f, clear %.0f cm"),BestYaw,BestLen);
+ Authored.Yaw=BestYaw;
+ return Authored;
+}
+}
 void AWoodCharacter::WoodView(const FString& View) {
  if(!Environment || !Controller) return;
  wood::World Landscape(wood::Settings{static_cast<uint32>(Environment->Seed),128,64});
@@ -216,7 +244,8 @@ void AWoodCharacter::WoodView(const FString& View) {
   else Known=false;
   if(!Known) {
    UE_LOG(LogTemp,Error,TEXT("Unknown -WoodFrameBiome: %s"),*FrameBiome);
-  } else if(Family==wood::Biome::OldGrowthForest||Family==wood::Biome::ColdRainforest||Family==wood::Biome::IcyHills||Family==wood::Biome::Savannah||Family==wood::Biome::Swamp||Family==wood::Biome::Marsh||Family==wood::Biome::WarmRainforest) {
+  } else if(Family==wood::Biome::OldGrowthForest||Family==wood::Biome::ColdRainforest||Family==wood::Biome::IcyHills||Family==wood::Biome::Savannah||Family==wood::Biome::Swamp||Family==wood::Biome::Marsh||Family==wood::Biome::WarmRainforest||Family==wood::Biome::Prairie) {
+   // Prairie joins the lattice search: no core lies within 2000 m of the start, so the nearest-core search fell back to the start frame.
    // Climate-driven families sit far from the start cell: take the nearest lattice region origin holding a core weight.
    bool Found=false;
    for(int Ring=0;Ring<=30&&!Found;++Ring) for(int Q=-Ring;Q<=Ring&&!Found;++Q) for(int R=-Ring;R<=Ring&&!Found;++R) {
@@ -239,6 +268,9 @@ void AWoodCharacter::WoodView(const FString& View) {
  Position.Z=Environment->GroundAt(Position.X,Position.Y)+100;
  Environment->EnsureTerrainAround(Position);
  SetActorLocation(Position);
+ // Biome, Taiga, Highlands, Unreal and Rain/Snow frames take the open direction; ruin, creature, landmark and stream frames keep their intended facing.
+ if(!FrameBiome.IsEmpty()||View.Equals(TEXT("Taiga"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Highlands"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Unreal"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Rain"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Snow"),ESearchCase::IgnoreCase))
+  Facing=OpenFacing(GetWorld(),this,Position,Facing);
  Controller->SetControlRotation(Facing);
  GetCharacterMovement()->StopMovementImmediately();
 }
@@ -281,8 +313,23 @@ void AWoodCharacter::WoodCapture(const FString& View,float Delay) {
   FTimerHandle DumpTimer;
   GetWorldTimerManager().SetTimer(DumpTimer,FTimerDelegate::CreateLambda([this]{ WoodDumpView(60.0f); }),FMath::Max(Delay,0.1f)*0.8f,false);
  }
- FTimerHandle CaptureTimer;
- GetWorldTimerManager().SetTimer(CaptureTimer,this,&AWoodCharacter::Photograph,FMath::Max(Delay,0.1f),false);
+ // Settle gate: poll every 0.1 s; photograph once the minimum delay and 30 frames have passed and the camera's chunks are resident.
+ // Timeout after 30 s past the delay captures anyway with a warning. The run exits 3 s after the shot.
+ const double MinDelay=FMath::Max(Delay,0.1f);
+ const double Start=FPlatformTime::Seconds();
+ const uint64 StartFrame=GFrameCounter;
+ TSharedRef<FTimerHandle> Poll=MakeShared<FTimerHandle>();
+ GetWorldTimerManager().SetTimer(*Poll,FTimerDelegate::CreateLambda([this,Poll,Start,StartFrame,MinDelay]{
+  const double Elapsed=FPlatformTime::Seconds()-Start;
+  const bool Settled=Environment&&Environment->StreamingSettled(GetActorLocation());
+  const bool Ready=Elapsed>=MinDelay&&GFrameCounter-StartFrame>=30&&Settled;
+  if(!Ready&&Elapsed<MinDelay+30.0) { if(Environment) Environment->EnsureTerrainAround(GetActorLocation()); return; }
+  if(!Ready) UE_LOG(LogTemp,Warning,TEXT("WoodCapture: settle timeout, capturing unsettled view"));
+  GetWorldTimerManager().ClearTimer(*Poll);
+  Photograph();
+  FTimerHandle ExitTimer;
+  GetWorldTimerManager().SetTimer(ExitTimer,FTimerDelegate::CreateLambda([]{ FPlatformMisc::RequestExit(false); }),3.0f,false);
+ }),0.1f,true);
 }
 void AWoodCharacter::ApplyRuntimeSettings(const FWoodSettings& S) {
  MouseSensitivity=S.MouseSensitivity;

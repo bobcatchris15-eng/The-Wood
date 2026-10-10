@@ -56,8 +56,8 @@ void AWoodPrecipitation::Drive(float DeltaSeconds,FVector CenterCm,EWoodPrecip K
  const FVector Drift(WindMps*80.0f,WindMps*60.0f,0.0f);
  const int32 RainActive=Kind==EWoodPrecip::Rain?FMath::RoundToInt(RainCapacity*Level):0;
  const int32 SnowActive=Kind==EWoodPrecip::Snow?FMath::RoundToInt(SnowCapacity*Level):0;
- // Plane mesh is 100 cm square; scale 0.04 x 0.5 gives a 4 cm x 50 cm streak, 0.07 gives a 7 cm flake.
- Step(RainPool,RainFlakes,RainActive,Dt,CenterCm,Drift,RainFallCmPerS,FVector(0.04f,0.5f,1.0f),CameraYawDeg,101);
+ // Plane mesh is 100 cm square; scale 0.08 x 0.9 gives an 8 cm x 90 cm streak (was 4 x 50 cm, invisible in a still frame), 0.07 gives a 7 cm flake.
+ Step(RainPool,RainFlakes,RainActive,Dt,CenterCm,Drift,RainFallCmPerS,FVector(0.08f,0.9f,1.0f),CameraYawDeg,101);
  Step(SnowPool,SnowFlakes,SnowActive,Dt,CenterCm,Drift*0.5f,SnowFallCmPerS,FVector(0.07f,0.07f,1.0f),CameraYawDeg,202);
 }
 

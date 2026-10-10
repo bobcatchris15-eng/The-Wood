@@ -31,13 +31,15 @@ $views=[ordered]@{
 function Get-Luma($path) {
   $bmp=[System.Drawing.Bitmap]::FromFile($path)
   try {
-    $n=0; $sum=0.0; $sq=0.0
+    $n=0; $sum=0.0; $sq=0.0; $sky=0
     for($y=0;$y -lt $bmp.Height;$y+=12) { for($x=0;$x -lt $bmp.Width;$x+=12) {
       $c=$bmp.GetPixel($x,$y); $l=0.299*$c.R+0.587*$c.G+0.114*$c.B
       $n++; $sum+=$l; $sq+=$l*$l
+      # Sky-like: bright and blue-dominant. A frame that is mostly this is sky with no terrain or subject in it.
+      if($c.B -gt $c.R+10 -and $l -gt 90) { $sky++ }
     } }
     $mean=$sum/$n
-    [pscustomobject]@{Mean=$mean; SD=[math]::Sqrt([math]::Max(0,$sq/$n-$mean*$mean))}
+    [pscustomobject]@{Mean=$mean; SD=[math]::Sqrt([math]::Max(0,$sq/$n-$mean*$mean)); SkyFrac=$sky/$n}
   } finally { $bmp.Dispose() }
 }
 
@@ -53,6 +55,7 @@ foreach($v in $views.Keys) {
     $s=Get-Luma $src
     if($s.Mean -lt 10) { $status="BROKEN: black (mean $([math]::Round($s.Mean)))" }
     elseif($s.SD -lt 6) { $status="BROKEN: flat grey (sd $([math]::Round($s.SD,1)), attempt $attempt)" }
+    elseif($s.SkyFrac -gt 0.85) { $status="BROKEN: sky only (sky $([math]::Round(100*$s.SkyFrac)) pct, attempt $attempt)" }
     else { $status='OK' }
   }
   if(Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $gallery "$v.png") -Force }

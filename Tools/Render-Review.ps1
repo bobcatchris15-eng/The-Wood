@@ -15,7 +15,7 @@ if($biomeFrame.ContainsKey($View)) { $frame+=@("-WoodFrameBiome=$($biomeFrame[$V
 $start=Get-Date
 $name="${Seed}-${View}-${Time}"
 $log=Join-Path $review "$name.log"
-& $editor "$taskRoot/TheWood.uproject" /Game/Maps/VisualBenchmark -game -RenderOffscreen -unattended -nosplash -windowed -WoodFresh -ResX=1280 -ResY=720 "-WoodSeed=$Seed" "-WoodTime=$Time" "-WoodStartX=$startX" "-WoodStartY=$startY" @frame '-ini:Engine:[DevOptions.Shaders]:bAllowAsynchronousShaderCompiling=False' "-ExecCmds=WoodCapture $View 2" -benchmark -seconds=4 "-abslog=$log" *> (Join-Path $review "$name-output.log")
+& $editor "$taskRoot/TheWood.uproject" /Game/Maps/VisualBenchmark -game -RenderOffscreen -unattended -nosplash -windowed -WoodFresh -ResX=1280 -ResY=720 "-WoodSeed=$Seed" "-WoodTime=$Time" "-WoodStartX=$startX" "-WoodStartY=$startY" @frame '-ini:Engine:[DevOptions.Shaders]:bAllowAsynchronousShaderCompiling=False' "-ExecCmds=WoodCapture $View 2" -benchmark -seconds=90"-abslog=$log" *> (Join-Path $review "$name-output.log")
 if($LASTEXITCODE -ne 0) { throw "Review render failed: $log" }
 $photo=Get-ChildItem -LiteralPath "$taskRoot/Saved/Photos" -Filter '*.png' | Where-Object LastWriteTime -GE $start | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if(!$photo) { throw "No photograph generated: $log" }
