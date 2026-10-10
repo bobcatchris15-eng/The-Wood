@@ -83,6 +83,7 @@ private:
  friend class FWoodJourneyFlowTest;
  friend class FWoodLandmarkPersistenceTest;
  friend class FWoodForgetFreshTest;
+ friend class FWoodSaveResumeTest;
  bool bEnteredWild=false;
  bool bTrailheadStart=false;
  bool bResumeReady=false;

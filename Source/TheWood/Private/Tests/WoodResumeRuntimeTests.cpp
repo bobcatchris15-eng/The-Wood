@@ -26,6 +26,23 @@ bool FWoodSaveResumeTest::RunTest(const FString& Parameters) {
  FIntPoint StartChunk(0,0);
  uint64 PreFingerprint=0;
  double PreSeconds=0;
+ // Sorted "kind|x|y|z" keys (position in 1 cm units) of generated features within 128 m of a point, from the 3x3 chunks around it.
+ auto CollectFeatures=[](AWoodWorld* Env,const FVector& PosCm) {
+  TArray<FString> Keys;
+  const double Px=PosCm.X/100.0,Py=PosCm.Y/100.0;
+  const int Cx=FMath::FloorToInt(Px/128.0),Cy=FMath::FloorToInt(Py/128.0);
+  for(int Dx=-1;Dx<=1;++Dx) for(int Dy=-1;Dy<=1;++Dy) {
+   const auto Chunk=Env->Generator.generate(Cx+Dx,Cy+Dy);
+   for(const auto& F:Chunk.features) {
+    const double Ox=F.position.x-Px,Oy=F.position.y-Py;
+    if(Ox*Ox+Oy*Oy>128.0*128.0) continue;
+    Keys.Add(FString::Printf(TEXT("%d|%lld|%lld|%lld"),static_cast<int>(F.kind),FMath::RoundToInt64(F.position.x*100.0),FMath::RoundToInt64(F.position.y*100.0),FMath::RoundToInt64(F.position.z*100.0)));
+   }
+  }
+  Keys.Sort();
+  return Keys;
+ };
+ TArray<FString> PreFeatures,PostFeatures;
  {
   FTestWorldWrapper Fixture;
   if(!Fixture.CreateTestWorld(EWorldType::Game)) return false;
@@ -56,6 +73,8 @@ bool FWoodSaveResumeTest::RunTest(const FString& Parameters) {
   PreLocation=Character->GetActorLocation();
   PreSeconds=Environment->ObservationSeconds();
   PreFingerprint=Environment->ChunkFingerprint(StartChunk);
+  PreFeatures=CollectFeatures(Environment,PreLocation);
+  TestTrue(TEXT("Feature set near player non-empty"),PreFeatures.Num()>0);
   TestTrue(TEXT("Explicit save writes resume file"),Environment->SaveResumeNow());
   TestTrue(TEXT("Resume file exists after save"),IFileManager::Get().FileExists(*Path));
   Fixture.EndPlayInTestWorld();
@@ -77,6 +96,9 @@ bool FWoodSaveResumeTest::RunTest(const FString& Parameters) {
   FRotator Rotation=FRotator::ZeroRotator;
   TestTrue(TEXT("Player transform restored"),Environment->TakeResumedPlayer(Location,Rotation));
   TestTrue(TEXT("Player location restored"),Location.Equals(PreLocation,0.01));
+  TestTrue(TEXT("Player location within 1 cm"),FVector::Dist(Location,PreLocation)<=1.0);
+  PostFeatures=CollectFeatures(Environment,Location);
+  TestTrue(TEXT("Feature set within 128 m identical after resume"),PostFeatures==PreFeatures);
   TestTrue(TEXT("Retained area pre-requested"),Environment->LoadedChunkCount()>0);
   Fixture.EndPlayInTestWorld();
   Fixture.ForwardErrorMessages(this);
