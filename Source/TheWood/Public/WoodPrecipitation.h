@@ -32,7 +32,10 @@ private:
  UPROPERTY() TObjectPtr<UInstancedStaticMeshComponent> SnowPool;
  TArray<FWoodFlake> RainFlakes;
  TArray<FWoodFlake> SnowFlakes;
+ // Flakes written visible last step. Only indices below max(Active, Shown) need a transform write.
+ int32 RainShown=0;
+ int32 SnowShown=0;
  void Initialize();
  UInstancedStaticMeshComponent* MakePool(const TCHAR* Name,UStaticMesh* Mesh,UMaterialInterface* Material,int32 Count);
- void Step(UInstancedStaticMeshComponent* Pool,TArray<FWoodFlake>& Flakes,int32 Active,float Dt,FVector CenterCm,FVector DriftCmPerS,float FallCmPerS,FVector Scale,float CameraYawDeg,uint32 Salt);
+ void Step(UInstancedStaticMeshComponent* Pool,TArray<FWoodFlake>& Flakes,int32& Shown,int32 Active,float Dt,FVector CenterCm,FVector DriftCmPerS,float FallCmPerS,FVector Scale,float CameraYawDeg,uint32 Salt);
 };

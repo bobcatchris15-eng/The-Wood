@@ -126,6 +126,8 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
   }
  }
  if(Resident.Detailed||!Detailed) return;
+ // Timed for hitch correlation: matches CSV GameThread spikes to chunk realisation.
+ const double RealizeStart=FPlatformTime::Seconds();
  const auto& Placements=Prepared.Placements;Resident.Instances.SetNum(Vegetation.Num());
  for(int32 I=0;I<Vegetation.Num();++I) if(!Placements[I].IsEmpty()) {
   Resident.Instances[I]=Vegetation[I]->AddInstancesById(Placements[I],true,false);
@@ -134,6 +136,7 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
  Resident.Detailed=true;
  SpawnFauna(Resident,Key);
  SpawnLandmarks(Key);
+ UE_LOG(LogTemp,Log,TEXT("WoodRealize chunk %d,%d detailed in %.1f ms, flora comps %d"),Key.X,Key.Y,(FPlatformTime::Seconds()-RealizeStart)*1000.0,Resident.Flora.Num());
 }
 void AWoodWorld::BuildFlora() {
  Runtime->FloraVariants.Reset();
@@ -206,7 +209,11 @@ void AWoodWorld::SpawnFlora(FWoodResident& Resident,const FWoodPreparedChunk& Pr
   Comp->SetCullDistances(Cull*3/4,Cull);
   Comp->SetWorldPositionOffsetDisableDistance(Understory?6000:14000);
   Comp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-  if(Understory) Comp->SetCastShadow(false);
+  // Grass, flowers, moss and fungus cast no dynamic or contact shadow: sub-metre, invisible at range, and costly per instance.
+  if(Understory||Row.role==wood::flora::Role::Moss||Row.role==wood::flora::Role::Fungus) {
+   Comp->SetCastShadow(false);
+   Comp->bCastContactShadow=false;
+  }
   Comp->RegisterComponent();
   Comp->AddInstances(Group.Value,false,false);
   const TArray<float>& Values=Tints.FindChecked(Group.Key);

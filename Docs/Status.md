@@ -103,3 +103,24 @@ Label: dev machine, editor -game, not packaged - not the acceptance target. The 
 - Game ms: avg 10.45, p95 15.18. Render ms: avg 22.72, p95 30.47. GPU ms: avg 21.70, p95 28.97.
 - Result against the 16.7 ms p95 budget: FAIL on this machine. This is a measurement of the dev baseline, not a certification.
 - Raw CSV: `Saved/FrameTime/20261009-224303.csv` (not committed).
+
+### Perf tuning pass - before/after
+
+Findings from the baseline CSV (dry weather, 156 hitches):
+- Precipitation pools rewrote all 6500 slots (4000 rain + 2500 snow) every frame even when dry. This matches the steady 6500 NumAddedInstances / NumRemovedInstances per frame and NumInstanceTransformUpdates of about 6500.
+- Hitch frames are game-thread spikes (game ms avg 24 in hitch frames vs 10 normal). They coincide with chunk realisation: added instances rise to 8k-21k against the 6.5k baseline.
+- GPU/render bound at steady state: about 340k primitives drawn per frame, about 255k dynamic GPU scene instances.
+
+Changes:
+- `WoodPrecipitation`: transform writes limited to the visible prefix, skipped entirely when dry, and the transform buffer is reused across calls.
+- `WoodWorldStreaming`: moss and fungus cast no shadow and no contact shadow. Grass and flowers keep the same treatment.
+- `WoodWorldStreaming`: `WoodRealize chunk x,y detailed in N ms` log line for hitch correlation.
+
+| Metric (120 s autopilot) | Before (224303) | After (224835) |
+|---|---|---|
+| Frame avg / p95 / p99 ms | 23.56 / 31.56 / 44.18 | 23.31 / 30.87 / 44.22 |
+| Hitches > 33 ms | 156 | 149 |
+| Game ms avg / p95 | 10.45 / 15.18 | 10.21 / 13.28 |
+| GPU ms avg / p95 | 21.70 / 28.97 | 21.28 / 28.40 |
+
+Still FAIL against the 16.7 ms p95 budget. The gain is small: the GPU and the render thread dominate steady state, and the hitches are chunk realisation spikes. Open: time-slice `Realize` (flora instance adds and fauna/landmark spawns) across frames at about 2 ms per frame; trim foliage cull distances (no lower than 0.75 x role defaults); check the iGPU shadow and translucency cost.
