@@ -1,4 +1,4 @@
-param([int]$Seed=12345,[ValidateSet('Forest','Stream','Ridge','Grassland','Taiga','Highlands','OldGrowth','ColdRainforest','IcyHills','Savannah','Swamp','Marsh','WarmRainforest','Roots','Ruins','Trailhead')][string]$View='Forest',[double]$Time=0,[switch]$Dump)
+param([int]$Seed=12345,[ValidateSet('Forest','Stream','Ridge','Grassland','Taiga','Highlands','OldGrowth','ColdRainforest','IcyHills','Savannah','Swamp','Marsh','WarmRainforest','Roots','Ruins','Trailhead','TemperateForest','RockyHighlands','DryGrassland','Prairie','Landmark','Creature','Unreal','Rain','Snow')][string]$View='Forest',[double]$Time=0,[switch]$Dump)
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path $PSScriptRoot -Parent
 $editor='C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe'
@@ -9,7 +9,9 @@ $startX=-180;$startY=-180
 $frame=@('-WoodWild'); if($View -eq 'Ruins') { $frame+=@('-WoodFrameRuin') }
 if($View -eq 'Trailhead') { $frame=@() }
 if($Dump) { $frame+=@('-WoodDumpView') }
-if($View -in 'Grassland','Taiga','Highlands','OldGrowth','ColdRainforest','IcyHills','Savannah','Swamp','Marsh','WarmRainforest') { $frame+=@("-WoodFrameBiome=$View") }
+# Biome-framed views: family name is passed through; Snow is framed in a cold family (IcyHills) and forced to snow in WoodCapture.
+$biomeFrame=@{Grassland='Grassland';Taiga='Taiga';Highlands='Highlands';OldGrowth='OldGrowth';ColdRainforest='ColdRainforest';IcyHills='IcyHills';Savannah='Savannah';Swamp='Swamp';Marsh='Marsh';WarmRainforest='WarmRainforest';TemperateForest='TemperateForest';RockyHighlands='RockyHighlands';DryGrassland='DryGrassland';Prairie='Prairie';Snow='IcyHills'}
+if($biomeFrame.ContainsKey($View)) { $frame+=@("-WoodFrameBiome=$($biomeFrame[$View])") }
 $start=Get-Date
 $name="${Seed}-${View}-${Time}"
 $log=Join-Path $review "$name.log"

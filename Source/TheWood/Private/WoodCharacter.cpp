@@ -23,6 +23,8 @@
 #include "Engine/GameViewportClient.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
+#include "Generation/WoodLandmarks.h"
+#include "Generation/WoodFauna.h"
 
 AWoodCharacter::AWoodCharacter() {
  PrimaryActorTick.bCanEverTick=true;
@@ -158,6 +160,41 @@ void AWoodCharacter::WoodView(const FString& View) {
  } else if(View.Equals(TEXT("Trailhead"),ESearchCase::IgnoreCase)) {
   // Trailhead lot, 1 m south of its pad edge, facing north up the lot. Requires -WoodEntrance.
   Position=FVector(0,-57500,0);Facing=FRotator(-4,90,0);
+ } else if(View.Equals(TEXT("Landmark"),ESearchCase::IgnoreCase)) {
+  // Nearest lattice region holding a landmark; camera 120 m west of it, facing east.
+  bool Found=false;
+  for(int Ring=0;Ring<=30&&!Found;++Ring) for(int Q=-Ring;Q<=Ring&&!Found;++Q) for(int R=-Ring;R<=Ring&&!Found;++R) {
+   if(FMath::Max(FMath::Abs(Q),FMath::Abs(R))!=Ring) continue;
+   const auto Lm=wood::landmark::placeLandmark(static_cast<uint32>(Environment->Seed),Q,R,Landscape);
+   if(!Lm) continue;
+   Position=FVector((Lm->x-120.0)*100.0,Lm->y*100.0,0);Facing=FRotator(-6,0,0);
+   Found=true;
+  }
+  if(!Found) UE_LOG(LogTemp,Warning,TEXT("No landmark within lattice ring 30; keeping start frame"));
+ } else if(View.Equals(TEXT("Creature"),ESearchCase::IgnoreCase)) {
+  // First fauna cell (64 m, outward from origin) with a spawn; camera 8 m west of the first spawn, facing east.
+  bool Found=false;
+  for(int Ring=0;Ring<=40&&!Found;++Ring) for(int Q=-Ring;Q<=Ring&&!Found;++Q) for(int R=-Ring;R<=Ring&&!Found;++R) {
+   if(FMath::Max(FMath::Abs(Q),FMath::Abs(R))!=Ring) continue;
+   const auto CellOwner=Landscape.regionOwner(Q*wood::fauna::kChunkM+wood::fauna::kChunkM/2,R*wood::fauna::kChunkM+wood::fauna::kChunkM/2);
+   const auto Info=Landscape.region(CellOwner.q,CellOwner.r);
+   const auto Spawns=wood::fauna::spawnCreatures(static_cast<uint32>(Environment->Seed),Q,R,Info.family,Info.unreal);
+   if(Spawns.empty()) continue;
+   Position=FVector((Q*wood::fauna::kChunkM+Spawns[0].x-8.0)*100.0,(R*wood::fauna::kChunkM+Spawns[0].y)*100.0,0);Facing=FRotator(-6,0,0);
+   Found=true;
+  }
+  if(!Found) UE_LOG(LogTemp,Warning,TEXT("No fauna spawn within fauna ring 40; keeping start frame"));
+ } else if(View.Equals(TEXT("Unreal"),ESearchCase::IgnoreCase)) {
+  // Nearest unreal-flagged region, framed at its origin.
+  bool Found=false;
+  for(int Ring=0;Ring<=30&&!Found;++Ring) for(int Q=-Ring;Q<=Ring&&!Found;++Q) for(int R=-Ring;R<=Ring&&!Found;++R) {
+   if(FMath::Max(FMath::Abs(Q),FMath::Abs(R))!=Ring) continue;
+   const auto Reg=Landscape.region(Q,R);
+   if(!Reg.unreal) continue;
+   Position=FVector(Reg.origin.x*100.0,Reg.origin.y*100.0,0);Facing=FRotator(-4,35,0);
+   Found=true;
+  }
+  if(!Found) UE_LOG(LogTemp,Warning,TEXT("No unreal region within lattice ring 30; keeping start frame"));
  }
  if(!FrameBiome.IsEmpty()) {
   wood::Biome Family=wood::Biome::DryGrassland;
@@ -173,6 +210,9 @@ void AWoodCharacter::WoodView(const FString& View) {
   else if(FrameBiome.Equals(TEXT("Marsh"),ESearchCase::IgnoreCase)) Family=wood::Biome::Marsh;
   else if(FrameBiome.Equals(TEXT("WarmRainforest"),ESearchCase::IgnoreCase)) Family=wood::Biome::WarmRainforest;
   else if(FrameBiome.Equals(TEXT("Prairie"),ESearchCase::IgnoreCase)) Family=wood::Biome::Prairie;
+  else if(FrameBiome.Equals(TEXT("TemperateForest"),ESearchCase::IgnoreCase)) Family=wood::Biome::TemperateForest;
+  else if(FrameBiome.Equals(TEXT("RockyHighlands"),ESearchCase::IgnoreCase)) Family=wood::Biome::RockyHighlands;
+  else if(FrameBiome.Equals(TEXT("DryGrassland"),ESearchCase::IgnoreCase)) Family=wood::Biome::DryGrassland;
   else Known=false;
   if(!Known) {
    UE_LOG(LogTemp,Error,TEXT("Unknown -WoodFrameBiome: %s"),*FrameBiome);
@@ -234,6 +274,9 @@ void AWoodCharacter::WoodDumpView(float RadiusM) {
 }
 void AWoodCharacter::WoodCapture(const FString& View,float Delay) {
  WoodView(View);
+ // Weather review views: forced precipitation at 0.8 (WoodWeather override), applied after framing.
+ if(Environment&&View.Equals(TEXT("Rain"),ESearchCase::IgnoreCase)) Environment->ForceWeather(EWoodPrecip::Rain,0.8f);
+ if(Environment&&View.Equals(TEXT("Snow"),ESearchCase::IgnoreCase)) Environment->ForceWeather(EWoodPrecip::Snow,0.8f);
  if(FParse::Param(FCommandLine::Get(),TEXT("WoodDumpView"))) {
   FTimerHandle DumpTimer;
   GetWorldTimerManager().SetTimer(DumpTimer,FTimerDelegate::CreateLambda([this]{ WoodDumpView(60.0f); }),FMath::Max(Delay,0.1f)*0.8f,false);
