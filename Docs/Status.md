@@ -141,3 +141,15 @@ Measured (CsvProfile, r.GPUCsvStatsEnabled): GPU-bound, not game-thread. Top cos
 Fixes kept: flora ISM components built from a per-frame 2 ms queue (PumpFlora), async ground collision cook, `-Trace`/`-ExtraCmds`/`-ExecAt` in Capture-FrameTime.ps1.
 Target (hitches <= 30, p95 <= 25) NOT reached. Gallery Forest/Grassland comparison not done.
 Tried: dropping the translucent override at runtime (`-WoodMaskFlora`, off by default): translucency goes to 0 but Basepass +6 ms and RenderVelocities +5 ms (masked overdraw plus WPO velocity), GPU only 21 to 19 ms, hitches rose. Next steps: flora LODs/cull distances and WPO-disable distance for masked leaves, fix the MIC overrides in content and re-measure, cut instance density for the iGPU tier. Captures run alongside another editor process are invalid (contaminated); use a quiet machine.
+
+## Foliage material cost at import (perf-foliage)
+Dev machine, editor -game, 120 s autopilot, no other UnrealEditor running.
+| | before (D3) | after |
+|---|---|---|
+| frame avg / p95 | 22.5 / 29.7 ms | 21.7 / 24.6 ms |
+| hitches >33 ms | 80 | 35 |
+| GPU avg / p95 | 21.3 / 28.4 ms | 20.4 / 23.4 ms |
+
+Target (p95 <= 25, hitches <= 40) reached on this machine; still above the 16.7 ms packaged-target budget.
+Changes: (1) the Translucent override sat on an intermediate glTF-copy MIC in the parent chain, not on the leaf MIC; `fix_foliage_mic` now walks the chain and drops it, pins clip 0.35, and repairs already-keyed content on re-run (402 MICs logged, translucency 47 ms -> 0). (2) Masked parents get `dithered_lod_transition`. (3) Flora LOD screen sizes 1.0/0.7/0.24 (`WoodFloraLODSize` tag): removing translucency alone made GPU WORSE (p95 56, masked LOD0 everywhere); distance scale x3 equivalent gave p95 23. ForceLOD 2 floor: 11 ms. (4) DefaultEngine.ini `r.EarlyZPass=2`, `r.Velocity.EnableVertexDeformation=0` (not isolated; reverting both via cvar gave no change before the LOD fix). (5) `StreamingSettled` now requires every resident chunk's flora queue empty and ground collision cooked (`bCreatedPhysicsMeshes`).
+Gallery -Seed 42: 22 views, 0 broken; OldGrowth and Creature inspected, leaves cut out correctly. Test-Unreal 0 failures.

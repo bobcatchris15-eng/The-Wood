@@ -396,6 +396,7 @@ def explicit_needles():
     mat.set_editor_property('two_sided',True)
     mat.set_editor_property('shading_model',unreal.MaterialShadingModel.MSM_TWO_SIDED_FOLIAGE)
     mat.set_editor_property('opacity_mask_clip_value',0.35)
+    mat.set_editor_property('dithered_lod_transition',True)
     uv=expr(mat,unreal.MaterialExpressionTextureCoordinate,coordinate_index=0)
     atlas_sample=sample(mat,tex,uv)
     prop(atlas_sample,'RGB',unreal.MaterialProperty.MP_BASE_COLOR)
@@ -432,6 +433,29 @@ def keep_base_factor(source, copy):
     if found and color is not None:
         MEL.set_material_instance_vector_parameter_value(copy, 'BaseColorFactor', color)
 
+def fix_foliage_mic(mic):
+    """glTF alpha-BLEND instances carry a Translucent blend-mode override that wins over the Masked wind parent
+    (unsorted overdraw, ~13 ms GPU). Drop the override and pin a masked clip value on the instance. Returns True if changed."""
+    try:
+        overrides=mic.get_editor_property('base_property_overrides')
+        changed=False
+        unreal.log('FOLIAGE_MIC %s override_blend=%s mode=%s eff=%s' % (mic.get_name(),overrides.get_editor_property('override_blend_mode'),overrides.get_editor_property('blend_mode'),mic.get_blend_mode() if hasattr(mic,'get_blend_mode') else '?'))
+        if overrides.get_editor_property('override_blend_mode'):
+            overrides.set_editor_property('override_blend_mode',False)
+            changed=True
+        if not overrides.get_editor_property('override_opacity_mask_clip_value') or abs(overrides.get_editor_property('opacity_mask_clip_value')-0.35)>1e-4:
+            overrides.set_editor_property('override_opacity_mask_clip_value',True)
+            overrides.set_editor_property('opacity_mask_clip_value',0.35)
+            changed=True
+        if changed:
+            mic.set_editor_property('base_property_overrides',overrides)
+            LIB.save_loaded_asset(mic)
+        return changed
+    except Exception as error:
+        unreal.log_warning('FOLIAGE_MIC_FIX failed %s: %s' % (mic.get_name(),error))
+        return False
+
+
 def with_wind(interface, strength, two_sided=False, masked=False, tinted=False, key=''):
     """Copy each project import parent; preserve alpha, textures and shading. two_sided sets the Material-level flag (MIC inherits it).
     masked converts a BLEND foliage parent to BLEND_MASKED: Nanite does not draw translucent materials, so leaves must be cut out.
@@ -442,13 +466,21 @@ def with_wind(interface, strength, two_sided=False, masked=False, tinted=False, 
     name=interface.get_name() + (('_' + key) if key else '') + '_' + VERSION + '_Wind' + str(int(strength)) + ('_2S' if two_sided else '') + ('_Mask' if masked else '') + ('_TintV4' if tinted else '')
     dest='/Game/Wood/FoliageWind/' + name
     if LIB.does_asset_exist(dest):
-        return LIB.load_asset(dest)
+        existing=LIB.load_asset(dest)
+        if masked and isinstance(existing,unreal.MaterialInstanceConstant):
+            fix_foliage_mic(existing)
+        elif masked and isinstance(existing,unreal.Material) and not existing.get_editor_property('dithered_lod_transition'):
+            existing.set_editor_property('dithered_lod_transition',True)
+            finish(existing)
+        return existing
     if isinstance(interface,unreal.MaterialInstanceConstant):
         parent=interface.get_editor_property('parent')
         animated_parent=with_wind(parent,strength,two_sided,masked,tinted)  # parent is shared; only the instance copy is keyed
         copy=LIB.duplicate_asset(interface.get_path_name(),dest)
         MEL.set_material_instance_parent(copy,animated_parent)
         keep_base_factor(interface,copy)
+        if masked:
+            fix_foliage_mic(copy)
         if tinted:
             # Tinted flora samples its own FloraBase* parameters (see below); feed them from the glTF instance's values.
             texture_value=MEL.get_material_instance_texture_parameter_value(interface,'BaseColorTexture')
@@ -476,6 +508,8 @@ def with_wind(interface, strength, two_sided=False, masked=False, tinted=False, 
         opacity_output=MEL.get_material_property_input_node_output_name(copy,unreal.MaterialProperty.MP_OPACITY)
         copy.set_editor_property('blend_mode',unreal.BlendMode.BLEND_MASKED)
         copy.set_editor_property('opacity_mask_clip_value',0.35)
+        # Dithered LOD cross-fade: masked leaf cards pop between LODs otherwise.
+        copy.set_editor_property('dithered_lod_transition',True)
         prop(opacity_node,opacity_output,unreal.MaterialProperty.MP_OPACITY_MASK)
     color=expr(copy,unreal.MaterialExpressionTextureCoordinate,coordinate_index=1)
     time=expr(copy,unreal.MaterialExpressionTime,ignore_pause=False)
@@ -993,12 +1027,33 @@ for species in sorted(flora_files):
                     if unreal.EditorStaticMeshLibrary.import_lod(mesh,level,str(lod_source))>=0:
                         FLORA_STATS['lods']+=1
             LIB.save_loaded_asset(mesh)
+        # Distant flora must reach the low LODs: explicit screen sizes (LOD0 full, LOD1 at 0.7, LOD2 at 0.24; measured: LOD scale x3 equivalent, p95 37 -> 23), once per version.
+        lod_tag=VERSION+'_FloraLODSize2'
+        if SMES.get_lod_count(mesh)>1 and LIB.get_metadata_tag(mesh,'WoodFloraLODSize')!=lod_tag:
+            try:
+                sizes=[1.0,0.7,0.24][:SMES.get_lod_count(mesh)]
+                SMES.set_lod_screen_sizes(mesh,sizes)
+                LIB.set_metadata_tag(mesh,'WoodFloraLODSize',lod_tag)
+                LIB.save_loaded_asset(mesh)
+            except Exception as error:
+                unreal.log_warning('FLORA_LOD_SIZE skipped %s: %s' % (name,error))
         # Per-variant wind copies. A slot already pointing at a copy that lacks this variant's key is re-derived from the imported glTF material.
         keyed=False
         for i,item in enumerate(mesh.get_editor_property('static_materials')):
             interface=item.get_editor_property('material_interface')
             if interface is None or '/Game/Wood/FoliageWind/' in interface.get_path_name():
                 if interface is not None and ('_'+name+'_'+VERSION) in interface.get_path_name() and '_TintV4' in interface.get_path_name():
+                    # Already keyed: repair leaf copies saved before the Translucent override was dropped (bark copies are opaque).
+                    if '_Mask' in interface.get_path_name() and isinstance(interface,unreal.MaterialInstanceConstant):
+                        walk=interface
+                        while isinstance(walk,unreal.MaterialInstanceConstant):
+                            fix_foliage_mic(walk)
+                            walk=walk.get_editor_property('parent')
+                        if isinstance(walk,unreal.Material):
+                            unreal.log('FOLIAGE_CHAIN %s root=%s blend=%s' % (interface.get_name(),walk.get_name(),walk.get_editor_property('blend_mode')))
+                            if not walk.get_editor_property('dithered_lod_transition'):
+                                walk.set_editor_property('dithered_lod_transition',True)
+                                finish(walk)
                     continue
                 interface=LIB.load_asset('%s/%s/Materials/%s' % (dest_dir,name,str(item.get_editor_property('material_slot_name'))))
                 if interface is None:
