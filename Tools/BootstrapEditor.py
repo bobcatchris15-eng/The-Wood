@@ -12,7 +12,7 @@ TOOLS = unreal.AssetToolsHelpers.get_asset_tools()
 MEL = unreal.MaterialEditingLibrary
 SMES = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = 'CanopyV6'
+VERSION = 'CanopyV7'
 STATS = {'imported': 0, 'skipped': 0}
 
 
@@ -486,14 +486,17 @@ def fix_foliage_mic(mic):
         return False
 
 
-def with_wind(interface, strength, two_sided=False, masked=False, tinted=False, key=''):
+def with_wind(interface, strength, two_sided=False, masked=False, tinted=False, key='', look_kind=None):
     """Copy each project import parent; preserve alpha, textures and shading. two_sided sets the Material-level flag (MIC inherits it).
     masked converts a BLEND foliage parent to BLEND_MASKED: Nanite does not draw translucent materials, so leaves must be cut out.
     The Opacity source is re-wired to OpacityMask at the same output.
     tinted multiplies base colour by a per-instance tint index (PerInstanceCustomData 0, 0..3).
     key makes the copy unique per owner (flora species+variant): glTF slots are all named Bark/Leaves/Blade, so without it every
     species reused the first species' copy and shared its textures (all trees got the same bark and leaves)."""
-    name=interface.get_name() + (('_' + key) if key else '') + '_' + VERSION + '_Wind' + str(int(strength)) + ('_2S' if two_sided else '') + ('_Mask' if masked else '') + ('_TintV4' if tinted else '')
+    # look_kind: 'foliage' (hue/sat/value + vein-tip emissive from MPC) or 'bark' (mild value only). Part of the name so shared parents split.
+    if look_kind is None:
+        look_kind='bark' if 'bark' in interface.get_name().lower() else 'foliage'
+    name=interface.get_name() + (('_' + key) if key else '') + '_' + VERSION + '_' + look_kind + '_Wind' + str(int(strength)) + ('_2S' if two_sided else '') + ('_Mask' if masked else '') + ('_TintV4' if tinted else '')
     dest='/Game/Wood/FoliageWind/' + name
     if LIB.does_asset_exist(dest):
         existing=LIB.load_asset(dest)
@@ -505,7 +508,7 @@ def with_wind(interface, strength, two_sided=False, masked=False, tinted=False, 
         return existing
     if isinstance(interface,unreal.MaterialInstanceConstant):
         parent=interface.get_editor_property('parent')
-        animated_parent=with_wind(parent,strength,two_sided,masked,tinted)  # parent is shared; only the instance copy is keyed
+        animated_parent=with_wind(parent,strength,two_sided,masked,tinted,look_kind=look_kind)  # parent is shared; only the instance copy is keyed
         copy=LIB.duplicate_asset(interface.get_path_name(),dest)
         MEL.set_material_instance_parent(copy,animated_parent)
         keep_base_factor(interface,copy)
@@ -564,6 +567,23 @@ return float3(sin(T*1.1+phase),cos(T*0.83+phase)*0.38,0)*A*W.x*gust*S;''',{'W':(
 float3 tint=lerp(float3(0.90,1.04,0.86),float3(1.10,0.97,0.84),k);
 return B*F*H*tint*lerp(0.94,1.06,k);''',{'B':(base_tex,'RGB'),'F':(base_factor,'RGB'),'H':(hue_shift,'RGB'),'T':(tint_index,'')})
         prop(tinted_color,'',unreal.MaterialProperty.MP_BASE_COLOR)
+    if not interface.get_name().startswith('LeafVariant_'):  # LeafVariant masters already carry the look; do not apply it twice
+        # Unreal look from MPC_Weather on the base colour (UnrealWeight blends it in; zero in ordinary cells).
+        base_node=MEL.get_material_property_input_node(copy,unreal.MaterialProperty.MP_BASE_COLOR)
+        if base_node is not None:
+            base_out=MEL.get_material_property_input_node_output_name(copy,unreal.MaterialProperty.MP_BASE_COLOR)
+            base_rgb=custom(copy,'return float3(V.r,V.g,V.b);',{'V':(base_node,base_out)})
+            if look_kind=='bark':
+                # Bark: mild value shift only, no hue, no emissive.
+                bark_look=custom(copy,'return lerp(V,V*lerp(1.0,UVAL,0.5),UWGT);',dict({'V':(base_rgb,'')},**mpc_look_inputs(copy)))
+                prop(bark_look,'',unreal.MaterialProperty.MP_BASE_COLOR)
+            else:
+                # Foliage: hue/sat/value shift on the base colour.
+                look=custom(copy,unreal_look('V'),dict({'V':(base_rgb,'')},**mpc_look_inputs(copy)))
+                prop(look,'',unreal.MaterialProperty.MP_BASE_COLOR)
+                # Emissive accent: looked base colour x MPC UnrealEmissive x UnrealWeight x tip mask (UV1.x wind weight, squared), x3 like the LeafPools glow.
+                glow=custom(copy,'return C*pow(saturate(T.x),2.0)*S*E*UWGT;',{'C':(look,''),'T':(color,''),'S':(constant(copy,3.0),''),'E':(mpc_param(copy,'UnrealEmissive'),''),'UWGT':(mpc_param(copy,'UnrealWeight'),'')})
+                prop(glow,'',unreal.MaterialProperty.MP_EMISSIVE_COLOR)
     return finish(copy)
 
 def with_instancing(interface, tag=''):

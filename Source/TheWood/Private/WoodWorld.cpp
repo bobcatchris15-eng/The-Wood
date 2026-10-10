@@ -309,10 +309,10 @@ void AWoodWorld::Tick(float DeltaSeconds) {
   for(const auto& Reg:Generator.regions(Position.X/100,Position.Y/100)) {
    if(Reg.overlay==wood::unreal::Overlay::None) continue;
    switch(Reg.overlay) {
-    case wood::unreal::Overlay::UnnaturallyDark: VHue=130.0f; VSat=0.80f; VValue=0.55f; VEmissive=0.0f; VFog=FLinearColor(0.10f,0.10f,0.22f); break;
+    case wood::unreal::Overlay::UnnaturallyDark: VHue=165.0f; VSat=0.80f; VValue=0.60f; VEmissive=0.0f; VFog=FLinearColor(0.10f,0.10f,0.22f); break;
     case wood::unreal::Overlay::LuminousMoss: VHue=-80.0f; VSat=1.10f; VValue=1.00f; VEmissive=1.0f; VFog=FLinearColor(0.30f,0.20f,0.12f); break;
-    case wood::unreal::Overlay::GlassyMineral: VHue=0.0f; VSat=0.25f; VValue=1.30f; VEmissive=0.15f; VFog=FLinearColor(0.12f,0.30f,0.34f); break;
-    case wood::unreal::Overlay::ExcessivelyFungal: VHue=-105.0f; VSat=1.20f; VValue=0.90f; VEmissive=1.0f; VFog=FLinearColor(0.12f,0.10f,0.10f); break;
+    case wood::unreal::Overlay::GlassyMineral: VHue=0.0f; VSat=0.15f; VValue=1.30f; VEmissive=0.15f; VFog=FLinearColor(0.12f,0.30f,0.34f); break;
+    case wood::unreal::Overlay::ExcessivelyFungal: VHue=-90.0f; VSat=1.20f; VValue=0.90f; VEmissive=1.0f; VFog=FLinearColor(0.12f,0.10f,0.10f); break;
     default: break;
    }
    break;
