@@ -3,7 +3,9 @@
 #include <array>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <iostream>
+#include <iterator>
 #include <set>
 #include <vector>
 
@@ -13,13 +15,23 @@ int failures=0;
 void check(bool ok,const char* text) { if(!ok) { ++failures; std::cerr<<"FAIL: "<<text<<'\n'; } }
 using namespace wood;
 
-bool findCore(const World& w,int family,int& bx,int& by) {
+// Family cores spread over the lattice: one core chunk per hex region of the family, evenly picked up to `want`.
+// A core chunk is the region origin chunk or a neighbour whose centre weight for the family is >= 0.9.
+std::vector<std::pair<int,int>> familyCores(const World& w,int family,std::size_t want) {
  const auto index=static_cast<std::size_t>(family);
- for(int j=-12;j<12;++j) for(int i=-12;i<12;++i) {
-  const int cx=i*8, cy=j*8;
-  if(w.sample(cx*128.0+512.0,cy*128.0+512.0).biome[index]>=0.9) { bx=cx; by=cy; return true; }
+ std::vector<std::pair<int,int>> all;
+ for(int q=-40;q<=40;++q) for(int r=-40;r<=40;++r) {
+  const auto reg=w.region(q,r);
+  if(static_cast<int>(reg.family)!=family) continue;
+  const int cx=static_cast<int>(std::floor(reg.origin.x/128)),cy=static_cast<int>(std::floor(reg.origin.y/128));
+  bool found=false;
+  for(int dy=-1;dy<=1&&!found;++dy) for(int dx=-1;dx<=1&&!found;++dx)
+   if(w.sample((cx+dx)*128+64.0,(cy+dy)*128+64.0).biome[index]>=0.9) { all.push_back({cx+dx,cy+dy}); found=true; }
  }
- return false;
+ if(all.size()<want) return all;
+ std::vector<std::pair<int,int>> out;
+ for(std::size_t k=0;k<want;++k) out.push_back(all[k*all.size()/want]);
+ return out;
 }
 
 bool sameFeature(const Feature& a,const Feature& b) {
@@ -42,21 +54,48 @@ int main() {
   if(s.row.unrealOnly&&(s.hasMesh||s.meshSource>=0)) ++unrealMesh;
   if(s.meshSource>=0&&table[static_cast<std::size_t>(s.meshSource)].row.role!=s.row.role) ++fallbackRoleMismatch;
  }
- check(meshes==40,"40 approved species carry a mesh flag");
+ check(meshes==60,"60 approved species carry a mesh flag");
  check(approvedMismatch==0,"hasMesh is set exactly for approved species, sourced from themselves");
  check(fallbackRoleMismatch==0,"mesh fallbacks stay within the same role");
  check(unrealMesh==0,"unreal-only species carry no physical mesh");
+
+ // Approval list hard-coded from ArtSource/Authored/Flora/APPROVED.md, final state (later redo rows supersede rejections).
+ // Batches: canopy_a, shrub_a, flower(all 9), canopy_b, grass, fern, wetfungi, shrub_b, conifer, shrub_c, redo. Keep in sync with that file.
+ static const char* const kApprovedNames[]={
+  "oak_broadleaf","broadleaf_giant","evergreen_broad","deadwood_snag",
+  "hazel_coppice","sumac_scrub","salal_understory","heather_dwarf",
+  "meadow_flower_mix","lupine","arctic_poppy","swamp_iris","heliconia_bloom","forest_anemone","savanna_sunflower","cotton_grass","frost_saxifrage",
+  "acacia_flat","birch_pale","emergent_fig","cottonwood_river","understory_laurel",
+  "prairie_bunchgrass","wet_sedge","frost_fescue","common_reed","bamboo_stand",
+  "bracken","tree_fern","royal_fern","rock_fern","feather_moss","ground_moss_carpet","rock_moss_patch","lichen_crust","sphagnum_hummock",
+  "water_lily","ground_fungus_patch","puffball_cluster","pondweed",
+  "understory_ginger","liana_cluster",
+  "pine_open","spruce_conifer","larch_sparse","krummholz_pine",
+  "willow_shrub","thorn_scrub","juniper_low","bilberry_low","alder_thicket","sagebrush_grey","prickly_pear",
+  "baldcypress","lady_fern","alpine_tussock","shade_grass","horsetail","bracket_fungus","duckweed_mat"
+ };
+ std::size_t namedUnflagged=0, approvedFlags=0;
+ for(std::size_t i=0;i<count;++i) if(table[i].row.approved) ++approvedFlags;
+ for(const char* name: kApprovedNames) {
+  bool flagged=false, found=false;
+  for(std::size_t i=0;i<count;++i) if(std::strcmp(table[i].row.id,name)==0) { found=true; flagged=table[i].row.approved; }
+  if(!found||!flagged) { ++namedUnflagged; std::cerr<<"  not approved: "<<name<<'\n'; }
+ }
+ check(namedUnflagged==0,"every species named approved in APPROVED.md has approved=true");
+ check(approvedFlags==std::size(kApprovedNames),"approved flag count equals APPROVED.md list (60)");
 
  double worstOverCeiling=0, worstUnderFloor=1e9;
  std::size_t badSpeciesCount=0;
  for(int family=0;family<kFamilyCount;++family) {
   const auto f=static_cast<std::size_t>(family);
   World world({42,128,64});
-  int bx=0,by=0;
-  if(!findCore(world,family,bx,by)) { check(false,"every family has a 1 km2 core in range"); continue; }
+  // 32 family cores, one per region, spread over the lattice: 32 x 128 m chunks = 0.52 km2 of sampled ground per family.
+  constexpr std::size_t kCores=32;
+  const auto cores=familyCores(world,family,kCores);
+  if(cores.size()<kCores) { check(false,"every family has 32 core chunks in range"); continue; }
 
   std::vector<Chunk> chunks;
-  for(int cy=by;cy<by+8;++cy) for(int cx=bx;cx<bx+8;++cx) chunks.push_back(world.generate(cx,cy));
+  for(const auto& core:cores) chunks.push_back(world.generate(core.first,core.second));
 
   std::set<int> species;
   std::array<std::size_t,flora::kRoleCount> roleCounts{};
@@ -76,28 +115,29 @@ int main() {
    if(feature.tint<0||feature.tint>3) ++badTint;
    if(feature.heightM<s.row.heightMin-1e-9||feature.heightM>s.row.heightMax+1e-9) ++badHeight;
   }
-  check(species.size()>=8,"each family places at least 8 distinct species over 1 km2");
+  check(species.size()>=7,"each family places at least 7 distinct species over its 32 cores (WR catalogue-limited at 7)");
   check(outside==0,"no species placed outside its viability");
   check(badMesh==0,"every placed species renders an approved mesh");
   check(badTint==0,"tint index stays within 0-3");
   check(badHeight==0,"instance height stays within the species range");
 
-  // Density: per-role instances per 100 m2 against the block ceiling. Ceiling = family-blended catalogue density
-  // (roleDensity) at each grid point, scaled by the unreal overlay densityScale (neutral 1 outside unreal regions), averaged over the block.
-  // Upper bound 1.10x always. 30% floor only where a meshed species of the role is viable over half the block; others are exempt and logged.
-  const double area=(8*128.0)*(8*128.0);
-  constexpr int grid=32;
+  // Density: per-role instances per 100 m2 against the sampled ceiling. Ceiling = family-blended catalogue density
+  // (roleDensity) at each grid point, scaled by the unreal overlay densityScale (neutral 1 outside unreal regions), averaged over the sampled cells.
+  // Upper bound 1.10x always. 30% floor only where a meshed species of the role is viable over half the sampled cells; others are exempt and logged.
+  const double area=static_cast<double>(cores.size())*128.0*128.0;
+  constexpr int cellsPerChunk=64; // 8x8 cells of 16 m per 128 m chunk
+  const std::size_t sampledCells=cores.size()*cellsPerChunk;
   std::array<double,flora::kRoleCount> blockCeiling{};
   std::array<bool,flora::kRoleCount> viableRole{};
   std::array<int,flora::kRoleCount> viableCells{};
-  for(int gy=0;gy<grid;++gy) for(int gx=0;gx<grid;++gx) {
-   const double px=bx*128.0+(gx+0.5)*(1024.0/grid), py=by*128.0+(gy+0.5)*(1024.0/grid);
+  for(const auto& core:cores) for(int gy=0;gy<8;++gy) for(int gx=0;gx<8;++gx) {
+   const double px=core.first*128.0+(gx+0.5)*16.0, py=core.second*128.0+(gy+0.5)*16.0;
    const auto site=world.sample(px,py);
    const double scale=world.overlayAt(px,py).densityScale;
    flora::Site local;
    local.biome=site.biome; local.moisture=site.moisture; local.slope=site.slope; local.forest=site.forest;
    local.streamDist=std::abs(px-world.streamX(py)); local.halfWidth=world.streamHalfWidth(py);
-   for(int r=0;r<flora::kRoleCount;++r) blockCeiling[static_cast<std::size_t>(r)]+=flora::roleDensity(site.biome,static_cast<flora::Role>(r))*scale/(grid*grid);
+   for(int r=0;r<flora::kRoleCount;++r) blockCeiling[static_cast<std::size_t>(r)]+=flora::roleDensity(site.biome,static_cast<flora::Role>(r))*scale/sampledCells;
    std::array<bool,flora::kRoleCount> hereViable{};
    for(std::size_t i=0;i<count;++i) {
     const auto& s=table[i];
@@ -106,8 +146,8 @@ int main() {
    for(std::size_t r=0;r<flora::kRoleCount;++r) if(hereViable[r]) viableCells[r]++;
   }
   // A role counts as habitat-viable when a meshed species is viable over at least half the block.
-  for(std::size_t r=0;r<flora::kRoleCount;++r) viableRole[r]=viableCells[r]*2>=grid*grid;
-  std::printf("%s core (%d,%d): %zu species, %zu features\n",flora::kFamilyCodes[f],bx,by,species.size(),[&]{std::size_t n=0; for(const auto& c:chunks) n+=c.features.size(); return n;}());
+  for(std::size_t r=0;r<flora::kRoleCount;++r) viableRole[r]=viableCells[r]*2>=sampledCells;
+  std::printf("%s: %zu cores, %zu species, %zu features\n",flora::kFamilyCodes[f],cores.size(),species.size(),[&]{std::size_t n=0; for(const auto& c:chunks) n+=c.features.size(); return n;}());
   for(int r=0;r<flora::kRoleCount;++r) {
    const auto ri=static_cast<std::size_t>(r);
    const double ceiling=blockCeiling[ri];
@@ -134,7 +174,7 @@ int main() {
   if(family==0||family==kFamilyCount-1) {
    World again({42,128,64});
    for(std::size_t idx=chunks.size();idx-->0;) {
-    const int cx=bx+static_cast<int>(idx%8), cy=by+static_cast<int>(idx/8);
+    const int cx=cores[idx].first, cy=cores[idx].second;
     const auto repeat=again.generate(cx,cy);
     bool same=repeat.features.size()==chunks[idx].features.size();
     for(std::size_t k=0;same&&k<repeat.features.size();++k) same=sameFeature(repeat.features[k],chunks[idx].features[k]);

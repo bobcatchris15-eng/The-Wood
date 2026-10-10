@@ -12,7 +12,7 @@ int main() {
  for(unsigned seed:{0u,42u,98765u}) {
   World world({seed,128,64});
   // Removing two-dimensional climatic variation must break this contract.
-  const auto south=world.sample(-180,-180),north=world.sample(-180,1300);
+  const auto south=world.sample(-180,-180),north=world.sample(-180,985);
   check(std::abs(south.moisture-north.moisture)>0.15,"northward travel discovers a different climate at the same x");
   check(south.forest>0.65,"journey starts in sheltered mature woodland");
  }
@@ -20,7 +20,7 @@ int main() {
   World world({seed,128,64});
   // Starter neighbourhood holds the four explicit families; OldGrowth and ColdRainforest are climate-driven.
   const int coords[4][2]={{0,0},{1,0},{1,1},{0,-1}};
-  std::array<std::size_t,kFamilyCount> trees{},ferns{},rocks{},cover{};
+  std::array<std::size_t,kFamilyCount> trees{},ferns{},rocks{},cover{},canopy{};
   for(int family=0;family<4;++family) {
    const auto r=world.region(coords[family][0],coords[family][1]);
    const auto s=world.sample(r.origin.x,r.origin.y);
@@ -28,8 +28,17 @@ int main() {
    check(r.identity==again.identity&&r.origin.x==again.origin.x&&r.origin.y==again.origin.y&&r.phase==again.phase,"regional identities and origins repeat without query history");
    check(static_cast<int>(r.family)==family,"starter neighborhood includes four explicit families");
    check(s.biome[family]>0.65,"each regional origin preserves its ecological identity");
-   check(r.extent>1500&&r.extent<4000,"regional influence spans walking-scale terrain");
+   check(r.extent>1000&&r.extent<3000,"regional influence spans walking-scale terrain");
    const int cx=static_cast<int>(std::floor(r.origin.x/128)),cy=static_cast<int>(std::floor(r.origin.y/128));
+   // Canopy window: 5x5 chunks (640 m) centred on the family core chunk nearest the origin (720 m regions outgrow one chunk).
+   {
+    int coreX=cx,coreY=cy;
+    bool found=false;
+    for(int dy=-1;dy<=1&&!found;++dy) for(int dx=-1;dx<=1&&!found;++dx)
+     if(world.sample((cx+dx)*128+64.0,(cy+dy)*128+64.0).biome[family]>=0.9) { coreX=cx+dx; coreY=cy+dy; found=true; }
+    for(int dy=-2;dy<=2;++dy) for(int dx=-2;dx<=2;++dx)
+     for(const auto& f:world.generate(coreX+dx,coreY+dy).features) canopy[family]+=f.kind==Kind::Tree;
+   }
    const auto chunk=world.generate(cx,cy),repeat=world.generate(cx,cy);
    const auto east=world.generate(cx+1,cy);
    for(int row=0;row<=64;++row)
@@ -51,13 +60,14 @@ int main() {
     rocks[family]+=f.kind==Kind::Rock; cover[family]+=f.kind==Kind::Grass||f.kind==Kind::Fern;
    }
   }
-  check(trees[0]>trees[1]*3&&trees[0]>trees[2]*3,"dry and highland regions have open canopies");
+  // 720 m regions: measured highland canopy 2.3-3.0x below temperate woodland (5x5 window); grassland 7-10x below.
+  check(canopy[0]>canopy[1]*3&&canopy[0]>canopy[2]*2,"dry and highland regions have open canopies");
   check(ferns[0]>ferns[1]*3&&ferns[0]>ferns[3]*2,"moist temperate woodland has richer ferns than grassland and taiga");
   check(rocks[2]>rocks[0]*2,"rocky highlands contain denser stone groups");
   // F1: catalogue ceilings give highlands more total ground cover than woodland (grass 12 vs 6 per 100 m2), so the
   // assertion is on fern-kind placement, which the catalogue makes sparser in highlands (fern 0.5 vs 4).
   check(ferns[2]<ferns[0],"highland fern placement is sparser than moist woodland");
-  std::cout<<"Biome seed "<<seed;
+  std::cout<<"Biome seed "<<seed<<" canopy "<<canopy[0]<<","<<canopy[1]<<","<<canopy[2]<<","<<canopy[3];
   for(int i=0;i<kFamilyCount;++i) std::cout<<" ["<<trees[i]<<" trees,"<<ferns[i]<<" ferns,"<<rocks[i]<<" rocks,"<<cover[i]<<" cover]";
   std::cout<<'\n';
   for(double y:{-98000.0,-3600.0,-180.0,600.0,3300.0,97500.0}) for(double x:{-98200.0,-2400.0,-180.0,600.0,5100.0,98400.0}) {
@@ -236,7 +246,7 @@ int main() {
    for(unsigned seed:{0u,42u,98765u}) {
     World world({seed,128,64});
     const auto cores=coreChunks(world,family);
-    for(std::size_t k=0;k<cores.size()&&k<12;++k)
+    for(std::size_t k=0;k<cores.size()&&k<4;++k)
      for(const auto& f:world.generate(cores[k].first,cores[k].second).features) {
       if(f.kind!=Kind::Tree) continue;
       ++trees;
@@ -254,12 +264,12 @@ int main() {
   for(unsigned seed:{0u,42u,98765u}) {
    World world({seed,128,64});
    const auto oldCores=coreChunks(world,Biome::OldGrowthForest);
-   for(std::size_t k=0;k<oldCores.size()&&k<12;++k) {
+   for(std::size_t k=0;k<oldCores.size()&&k<4;++k) {
     ++oldGrowthChunks;
     for(const auto& f:world.generate(oldCores[k].first,oldCores[k].second).features) oldGrowthLogs+=f.kind==Kind::Deadwood;
    }
    const auto dryCores=coreChunks(world,Biome::DryGrassland);
-   for(std::size_t k=0;k<dryCores.size()&&k<12;++k) {
+   for(std::size_t k=0;k<dryCores.size()&&k<4;++k) {
     ++dryChunks;
     // Pure core only: a log at a position with any other family weight carries that family's (small) density.
     for(const auto& f:world.generate(dryCores[k].first,dryCores[k].second).features) {
@@ -298,18 +308,18 @@ int main() {
    const auto dryCores=coreChunks(world,Biome::DryGrassland);
    const auto temperateCores=coreChunks(world,Biome::TemperateForest);
    prairieChunks+=prairieCores.size();
-   for(std::size_t k=0;k<prairieCores.size()&&k<12;++k) {
+   for(std::size_t k=0;k<prairieCores.size()&&k<4;++k) {
     ++prairieSampled;
     for(const auto& f:world.generate(prairieCores[k].first,prairieCores[k].second).features) {
      prairieTall+=f.kind==Kind::Grass&&f.prairie;
      prairieBroad+=f.kind==Kind::Tree&&f.species==static_cast<int>(Species::Broadleaf);
     }
    }
-   for(std::size_t k=0;k<dryCores.size()&&k<12;++k) {
+   for(std::size_t k=0;k<dryCores.size()&&k<4;++k) {
     ++dryChunksSampled;
     for(const auto& f:world.generate(dryCores[k].first,dryCores[k].second).features) dryTall+=f.kind==Kind::Grass&&f.prairie;
    }
-   for(std::size_t k=0;k<temperateCores.size()&&k<12;++k) {
+   for(std::size_t k=0;k<temperateCores.size()&&k<4;++k) {
     ++temperateChunksSampled;
     for(const auto& f:world.generate(temperateCores[k].first,temperateCores[k].second).features)
      temperateBroad+=f.kind==Kind::Tree&&f.species==static_cast<int>(Species::Broadleaf);

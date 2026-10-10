@@ -24,7 +24,7 @@ static_assert(static_cast<int>(Biome::Prairie)+1==kFamilyCount,"kFamilyCount out
 // WarmRainforest<->DryGrassland, Prairie<->Taiga, Prairie<->ColdRainforest, Prairie<->IcyHills, Prairie<->Marsh,
 // Prairie<->WarmRainforest); symmetric.
 bool allowedAdjacent(Biome a, Biome b);
-// A stable regional identity on a warped 950m-radius hex lattice; extent is influence diameter.
+// A stable regional identity on a warped 720m-radius hex lattice; extent is influence diameter.
 struct Region {
  Vec3 origin; double moisture=0, roughness=0, phase=0;
  Biome family=Biome::TemperateForest;

@@ -64,7 +64,7 @@ exit /b 1
 :COMPILE_MSVC
 if not exist "Binaries" mkdir "Binaries"
 echo Compiling DiscoveryTests with MSVC (/W4 /WX)...
-cl /nologo /std:c++17 /W4 /WX /EHsc /I "Source\TheWood\Public" /I "Source\TheWood\Public\Generation" "Source\TheWood\Private\Generation\WoodDiscovery.cpp" "Tests\DiscoveryTests.cpp" /Fe:"Binaries\DiscoveryTests.exe" /Fo:"Binaries\\"
+cl /nologo /O2 /std:c++17 /W4 /WX /EHsc /I "Source\TheWood\Public" /I "Source\TheWood\Public\Generation" "Source\TheWood\Private\Generation\WoodDiscovery.cpp" "Tests\DiscoveryTests.cpp" /Fe:"Binaries\DiscoveryTests.exe" /Fo:"Binaries\\"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Compilation failed.
     popd
@@ -75,7 +75,7 @@ goto RUN_TESTS
 :COMPILE_ZIG
 if not exist "Binaries" mkdir "Binaries"
 echo Compiling DiscoveryTests with Zig C++ (-Wall -Wextra -Werror)...
-zig c++ -std=c++17 -Wall -Wextra -Werror -I "Source/TheWood/Public" -I "Source/TheWood/Public/Generation" "Source/TheWood/Private/Generation/WoodDiscovery.cpp" "Tests/DiscoveryTests.cpp" -o "Binaries/DiscoveryTests.exe"
+zig c++ -std=c++17 -O2 -Wall -Wextra -Werror -I "Source/TheWood/Public" -I "Source/TheWood/Public/Generation" "Source/TheWood/Private/Generation/WoodDiscovery.cpp" "Tests/DiscoveryTests.cpp" -o "Binaries/DiscoveryTests.exe"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Compilation failed.
     popd

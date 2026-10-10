@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <stdexcept>
 namespace wood::hex {
-constexpr double radius=950,halfWidth=100;
+constexpr double radius=720,halfWidth=100;
 struct Coord {int q=0,r=0; bool operator==(Coord b) const {return q==b.q&&r==b.r;} bool operator<(Coord b) const {return q<b.q||(q==b.q&&r<b.r);} };
 struct Point {double x,y;};
 struct Influence {Coord cell;double weight=0;};

@@ -831,11 +831,24 @@ for line in flora_text.splitlines():
     if len(cells)>=4 and cells[1] and cells[1] not in ('Batch','---'):
         approved_cells.append(cells[2])
 approved_words=set(re.findall(r'[a-z][a-z0-9_]*',' '.join(approved_cells)))
-flora_files={}
-for source in sorted((ROOT/'ArtSource/Authored/Flora').glob('*/*_v[0-9][0-9].glb')):
-    stem=source.stem
-    species,variant=stem.rsplit('_',1)
+# Batch folders in APPROVED.md order; a later batch supersedes an earlier rejection of the same species.
+FLORA_BATCH_RANK={'canopy_a':0,'shrub_a':1,'flower':2,'canopy_b':3,'grass':4,'fern':5,'wetfungi':6,'shrub_b':7,'conifer':8,'shrub_c':9,'redo':10}
+# Accepts v1 and v01 (grass/ and wetfungi/ use single digits); LOD and preview files are excluded by the anchored pattern.
+FLORA_FILE=re.compile(r'^([a-z][a-z0-9_]*)_v(\d+)$')
+flora_candidates=[]
+for source in sorted((ROOT/'ArtSource/Authored/Flora').glob('*/*.glb')):
+    m=FLORA_FILE.match(source.stem)
+    if not m:
+        continue
+    species,number=m.group(1),int(m.group(2))
     if species in flora_mapped or species in approved_words:
+        flora_candidates.append((species,FLORA_BATCH_RANK.get(source.parent.name,-1),'v%02d' % number,source))
+flora_best_rank={}
+for species,rank,_,_ in flora_candidates:
+    flora_best_rank[species]=max(flora_best_rank.get(species,-1),rank)
+flora_files={}
+for species,rank,variant,source in flora_candidates:
+    if rank==flora_best_rank[species]:
         flora_files.setdefault(species,{}).setdefault(variant,source)
 FLORA_STATS={'species':0,'variants':0,'lods':0}
 palette_flora_index=[]

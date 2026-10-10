@@ -64,7 +64,7 @@ exit /b 1
 :COMPILE_MSVC
 if not exist "Binaries" mkdir "Binaries"
 echo Compiling FaunaTests with MSVC (/W4 /WX)...
-cl /nologo /std:c++17 /W4 /WX /EHsc /I "Source\TheWood\Public" /I "Source\TheWood\Public\Generation" "Source\TheWood\Private\Generation\WoodFauna.cpp" "Tests\FaunaTests.cpp" /Fe:"Binaries\FaunaTests.exe" /Fo:"Binaries\\"
+cl /nologo /O2 /std:c++17 /W4 /WX /EHsc /I "Source\TheWood\Public" /I "Source\TheWood\Public\Generation" "Source\TheWood\Private\Generation\WoodFauna.cpp" "Tests\FaunaTests.cpp" /Fe:"Binaries\FaunaTests.exe" /Fo:"Binaries\\"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Compilation failed.
     popd
@@ -75,7 +75,7 @@ goto RUN_TESTS
 :COMPILE_ZIG
 if not exist "Binaries" mkdir "Binaries"
 echo Compiling FaunaTests with Zig C++ (-Wall -Wextra -Werror)...
-zig c++ -std=c++17 -Wall -Wextra -Werror -I "Source/TheWood/Public" -I "Source/TheWood/Public/Generation" "Source/TheWood/Private/Generation/WoodFauna.cpp" "Tests/FaunaTests.cpp" -o "Binaries/FaunaTests.exe"
+zig c++ -std=c++17 -O2 -Wall -Wextra -Werror -I "Source/TheWood/Public" -I "Source/TheWood/Public/Generation" "Source/TheWood/Private/Generation/WoodFauna.cpp" "Tests/FaunaTests.cpp" -o "Binaries/FaunaTests.exe"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Compilation failed.
     popd

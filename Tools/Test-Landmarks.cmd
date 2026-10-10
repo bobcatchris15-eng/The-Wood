@@ -64,7 +64,7 @@ exit /b 1
 :COMPILE_MSVC
 if not exist "Binaries" mkdir "Binaries"
 echo Compiling LandmarkTests with MSVC (/W4 /O2)...
-cl /nologo /std:c++17 /W4 /O2 /EHsc /I "Source\TheWood\Public" /I "Source\TheWood\Public\Generation" "Source\TheWood\Private\Generation\WoodLandmarks.cpp" "Source\TheWood\Private\Generation\WoodGeneration.cpp" "Source\TheWood\Private\Generation\WoodDiscovery.cpp" "Source\TheWood\Private\Generation\WoodEntrance.cpp" "Tests\LandmarkTests.cpp" /Fe:"Binaries\LandmarkTests.exe" /Fo:"Binaries\\"
+cl /nologo /O2 /std:c++17 /W4 /O2 /EHsc /I "Source\TheWood\Public" /I "Source\TheWood\Public\Generation" "Source\TheWood\Private\Generation\WoodLandmarks.cpp" "Source\TheWood\Private\Generation\WoodGeneration.cpp" "Source\TheWood\Private\Generation\WoodDiscovery.cpp" "Source\TheWood\Private\Generation\WoodEntrance.cpp" "Tests\LandmarkTests.cpp" /Fe:"Binaries\LandmarkTests.exe" /Fo:"Binaries\\"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Compilation failed.
     popd

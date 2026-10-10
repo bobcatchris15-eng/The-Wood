@@ -14,11 +14,11 @@ The three relevant scales remain separate:
 
 | Scale | Starting default | Responsibility |
 | --- | --- | --- |
-| Biome cell | 950 m corner radius; about 1,645 m across opposite sides | Climate family, character, regional light, discoveries |
+| Biome cell | 720 m corner radius; about 1,247 m across opposite sides | Climate family, character, regional light, discoveries |
 | Small habitat | Approximately 15–120 m, with occasional larger clearings/wetlands | Fern colonies, moss pockets, grass patches, sheltered hollows |
 | Terrain/rendering chunk | Existing 128 m square, 2 m ground vertices initially | Meshes, collision, instancing and streaming work |
 
-At 4.2 m/s, an unobstructed side-to-side crossing takes about 6.5 minutes. Moderate route bends produce the desired six-to-eight-minute typical crossing. Corner crossings, steep routes and time spent observing vary. This is a starting size, not a claim about measured playtests. A cell occupies roughly 2.34 square kilometres; typical crossing time must be measured along generated walking routes before tuning the radius.
+At 4.2 m/s, an unobstructed side-to-side crossing takes about 5 minutes. Moderate route bends produce the desired four-to-six-minute typical crossing. Corner crossings, steep routes and time spent observing vary. This is a starting size, not a claim about measured playtests. A cell occupies roughly 2.34 square kilometres; typical crossing time must be measured along generated walking routes before tuning the radius.
 
 The first hex implementation uses a fixed cell radius. Variation comes from warped shapes, routes, terrain, and optional groups of neighboring cells with related character. Arbitrarily varying independent hex radii is deferred because it breaks regular packing. Later, bounded cell merges can create exceptionally large regions while retaining six-neighbor geometry for the constituent ownership cells. A merged region generally has more than six external neighboring regions; its adjacency list must be derived from its constituent cells.
 
@@ -35,7 +35,7 @@ Use pointy-top hexes, axial integer coordinates `(q,r)`, and cube coordinates `(
 
 Round through cube coordinates, correcting the coordinate with the greatest rounding error so the three rounded coordinates sum to zero. Specify a deterministic coordinate-order tie-break on exact boundaries. This must work for negative coordinates, not merely positive integer casts.
 
-Let `W(p)=p+D(p)` be a continuous, seed-derived warp from physical world coordinates to cell-layout coordinates. All ownership and edge-distance queries use the same `W`. Use at least C1-continuous noise so blend and height derivatives can remain continuous. Begin with displacement capped at 8% of R (76 m) and wavelengths at least one cell across. Enforce a displacement-field Lipschitz bound below 0.25, including summed octaves. This keeps the map invertible and prevents folded boundaries, holes and duplicated ownership. Reduce amplitude automatically if the chosen noise construction cannot meet that bound. A slow spatial bend is preferable to visibly turbulent borders.
+Let `W(p)=p+D(p)` be a continuous, seed-derived warp from physical world coordinates to cell-layout coordinates. All ownership and edge-distance queries use the same `W`. Use at least C1-continuous noise so blend and height derivatives can remain continuous. Begin with displacement capped at 8% of R (about 58 m) and wavelengths at least one cell across. Enforce a displacement-field Lipschitz bound below 0.25, including summed octaves. This keeps the map invertible and prevents folded boundaries, holes and duplicated ownership. Reduce amplitude automatically if the chosen noise construction cannot meet that bound. A slow spatial bend is preferable to visibly turbulent borders.
 
 For any world point, compute the nearest hex center in warped space and inspect an axial radius-two neighborhood: at most 19 candidate cells. Geometry and candidate enumeration require no neighboring Unreal actors to exist. Queries use integer identifiers and immutable value records, including pending descriptors.
 
@@ -43,7 +43,7 @@ For any world point, compute the nearest hex center in warped space and inspect 
 
 Cell ownership is exact and gap-free. Environmental influence is soft. Keep these separate so a feature has one owner even when its surroundings blend three biomes.
 
-Every neighboring pair owns an undirected edge key, with the two cell identifiers sorted canonically. Its boundary contract contains a blend half-width, boundary profile inputs, channel crossings, route connections and reservations. The two endpoints read the same record. Begin with a half-width of 100 m, tunable from 60–150 m according to the biome pair and local terrain: a full transition of 120–300 m, or roughly 30–70 seconds of unobstructed walking. These widths are deliberately narrower than a cell interior.
+Every neighboring pair owns an undirected edge key, with the two cell identifiers sorted canonically. Its boundary contract contains a blend half-width, boundary profile inputs, channel crossings, route connections and reservations. The two endpoints read the same record. Begin with a half-width of 100 m (kept absolute at the 720 m radius; proportional 76 m breaks the 150 K/10 m lighting gate), tunable from 60–150 m according to the biome pair and local terrain: a full transition of 120–300 m, or roughly 30–70 seconds of unobstructed walking. These widths are deliberately narrower than a cell interior.
 
 In warped space, signed distance from cell i toward the bisector with neighbor j is:
 

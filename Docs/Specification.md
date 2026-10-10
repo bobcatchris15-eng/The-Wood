@@ -62,7 +62,7 @@ The next regional layout uses efficiently packed hexagonal ownership cells with 
 
 The landscape is built from regions with smaller habitats inside them. A region has an origin, an extent, broad environmental characteristics, and influences from its neighbors. Its identity emerges from those inputs rather than from placing a fixed rectangular biome template.
 
-A typical region should take roughly six to eight minutes to cross along an available walking route. This is travel time, not a fixed square size. At the current unobstructed walking speed, that would correspond to approximately 1.5–2 km of route, but slopes, bends, observation, and terrain interruptions change the actual distance. Region size should be tuned using traversed routes and playtests. The initial bounded benchmark is intentionally smaller and does not establish final region dimensions.
+A typical region should take roughly four to six minutes to cross along an available walking route. This is travel time, not a fixed square size. At the current unobstructed walking speed, that would correspond to approximately 1.0–1.5 km of route, but slopes, bends, observation, and terrain interruptions change the actual distance. Region size should be tuned using traversed routes and playtests. The initial bounded benchmark is intentionally smaller and does not establish final region dimensions.
 
 Regional inputs should cover at least:
 
@@ -174,7 +174,7 @@ Add the fixed parking lot and entrance forest. Implement and inspect the occlude
 
 ### Milestone 4 — broader places and discoveries
 
-Add climate families incrementally. Tune six-to-eight-minute region crossings using actual routes. Introduce terrain-aware ruins, varied architecture, damage and overgrowth, and coherent unreal ecology. Audit ruin and unreal probabilities independently across many generated regions.
+Add climate families incrementally. Tune four-to-six-minute region crossings using actual routes. Introduce terrain-aware ruins, varied architecture, damage and overgrowth, and coherent unreal ecology. Audit ruin and unreal probabilities independently across many generated regions.
 
 ### Milestone 5 — environmental life
 
