@@ -375,11 +375,11 @@ int main() {
   // F2: ground-cover consolidation (moss only via ground layer; aquatic + fungus enabled) re-baselined 9 feature cases; the (12,12) feature cases and the 3 terrain-only cases are unchanged.
   struct GoldenCase { unsigned seed; int x,y; bool features; std::uint64_t expected; };
   const GoldenCase cases[]={
-   {0,0,0,true,0x62a9dcc3d5840161ULL},{0,3,-2,true,0x60f986e1086fe049ULL},{0,-5,7,true,0xa6bb0e895d667949ULL},{0,12,12,true,0x44d1852340fc01b1ULL},{0,0,0,false,0x675a54c2da3a3c3eULL},
-   {42,0,0,true,0x2d3dee6adf0f195cULL},{42,3,-2,true,0xf6fba3c3e38e9514ULL},{42,-5,7,true,0x25825c0269c0833dULL},{42,12,12,true,0x53014812f41a555bULL},{42,0,0,false,0x0f61a6ac614626beULL},
-   {98765,0,0,true,0xb6479c174ee695bbULL}, // T1c; was U1 (unreal region, overlay density)
-   {98765,3,-2,true,0xe53c933407b6d669ULL}, // T1c; was U1 (unreal region, overlay density)
-   {98765,-5,7,true,0x966392621cc67a38ULL},{98765,12,12,true,0xe168e34218e80863ULL},{98765,0,0,false,0x8c534ebf0aa6c2f5ULL},
+   {0,0,0,true,0x6330badaadca553cULL},{0,3,-2,true,0x58676beea088224bULL},{0,-5,7,true,0x87635922c5ea2cffULL},{0,12,12,true,0x6f6caf9878540a78ULL},{0,0,0,false,0x675a54c2da3a3c3eULL},
+   {42,0,0,true,0x232d91b5c27ad3d8ULL},{42,3,-2,true,0xd3e4c76a980d10e5ULL},{42,-5,7,true,0x09450d5e4764b2d0ULL},{42,12,12,true,0x644b4316fafbb05dULL},{42,0,0,false,0x0f61a6ac614626beULL},
+   {98765,0,0,true,0x467b92e4f079decfULL}, // T1c; was U1 (unreal region, overlay density)
+   {98765,3,-2,true,0x3f490743d6115d10ULL}, // T1c; was U1 (unreal region, overlay density)
+   {98765,-5,7,true,0x0f5967dce6234d8dULL},{98765,12,12,true,0xd589cc540a336068ULL},{98765,0,0,false,0x8c534ebf0aa6c2f5ULL},
   };
   for(const auto& gc:cases) {
    World w({gc.seed,128,32});

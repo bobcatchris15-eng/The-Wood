@@ -12,7 +12,7 @@ TOOLS = unreal.AssetToolsHelpers.get_asset_tools()
 MEL = unreal.MaterialEditingLibrary
 SMES = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = 'CanopyV4'
+VERSION = 'CanopyV6'
 STATS = {'imported': 0, 'skipped': 0}
 
 
@@ -383,6 +383,19 @@ return float3(sin(T*1.1+phase),cos(T*0.83+phase)*0.38,0)*16.0*W.x*gust*S;''',{'W
 needles=explicit_needles()
 
 
+def keep_base_factor(source, copy):
+    """Factor-only glTF materials (flora grass has no textures) keep their colour as a BaseColorFactor instance override.
+    Re-parenting the copy must not drop it to the parent default (grey). Re-apply the source override and log what was found."""
+    try:
+        result = MEL.get_material_instance_vector_parameter_value(source, 'BaseColorFactor')
+    except Exception as error:
+        unreal.log_warning('FLORA_FACTOR read failed %s: %s' % (source.get_name(), error))
+        return
+    found, color = (result if isinstance(result, tuple) else (True, result))
+    unreal.log('FLORA_FACTOR %s found=%s color=%s' % (source.get_name(), found, color))
+    if found and color is not None:
+        MEL.set_material_instance_vector_parameter_value(copy, 'BaseColorFactor', color)
+
 def with_wind(interface, strength, two_sided=False, masked=False, tinted=False):
     """Copy each project import parent; preserve alpha, textures and shading. two_sided sets the Material-level flag (MIC inherits it).
     masked converts a BLEND foliage parent to BLEND_MASKED: Nanite does not draw translucent materials, so leaves must be cut out.
@@ -397,6 +410,7 @@ def with_wind(interface, strength, two_sided=False, masked=False, tinted=False):
         animated_parent=with_wind(parent,strength,two_sided,masked,tinted)
         copy=LIB.duplicate_asset(interface.get_path_name(),dest)
         MEL.set_material_instance_parent(copy,animated_parent)
+        keep_base_factor(interface,copy)
         LIB.save_loaded_asset(copy)
         return copy
     if not isinstance(interface,unreal.Material):
@@ -859,6 +873,10 @@ for species in sorted(flora_files):
     for variant in sorted(flora_files[species]):
         source=flora_files[species][variant]
         name=source.stem
+        # Interchange reuses existing source material instances on re-import, so a stale glb keeps its old factors.
+        # Clear the variant folder before a stale import so the new glb colours are the ones the wind copies read.
+        if is_stale(source,dest_dir,name):
+            LIB.delete_directory(dest_dir+'/'+name)
         rebuild=import_unit(source,dest_dir,name)
         found=find_meshes(dest_dir,name)
         if len(found)!=1:

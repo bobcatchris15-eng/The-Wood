@@ -467,12 +467,12 @@ stage::HabitatStage World::habitatStage(const stage::RegionStage& region,const s
     } else if(size<0.26) {
      // Understory poles and sub-canopy growth
      scale=0.42+size*1.65;
-    } else if(size<0.82) {
+    } else if(size<0.98) {
      // Dominant mature canopy ceiling
      scale=0.86+(size-0.26)*1.40;
     } else {
-     // Towering ancient giants
-     scale=1.65+(size-0.82)*4.2;
+     // Towering ancient giants: rare tail (size>=0.98, about 2% of non-young trees)
+     scale=1.65+(size-0.98)*12.5;
      if(surface.biome[2]>0.3) scale*=(1.0-0.35*surface.biome[2]);
     }
     scale*=familyMul(surface.biome,kTreeScaleMul);

@@ -159,7 +159,7 @@ GRASS = {
                            cols=[(0.50, 0.52, 0.36), (0.62, 0.58, 0.40)], head=None),
     "wet_sedge": dict(kind="sedge", n=45, h=(0.35, 0.8), rad=0.09, wd=0.012, bend=(0.02, 0.08),
                       droop=0.0, segs=4, radial=False, heads=10,
-                      cols=[(0.20, 0.32, 0.13), (0.28, 0.36, 0.14)], head=(0.45, 0.30, 0.14)),
+                      cols=[(0.20, 0.32, 0.13), (0.28, 0.36, 0.14)], head=(0.36, 0.35, 0.18)),
     "shade_grass": dict(kind="bunch", n=240, h=(0.2, 0.5), rad=0.20, wd=0.010, bend=(0.5, 0.9),
                         droop=0.40, segs=3, radial=True, heads=0,
                         cols=[(0.12, 0.28, 0.20), (0.22, 0.38, 0.16)], head=None),
