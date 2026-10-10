@@ -5,6 +5,9 @@
 # Dev machine, editor -game, not packaged: not the acceptance target (see Docs/Status.md).
 # -Seed / -View are passed as -Seed= / -View= for tooling; the game does not consume them.
 # Stop: the game quits itself; the script waits Seconds + 300 s for load and route, then closes and kills if needed.
+# -Trace adds -trace=cpu,gpu,frame,bookmark,loadtime -statnamedevents and writes Saved/FrameTime/<timestamp>.utrace.
+# -ExtraCmds 'cvar a,cvar b' appends console commands (experiments, comma separated).
+# -ExecAt '<sec>:<cmd>' runs one console command at route time (e.g. '30:ProfileGPU').
 # -DryRun prints the command and exits without launching.
 param(
  [int]$Seconds = 120,
@@ -12,6 +15,9 @@ param(
  [ValidateSet('','Forest','Stream','Ridge','Grassland','Taiga','Highlands','Roots','Ruins')][string]$View = '',
  [string]$Exe = '',
  [string]$EngineRoot = 'C:/Program Files/Epic Games/UE_5.8',
+ [string]$ExtraCmds = '',
+ [string]$ExecAt = '',
+ [switch]$Trace,
  [switch]$DryRun
 )
 $ErrorActionPreference = 'Stop'
@@ -25,7 +31,17 @@ if ($Exe) {
  $exePath = Join-Path $EngineRoot 'Engine/Binaries/Win64/UnrealEditor.exe'
  $lead = @("`"$project`"", '-game')
 }
-$common = @('-windowed','-ResX=1920','-ResY=1080','-nosplash','-log','-WoodFresh','-WoodWild',"-WoodAutopilot=$Seconds",'-ExecCmds="stat unit"')
+$common = @('-windowed','-ResX=1920','-ResY=1080','-nosplash','-log','-WoodFresh','-WoodWild',"-WoodAutopilot=$Seconds",'-ExecCmds="stat unit,r.GPUCsvStatsEnabled 1"')
+if ($ExtraCmds) { $common[-1] = '-ExecCmds="stat unit,r.GPUCsvStatsEnabled 1,' + $ExtraCmds + '"' }
+$traceFile = ''
+if ($Trace) {
+ $traceFile = Join-Path (Join-Path $taskRoot 'Saved/FrameTime') ((Get-Date -Format 'yyyyMMdd-HHmmss') + '.utrace')
+ New-Item -ItemType Directory -Force -Path (Split-Path $traceFile) | Out-Null
+ $common += '-trace=cpu,gpu,frame,bookmark,loadtime'
+ $common += '-statnamedevents'
+ $common += "-tracefile=`"$traceFile`""
+}
+if ($ExecAt) { $parts = $ExecAt -split ':',2; $common += "-WoodExecAt=$($parts[0])"; $common += "-WoodExecCmd=`"$($parts[1])`"" }
 if ($Seed -ge 0) { $common += "-Seed=$Seed" }
 if ($View) { $common += "-View=$View" }
 $argList = (@($lead + $common)) -join ' '
@@ -51,6 +67,7 @@ New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 $dest = Join-Path $outDir ((Get-Date -Format 'yyyyMMdd-HHmmss') + '.csv')
 Copy-Item -LiteralPath $csv.FullName -Destination $dest
 Write-Output $dest
+if ($traceFile) { Write-Output "TRACE: $traceFile" }
 $summarizer = Join-Path $PSScriptRoot 'Summarize-FrameTime.py'
 $py = Get-Command python -ErrorAction SilentlyContinue
 if ($py) { & $py.Source $summarizer $dest } else { Write-Output "NOTE: python not on PATH; run Tools\Summarize-FrameTime.py on $dest" }

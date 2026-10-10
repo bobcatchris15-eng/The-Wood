@@ -214,17 +214,30 @@ void AWoodCharacter::WoodView(const FString& View) {
    Found=true;
   }
   if(!Found) UE_LOG(LogTemp,Warning,TEXT("No fauna spawn within fauna ring 40; keeping start frame"));
- } else if(View.Equals(TEXT("Unreal"),ESearchCase::IgnoreCase)) {
-  // Nearest unreal-flagged region, framed at its origin.
+ } else if(View.StartsWith(TEXT("Unreal"),ESearchCase::IgnoreCase)) {
+  // Unreal: nearest unreal-flagged region, framed at its origin.
+  // Unreal_<Variant>: the Kth unreal core in lattice order (Shadebell=0, Lanternbrush=1, Glassfinger=2, Embercrown=3), a core being an
+  // unreal region whose origin has overlay unrealWeight >= 0.85. Deterministic per variant; species presence is judged in review, not here.
+  int Want=-1;
+  if(View.Contains(TEXT("_"))) {
+   static const TCHAR* Variants[]={TEXT("Shadebell"),TEXT("Lanternbrush"),TEXT("Glassfinger"),TEXT("Embercrown")};
+   for(int V=0;V<4;++V) if(View.EndsWith(Variants[V],ESearchCase::IgnoreCase)) Want=V;
+   if(Want<0) UE_LOG(LogTemp,Error,TEXT("Unknown unreal review variant: %s"),*View);
+  }
+  int Seen=0;
   bool Found=false;
   for(int Ring=0;Ring<=30&&!Found;++Ring) for(int Q=-Ring;Q<=Ring&&!Found;++Q) for(int R=-Ring;R<=Ring&&!Found;++R) {
    if(FMath::Max(FMath::Abs(Q),FMath::Abs(R))!=Ring) continue;
    const auto Reg=Landscape.region(Q,R);
    if(!Reg.unreal) continue;
+   if(Want>=0) {
+    if(Landscape.overlayAt(Reg.origin.x,Reg.origin.y).unrealWeight<0.85) continue;
+    if(Seen++!=Want) continue;
+   }
    Position=FVector(Reg.origin.x*100.0,Reg.origin.y*100.0,0);Facing=FRotator(-4,35,0);
    Found=true;
   }
-  if(!Found) UE_LOG(LogTemp,Warning,TEXT("No unreal region within lattice ring 30; keeping start frame"));
+  if(!Found) UE_LOG(LogTemp,Warning,TEXT("No unreal region for %s within lattice ring 30; keeping start frame"),*View);
  }
  if(!FrameBiome.IsEmpty()) {
   wood::Biome Family=wood::Biome::DryGrassland;
@@ -271,7 +284,7 @@ void AWoodCharacter::WoodView(const FString& View) {
  Environment->EnsureTerrainAround(Position);
  SetActorLocation(Position);
  // Biome, Taiga, Highlands, Unreal and Rain/Snow frames take the open direction; ruin, creature, landmark and stream frames keep their intended facing.
- if(!FrameBiome.IsEmpty()||View.Equals(TEXT("Taiga"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Highlands"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Unreal"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Rain"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Snow"),ESearchCase::IgnoreCase))
+ if(!FrameBiome.IsEmpty()||View.Equals(TEXT("Taiga"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Highlands"),ESearchCase::IgnoreCase)||View.StartsWith(TEXT("Unreal"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Rain"),ESearchCase::IgnoreCase)||View.Equals(TEXT("Snow"),ESearchCase::IgnoreCase))
   Facing=OpenFacing(GetWorld(),this,Position,Facing);
  Controller->SetControlRotation(Facing);
  GetCharacterMovement()->StopMovementImmediately();
@@ -393,6 +406,12 @@ void AWoodCharacter::TickAutopilot() {
  const double T=FPlatformTime::Seconds()-AutopilotStartWall;
  const FVector P=GetActorLocation();
  SetSprintHeld(T>=AutopilotSprintFrom&&T<AutopilotSprintTo);
+{
+  // Dev diagnostic: -WoodExecAt=<s> -WoodExecCmd="cmd" runs console commands (| separated) mid-route.
+  static double ExecAt=-2; static FString ExecCmd;
+  if(ExecAt==-2) { ExecAt=-1; double V=0; if(FParse::Value(FCommandLine::Get(),TEXT("-WoodExecAt="),V)&&FParse::Value(FCommandLine::Get(),TEXT("-WoodExecCmd="),ExecCmd)) ExecAt=V; }
+  if(ExecAt>=0&&T>=ExecAt) { ExecAt=-1; TArray<FString> Cmds; ExecCmd.ParseIntoArray(Cmds,TEXT("|")); for(const FString& C:Cmds) if(GEngine) GEngine->Exec(GetWorld(),*C,*GLog); }
+ }
  if(AutopilotPhotos<3&&T>=AutopilotPhotoAt[AutopilotPhotos]) { Photograph(); ++AutopilotPhotos; }
  if(!bAutopilotSeatStarted&&T>=AutopilotSeatFrom) {
   bAutopilotSeatStarted=true;

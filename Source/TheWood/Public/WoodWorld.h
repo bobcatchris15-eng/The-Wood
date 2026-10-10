@@ -121,6 +121,8 @@ private:
  void BuildFlora();
  void SpawnFlora(FWoodResident& Resident, const FWoodPreparedChunk& Prepared);
  void DestroyFlora(FWoodResident& Resident);
+ // Builds queued flora components within a per-frame time budget (hitch control); one group minimum per call.
+ void PumpFlora(double BudgetSeconds);
  UPROPERTY() TArray<TObjectPtr<UInstancedStaticMeshComponent>> FloraComponents;
  UPROPERTY() TArray<TObjectPtr<UStaticMesh>> FloraKeep;
  void SpawnTrailheadLot();

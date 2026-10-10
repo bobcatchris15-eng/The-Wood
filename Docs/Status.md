@@ -124,3 +124,20 @@ Changes:
 | GPU ms avg / p95 | 21.70 / 28.97 | 21.28 / 28.40 |
 
 Still FAIL against the 16.7 ms p95 budget. The gain is small: the GPU and the render thread dominate steady state, and the hitches are chunk realisation spikes. Open: time-slice `Realize` (flora instance adds and fauna/landmark spawns) across frames at about 2 ms per frame; trim foliage cull distances (no lower than 0.75 x role defaults); check the iGPU shadow and translucency cost.
+
+## Frame-time root-cause pass (dev machine, editor -game, Radeon 860M, 120 s autopilot)
+
+Measured (CsvProfile, r.GPUCsvStatsEnabled): GPU-bound, not game-thread. Top costs:
+1. GPU/Translucency about 13 ms of about 21 ms GPU. Cause: flora Leaves/Fronds/Petals MICs carry a BLEND_Translucent base-property override over a MASKED parent (about 660 translucent draws, TranslucencyAfterDOF). `show Translucency` off: avg 23 to 9.7 ms.
+2. Chunk realize on the game thread, 10-40 ms per chunk (25 flora ISM components built in one frame, plus synchronous ground collision cook): most hitches.
+3. TSR/post/lights about 4 ms (internal 1280x540 already).
+
+| Metric | Before | After |
+|---|---|---|
+| frame avg / p95 | 23.3 / 30.9 ms | 22.5 / 29.7 ms |
+| hitches >33 ms | 149 | 80 |
+| Test-Unreal | pass | pass (0 failures) |
+
+Fixes kept: flora ISM components built from a per-frame 2 ms queue (PumpFlora), async ground collision cook, `-Trace`/`-ExtraCmds`/`-ExecAt` in Capture-FrameTime.ps1.
+Target (hitches <= 30, p95 <= 25) NOT reached. Gallery Forest/Grassland comparison not done.
+Tried: dropping the translucent override at runtime (`-WoodMaskFlora`, off by default): translucency goes to 0 but Basepass +6 ms and RenderVelocities +5 ms (masked overdraw plus WPO velocity), GPU only 21 to 19 ms, hitches rose. Next steps: flora LODs/cull distances and WPO-disable distance for masked leaves, fix the MIC overrides in content and re-measure, cut instance density for the iGPU tier. Captures run alongside another editor process are invalid (contaminated); use a quiet machine.

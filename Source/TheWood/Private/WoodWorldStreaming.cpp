@@ -4,6 +4,9 @@
 #include "Generation/WoodFlora.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInstanceConstant.h"
+#include "Materials/MaterialInterface.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include <algorithm>
 #include <map>
@@ -20,6 +23,28 @@
 #include "Generation/WoodEntrance.h"
 #include "WoodCreature.h"
 #include <cmath>
+
+namespace {
+// Flora leaf/frond/petal instances carry a BLEND_Translucent base-property override over a MASKED parent. Translucent draws
+// are unsorted overdraw and cost ~13 ms GPU on the iGPU (measured: GPU/Translucency); the alpha-tested cutout is what the
+// parent encodes. Drops the override on the in-memory instance once per session; persist by re-saving content (not done here).
+void ForceMaskedFlora(UMaterialInterface* Interface) {
+#if WITH_EDITORONLY_DATA
+ if(!Interface||Interface->GetBlendMode()!=BLEND_Translucent) return;
+ const UMaterial* Base=Interface->GetMaterial();
+ if(!Base||Base->BlendMode!=BLEND_Masked) return;
+ for(UMaterialInterface* Walk=Interface;Walk;) {
+  auto* Constant=Cast<UMaterialInstanceConstant>(Walk);
+  if(!Constant) break;
+  if(Constant->BasePropertyOverrides.bOverride_BlendMode&&Constant->BasePropertyOverrides.BlendMode==BLEND_Translucent) {
+   Constant->BasePropertyOverrides.bOverride_BlendMode=false;
+   Constant->PostEditChange();
+  }
+  Walk=Constant->Parent;
+ }
+#endif
+}
+}
 
 namespace {
 // True if any sample of the 128 m chunk footprint (metres) lies inside the entrance zone.
@@ -80,7 +105,7 @@ bool AWoodWorld::StreamingSettled(FVector Position) const {
  const FIntPoint Center(FMath::FloorToInt(Position.X/12800),FMath::FloorToInt(Position.Y/12800));
  for(int32 J=-1;J<=1;++J) for(int32 I=-1;I<=1;++I) {
   const FWoodResident* Resident=Runtime->Chunks.Find(FIntPoint(Center.X+I,Center.Y+J));
-  if(!Resident||!Resident->Detailed) return false;
+  if(!Resident||!Resident->Detailed||!Resident->FloraPending.IsEmpty()) return false;
  }
  return true;
 }
@@ -89,11 +114,15 @@ void AWoodWorld::EnsureTerrainAround(FVector Position) {
  if(!Runtime->Chunks.Contains(Key)) Realize(WoodPrepareChunk(Generator,Key.X,Key.Y,Runtime->Kinds,Runtime->Profiles,Runtime->Available,false),false);
 }
 void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
+ const double GroundStart=FPlatformTime::Seconds();
  const auto& Chunk=Prepared.Chunk;
  const FIntPoint Key(Chunk.x,Chunk.y);
  auto& Resident=Runtime->Chunks.FindOrAdd(Key);
  if(!Resident.Ground) {
-  auto* Mesh=NewObject<UProceduralMeshComponent>(this); Mesh->SetupAttachment(RootComponent);Mesh->RegisterComponent();
+  auto* Mesh=NewObject<UProceduralMeshComponent>(this); Mesh->SetupAttachment(RootComponent);
+  // Collision cooks off the game thread: a synchronous 64x64 trimesh cook was a per-chunk hitch.
+  Mesh->bUseAsyncCooking=true;
+  Mesh->RegisterComponent();
   TArray<FVector> Vertices,Normals;TArray<FVector2D> UVs,UV1,UV2;TArray<FColor> Colors;TArray<int32> Triangles;
   for(const auto& P:Chunk.vertices) Vertices.Add(FVector(P.x,P.y,P.z)*100);
   Normals=Prepared.Normals;UVs=Prepared.HabitatUV;
@@ -128,6 +157,7 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
  if(Resident.Detailed||!Detailed) return;
  // Timed for hitch correlation: matches CSV GameThread spikes to chunk realisation.
  const double RealizeStart=FPlatformTime::Seconds();
+ const double GroundMs=(RealizeStart-GroundStart)*1000.0;
  const auto& Placements=Prepared.Placements;Resident.Instances.SetNum(Vegetation.Num());
  for(int32 I=0;I<Vegetation.Num();++I) if(!Placements[I].IsEmpty()) {
   Resident.Instances[I]=Vegetation[I]->AddInstancesById(Placements[I],true,false);
@@ -136,7 +166,7 @@ void AWoodWorld::Realize(const FWoodPreparedChunk& Prepared,bool Detailed) {
  Resident.Detailed=true;
  SpawnFauna(Resident,Key);
  SpawnLandmarks(Key);
- UE_LOG(LogTemp,Log,TEXT("WoodRealize chunk %d,%d detailed in %.1f ms, flora comps %d"),Key.X,Key.Y,(FPlatformTime::Seconds()-RealizeStart)*1000.0,Resident.Flora.Num());
+ UE_LOG(LogTemp,Log,TEXT("WoodRealize chunk %d,%d detailed in %.1f ms (ground+water %.1f), flora groups queued %d"),Key.X,Key.Y,(FPlatformTime::Seconds()-RealizeStart)*1000.0,GroundMs,Resident.FloraPending.Num());
 }
 void AWoodWorld::BuildFlora() {
  Runtime->FloraVariants.Reset();
@@ -154,6 +184,7 @@ void AWoodWorld::BuildFlora() {
   Variant.Species=Species;
   Variant.Profile=WoodPlacementProfile(*Mesh);
   for(const auto& Slot:Mesh->GetStaticMaterials()) {
+   if(FParse::Param(FCommandLine::Get(),TEXT("WoodMaskFlora"))) ForceMaskedFlora(Slot.MaterialInterface);
    UMaterialInstanceDynamic* Mid=Slot.MaterialInterface?UMaterialInstanceDynamic::Create(Slot.MaterialInterface,this):nullptr;
    if(Mid) WindMaterials.Add(Mid);
    Variant.Slots.Add(Mid);
@@ -188,39 +219,57 @@ void AWoodWorld::SpawnFlora(FWoodResident& Resident,const FWoodPreparedChunk& Pr
   Tints.FindOrAdd(Id).Add(static_cast<float>(Feature.tint));
  }
  for(auto& Group:Placed) {
-  const FWoodFloraVariant& Variant=Runtime->FloraVariants[Group.Key];
-  const auto& Row=wood::flora::table()[static_cast<std::size_t>(Variant.Species)].row;
-  auto* Comp=NewObject<UInstancedStaticMeshComponent>(this);
-  Comp->SetupAttachment(RootComponent);
-  Comp->SetStaticMesh(Variant.Mesh);
-  // One float per instance: tint index 0-3, read by the flora material.
-  Comp->NumCustomDataFloats=1;
-  for(int32 S=0;S<Variant.Slots.Num();++S) if(Variant.Slots[S]) Comp->SetMaterial(S,Variant.Slots[S]);
-  const bool Understory=wood::flora::understoryRole(Row.role);
-  int32 Cull=4000;
-  switch(Row.role) {
-   case wood::flora::Role::Canopy: Cull=30000; break;
-   case wood::flora::Role::Subcanopy: Cull=15000; break;
-   case wood::flora::Role::Shrub: Cull=8000; break;
-   case wood::flora::Role::Moss:
-   case wood::flora::Role::Fungus: Cull=2500; break;
-   default: Cull=4000; break;
+  FWoodPendingFlora& Pending=Resident.FloraPending.AddDefaulted_GetRef();
+  Pending.Variant=Group.Key;
+  Pending.Transforms=MoveTemp(Group.Value);
+  Pending.Tints=MoveTemp(Tints.FindChecked(Group.Key));
+ }
+}
+void AWoodWorld::PumpFlora(double BudgetSeconds) {
+ if(!Runtime.IsValid()) return;
+ const double Start=FPlatformTime::Seconds();
+ bool Any=false;
+ for(auto& Entry:Runtime->Chunks) {
+  FWoodResident& Resident=Entry.Value;
+  while(!Resident.FloraPending.IsEmpty()) {
+   if(Any&&FPlatformTime::Seconds()-Start>=BudgetSeconds) return;
+   FWoodPendingFlora Group=MoveTemp(Resident.FloraPending[0]);
+   Resident.FloraPending.RemoveAt(0,1,EAllowShrinking::No);
+   Any=true;
+   const FWoodFloraVariant& Variant=Runtime->FloraVariants[Group.Variant];
+   const auto& Row=wood::flora::table()[static_cast<std::size_t>(Variant.Species)].row;
+   auto* Comp=NewObject<UInstancedStaticMeshComponent>(this);
+   Comp->SetupAttachment(RootComponent);
+   Comp->SetStaticMesh(Variant.Mesh);
+   // One float per instance: tint index 0-3, read by the flora material.
+   Comp->NumCustomDataFloats=1;
+   for(int32 S=0;S<Variant.Slots.Num();++S) if(Variant.Slots[S]) Comp->SetMaterial(S,Variant.Slots[S]);
+   const bool Understory=wood::flora::understoryRole(Row.role);
+   int32 Cull=4000;
+   switch(Row.role) {
+    case wood::flora::Role::Canopy: Cull=30000; break;
+    case wood::flora::Role::Subcanopy: Cull=15000; break;
+    case wood::flora::Role::Shrub: Cull=8000; break;
+    case wood::flora::Role::Moss:
+    case wood::flora::Role::Fungus: Cull=2500; break;
+    default: Cull=4000; break;
+   }
+   Comp->SetCullDistances(Cull*3/4,Cull);
+   Comp->SetWorldPositionOffsetDisableDistance(Understory?6000:14000);
+   Comp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+   // Grass, flowers, moss and fungus cast no dynamic or contact shadow: sub-metre, invisible at range, and costly per instance.
+   if(Understory||Row.role==wood::flora::Role::Moss||Row.role==wood::flora::Role::Fungus) {
+    Comp->SetCastShadow(false);
+    Comp->bCastContactShadow=false;
+   }
+   Comp->RegisterComponent();
+   Comp->AddInstances(Group.Transforms,false,false);
+   const TArray<float>& Values=Group.Tints;
+   for(int32 I=0;I<Values.Num();++I) Comp->SetCustomDataValue(I,0,Values[I],false);
+   Comp->MarkRenderStateDirty();
+   FloraComponents.Add(Comp);
+   Resident.Flora.Add(Comp);
   }
-  Comp->SetCullDistances(Cull*3/4,Cull);
-  Comp->SetWorldPositionOffsetDisableDistance(Understory?6000:14000);
-  Comp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-  // Grass, flowers, moss and fungus cast no dynamic or contact shadow: sub-metre, invisible at range, and costly per instance.
-  if(Understory||Row.role==wood::flora::Role::Moss||Row.role==wood::flora::Role::Fungus) {
-   Comp->SetCastShadow(false);
-   Comp->bCastContactShadow=false;
-  }
-  Comp->RegisterComponent();
-  Comp->AddInstances(Group.Value,false,false);
-  const TArray<float>& Values=Tints.FindChecked(Group.Key);
-  for(int32 I=0;I<Values.Num();++I) Comp->SetCustomDataValue(I,0,Values[I],false);
-  Comp->MarkRenderStateDirty();
-  FloraComponents.Add(Comp);
-  Resident.Flora.Add(Comp);
  }
 }
 void AWoodWorld::DestroyFlora(FWoodResident& Resident) {
@@ -231,6 +280,7 @@ void AWoodWorld::DestroyFlora(FWoodResident& Resident) {
   Comp->DestroyComponent();
  }
  Resident.Flora.Reset();
+ Resident.FloraPending.Reset();
 }
 void AWoodWorld::SpawnFauna(FWoodResident& Resident,FIntPoint Chunk) {
  if(!GetWorld()) return;
@@ -361,6 +411,7 @@ void AWoodWorld::Stream(FVector Position) {
   for(auto& Creature:C.Creatures) if(Creature.IsValid()) Creature->Destroy();
   Terrain.Remove(C.Ground);C.Ground->DestroyComponent();if(C.Water) {Water.Remove(C.Water);C.Water->DestroyComponent();}Runtime->Chunks.Remove(Key);
  }
+ PumpFlora(0.002);
  UpdateForgetting();
  std::vector<wood::streaming::Coord> Loaded,Pending;
  for(const auto& Entry:Runtime->Chunks) if(Entry.Value.Detailed) Loaded.push_back({Entry.Key.X,Entry.Key.Y});
