@@ -172,3 +172,16 @@ Packaged Development, Capture-FrameTime 120 s (ran full 120 s, 4868 frames): fra
 Editor -game, same 120 s autopilot (last recorded, D4 commit): frame avg 21.7 / p95 24.6 ms; hitches 35.
 Packaged is ~3 ms slower on average and ~7 ms worse at p95, with 2.7x the hitches. Gap not yet analysed.
 Validate: Build-Unreal OK; Test-Unreal 11 tests, 0 failures; Package.ps1 Development OK; Capture-FrameTime RESULT FAIL only on the 16.7 ms budget, run completed.
+
+## Packaged frame-time pass (10 October 2026)
+
+Packaged Development (`Tools/Package.ps1 -Config Development`, Saved/Package/Windows/TheWood.exe), 120 s autopilot capture, dev machine, Radeon 860M.
+
+- Cause, confirmed: cooked tree meshes whose `allow_cpu_access` was false produced invalid CPU positions for `WoodRootContacts`. Variants imported before the flag rule kept it false because the flag was only set on fresh import.
+- Change: `Tools/BootstrapEditor.py` now enforces `allow_cpu_access` on tree, sapling, species and flora meshes on every run, not only on fresh import. `WoodGrounding.cpp` reads root contacts only for `Kind::Tree`; other kinds use bounds alone and no longer log the fallback.
+- Result, run 1 (before the kind restriction): p95 23.99 ms, hitches 15, 106 bounds-base warnings.
+- Result, run 2 (after the kind restriction): p95 26.01 ms, hitches 16, 63 bounds-base warnings.
+- Editor -game reference (earlier): p95 24.6 ms, hitches 35. Packaged run 2 is within editor p95 + 2 ms; run 1 vs run 2 spread is about 2 ms, so the margin is not stable.
+- Still open: 63 bounds-base warnings remain. Tree-kind names still falling back include acacia_savannah_01, bald_cypress_01, bald_cypress_knees, krummholz_conifer_01, stump_snag and log_* (authored logs). The rest are kit, prop, rock and grass names, which are logged from paths outside this change. Root contacts are not yet baked into a data asset; that remains the preferred fix.
+- Not yet diagnosed: PSO precache and `r.ShaderPipelineCache` (hypothesis 2) and scalability parity with the editor (hypothesis 3) were not tested in this pass.
+- Validation: Build-Unreal -InitializeContent Succeeded; Test-Unreal 11 tests, 0 failures.

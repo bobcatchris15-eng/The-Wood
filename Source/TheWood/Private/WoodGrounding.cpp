@@ -51,6 +51,8 @@ FWoodPlacementProfile WoodPlacementProfile(const UStaticMesh& Asset) {
 }
 
 FTransform WoodGroundedTransform(const wood::World& World,const wood::Feature& Feature,const UStaticMesh& Asset) {
+ // Only trees read root contacts; other kinds use bounds alone, so they never touch the vertex buffers.
+ if(Feature.kind!=wood::Kind::Tree) return WoodGroundedTransform(World,Feature,FWoodPlacementProfile{TArray<FVector>(),Asset.GetBoundingBox()});
  return WoodGroundedTransform(World,Feature,WoodPlacementProfile(Asset));
 }
 

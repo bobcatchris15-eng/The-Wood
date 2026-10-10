@@ -657,9 +657,14 @@ for record in records:
     if not meshes:
         raise RuntimeError('Import produced no mesh: '+record['variant'])
     slot=slots[record['asset']]
+    # Root fit reads CPU positions of cooked trees (WoodRootContacts). Enforced on every run: variants imported
+    # before this rule kept bAllowCPUAccess false, which caused the packaged bounds-base fallbacks.
+    if slot in ('trees','saplings'):
+        for mesh in meshes:
+            if not mesh.get_editor_property('allow_cpu_access'):
+                mesh.set_editor_property('allow_cpu_access',True)
+                LIB.save_loaded_asset(mesh)
     for mesh in (meshes if rebuild else []):
-        if slot in ('trees','saplings'):
-            mesh.set_editor_property('allow_cpu_access',True)
         # All lighting is dynamic; UV1 is the authored root wind mask. Keep
         # automatic lightmap generation from replacing it during mesh builds.
         settings=SMES.get_lod_build_settings(mesh,0)
@@ -852,6 +857,11 @@ for group,name in SPECIES_FILES:
                     mesh.set_material(i,with_wind(interface,SPECIES_LEAF_WIND if leaf else 16.0,True,False))
         LIB.save_loaded_asset(mesh)
         unreal.log('SPECIES_NANITE %s enabled=%s' % (name, SMES.get_nanite_settings(mesh).get_editor_property('enabled')))
+    # Root fit reads CPU positions when cooked (WoodRootContacts). Enforced on every run, not only fresh imports,
+    # so existing assets pick it up; snag included, since dead wood also grounds through the root fit.
+    if not mesh.get_editor_property('allow_cpu_access'):
+        mesh.set_editor_property('allow_cpu_access',True)
+        LIB.save_loaded_asset(mesh)
     species[group].append(mesh)
 for group,palette_slot in SPECIES_PALETTE.items():
     if not species[group]:
@@ -1016,8 +1026,11 @@ for species in sorted(flora_files):
         if len(found)!=1:
             raise RuntimeError('Flora import produced no unique mesh: '+name)
         mesh=found[0]
+        # Flora can be selected as Tree kind, and the root fit reads cooked CPU positions. Enforced on every run.
+        if not mesh.get_editor_property('allow_cpu_access'):
+            mesh.set_editor_property('allow_cpu_access',True)
+            LIB.save_loaded_asset(mesh)
         if rebuild:
-            mesh.set_editor_property('allow_cpu_access',False)
             settings=SMES.get_lod_build_settings(mesh,0)
             settings.set_editor_property('generate_lightmap_u_vs',False)
             SMES.set_lod_build_settings(mesh,0,settings)
