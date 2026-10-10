@@ -125,6 +125,15 @@ Changes:
 
 Still FAIL against the 16.7 ms p95 budget. The gain is small: the GPU and the render thread dominate steady state, and the hitches are chunk realisation spikes. Open: time-slice `Realize` (flora instance adds and fauna/landmark spawns) across frames at about 2 ms per frame; trim foliage cull distances (no lower than 0.75 x role defaults); check the iGPU shadow and translucency cost.
 
+### Packaged Win64 Development build - 10 October 2026
+
+Label: dev machine, packaged, not the acceptance target (still the Radeon 860M iGPU, not the reference PC).
+
+- `Tools\Package.ps1 -Config Development`: BuildCookRun succeeded, archive at `Saved/Package/Windows/TheWood.exe`. Packaging config added to `Config/DefaultGame.ini`: MapsToCook `/Game/Maps/VisualBenchmark`, DirectoriesToAlwaysCook `/Game/Art`, `/Game/Wood`.
+- `Tools\Capture-FrameTime.ps1 -Seconds 120 -Exe Saved\Package\Windows\TheWood.exe`: no frame data. The packaged exe crashed during `AWoodWorld::BeginPlay` (Generate, Realize, SpawnFlora), before the route started. Unhandled C++ exception (0xe06d7363) thrown from `wood::validatePoint()` (`Source/TheWood/Private/Generation/WoodGeneration.cpp:32`) via `terrainHeight()` and `WoodGroundedTransform()` (`WoodGrounding.cpp:60`). The editor `-game` run of the same route does not hit this, so the cause is not yet known. Crash log: `Saved/Package/Windows/TheWood/Saved/Crashes/`.
+- Packaged results: none. Packaged avg/p95/hitches and the comparison with editor numbers are open until the crash is fixed.
+- Shipping not attempted: the Development runtime fails before the route starts.
+
 ## Frame-time root-cause pass (dev machine, editor -game, Radeon 860M, 120 s autopilot)
 
 Measured (CsvProfile, r.GPUCsvStatsEnabled): GPU-bound, not game-thread. Top costs:
